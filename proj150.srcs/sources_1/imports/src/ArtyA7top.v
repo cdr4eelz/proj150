@@ -80,9 +80,13 @@ module ArtyA7top #(
         .reset(reset_top_clocks),  // input reset (ACTIVE HIGH)
         .locked(locked_top_clocks)  // output locked (ACTIVE HIGH)
     );  // NOTE: clk_wiz puts BUFG on its output clocks
+//TODO: Figure out if we need BUFG on these clocks???
 
     // Then some other support components come out of reset (like DRAM)
-    wire rst_cpu, rst_pix, init_done;  // TODO: CPU comes out of reset after everything else
+    wire rst_cpu, rst_mig_sys_n, rst_pix, init_done;  // TODO: CPU comes out of reset after everything else
+    Synchronizer #( .Width(1) ) sync_rst_mig_sys_n (
+        .async_signal(!locked_top_clocks || !reset_top_clocks),
+        .Clock(clk_mig_sys),  .sync_signal(rst_mig_sys_n));  // NOTE: This clock is bad when PLL not locked!
     Synchronizer #( .Width(1) ) sync_rst_cpu (
         .async_signal(!locked_top_clocks || !init_done ),
         .Clock(clk_cpu),  .sync_signal(rst_cpu));  // NOTE: This clock is bad when PLL not locked!
@@ -100,7 +104,7 @@ module ArtyA7top #(
         .Clock(clk_cpu), .Reset(rst_cpu),
         .OUT(clean_combo) );
     assign { buttons[3:0], switches[1:0] } = clean_combo;  // Separate the signals
-
+//TODO: Let sync/debounce complete before letting CPU out of reset!
 
     // Borrowed from 2024/2019 top level IOBs to drive/sense UART serial lines...
     wire cpu_tx, cpu_rx;
@@ -130,7 +134,7 @@ module ArtyA7top #(
     end else begin:MIPS150
 
         wire stall_top, stall_dip;
-        assign stall_dip = 1'b0;  // TODO: Tie-in to a GPIO switch (and invert repeatedly)
+        assign stall_dip = switches[1]; //1'b0;  // TODO: Tie-in to a GPIO switch (and invert repeatedly)
 
         // MemoryDDR (WAS: Memory150)
         wire [31:0] dcache_addr,    icache_addr;
@@ -154,11 +158,12 @@ module ArtyA7top #(
         ) mem_arch (
         // Critical clock & reset
             .clk_cpu        (clk_cpu),
-            .clk_pix        (clk_pix),
-            .clk_mig_sys    (clk_mig_sys),
-            .clk_mig_ref    (clk_mig_ref),
             .rst_cpu_mem    (rst_cpu),
             .rst_cpu_bus    (rst_cpu),  //TODO: Distinguish "mem" & "bus" & CPU resets?
+            .clk_mig_sys    (clk_mig_sys),
+            .rst_mig_sys_n  (rst_mig_sys_n),
+            .clk_mig_ref    (clk_mig_ref),
+            .clk_pix        (clk_pix),
             .rst_pix        (rst_pix),
             .locked         (locked_top_clocks),  //Acts as an active HIGH reset
             .init_done      (init_done),  // Output HIGH when MIG is ready
@@ -205,6 +210,8 @@ module ArtyA7top #(
 
         assign video_ready = 1'b0;
 
+        wire [3:0] CNTDEBUG;
+
         // MIPS 150 CPU
         MIPS150 #(
             .CPU_FREQ(CPU_FREQ),
@@ -227,18 +234,20 @@ module ArtyA7top #(
             .pf_wframe  (pf_wframe),    .gp_wcode(gp_wcode),    .gp_wframe(gp_wframe),
                                         .gp_rcode(gp_rcode),
             .pf_status  (pf_status),                            .gp_status(gp_status),
-            .irq_pf_frame(irq_pf_frame),    .irq_gp_done(irq_gp_done)
+            .irq_pf_frame(irq_pf_frame),    .irq_gp_done(irq_gp_done),
+
+            .CNTDEBUG(CNTDEBUG)
         );
 
         assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
 
         assign LED[0] = buttons[0] ^ (locked_top_clocks & init_done);
         assign LED[1] = buttons[1] ^ (reset_top_clocks & rst_cpu);
-        assign LED[2] = buttons[2] ^ stall_icache;
-        assign LED[3] = buttons[3] ^ stall_dcache;
+        assign LED[2] = buttons[2] ^ stall_dcache;
+        assign LED[3] = buttons[3] ^ stall_top;
         // TODO: Map RGB LEDs in constraints file and drive them with PWM
         wire [3:0] led_rgb_set;
-        assign led_rgb_set = (switches[0]) ? DBG_dcache : DBG_icache;
+        assign led_rgb_set = (switches[0]) ? DBG_dcache : CNTDEBUG;
         assign { led3_b, led2_r, led1_g, led0_b } = led_rgb_set ^ buttons;
 
     end endgenerate;

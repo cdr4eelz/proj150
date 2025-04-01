@@ -3,4 +3,8 @@
 /proj150.hw/
 /proj150.ip_user_files/
 /proj150.runs/
-
+/proj150.sim/
+*.jou
+*.log
+vivado_*.zip
+vivado_*.str

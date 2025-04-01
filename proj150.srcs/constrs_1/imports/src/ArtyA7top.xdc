@@ -5,53 +5,74 @@
 
 ## Clock signal
 
-set_property -dict {PACKAGE_PIN E3 IOSTANDARD LVCMOS33} [get_ports CLK_100MHz]
-create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} -add [get_ports CLK_100MHz]
+set_property -dict { PACKAGE_PIN E3    IOSTANDARD LVCMOS33 } [get_ports { CLK_100MHz }]; #IO_L12P_T1_MRCC_35 Sch=gclk[100]
+create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports { CLK_100MHz }];
 
 # Address a warning about these 2 properies being missing: *** SEE: ug470_7Series_Config.pdf (page 29) ***
 #set_property CFGBVS value1 [current_design];  #where value1 is either VCCO or GND
 #set_property CONFIG_VOLTAGE value2 [current_design];  #where value2 is the voltage provided to configuration bank 0
-set_property CFGBVS VCCO [current_design]
-set_property CONFIG_VOLTAGE 3.3 [current_design]
+set_property CFGBVS VCCO        [current_design];  # Choosing VCCO and 3.3v because a lower setting can DAMAGE ...
+set_property CONFIG_VOLTAGE 3.3 [current_design];  #   ... the chip if various inputs are driven by higher V!
 
+## TIMING adjustments (mostly false paths)
+set_false_path -from [get_ports CK_RST_N]
+set_false_path -to   [get_ports ddr3_reset_n]
+set_false_path -to   [get_ports LED[*]]
+set_false_path -to   [get_ports led*]
+#set_false_path -from [get_cells por_counter_reg[*]]
+# Below removes path analysis related to init_calib_complete
+#set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_out_50MHz_clk_wiz_fetcher]
+set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_cpu_50MHz_clk_wiz_0]
+set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_pixel_40MHz_clk_wiz_0]
+
+set_false_path -to [get_ports VGA_R[*]]
+set_false_path -to [get_ports VGA_G[*]]
+set_false_path -to [get_ports VGA_B[*]]
+set_false_path -to [get_ports VGA_HS_O]
+set_false_path -to [get_ports VGA_VS_O]
+set_false_path -from [get_ports BUTTON[*]]
+set_false_path -from [get_ports SWITCH[*]]
+set_false_path -from [get_ports CK_RST_N]
+set_false_path -to [get_ports FPGA_SERIAL_TX]
+set_false_path -from [get_ports FPGA_SERIAL_RX]
 
 ##Switches
 
-set_property -dict {PACKAGE_PIN A8 IOSTANDARD LVCMOS33} [get_ports {SWITCH[0]}]
-set_property -dict {PACKAGE_PIN C11 IOSTANDARD LVCMOS33} [get_ports {SWITCH[1]}]
+set_property -dict { PACKAGE_PIN A8    IOSTANDARD LVCMOS33 } [get_ports { SWITCH[0] }]; #IO_L12N_T1_MRCC_16 Sch=sw[0]
+set_property -dict { PACKAGE_PIN C11   IOSTANDARD LVCMOS33 } [get_ports { SWITCH[1] }]; #IO_L13P_T2_MRCC_16 Sch=sw[1]
 ## IGNORE upper 2 switches since PYNQ boards lack them:
 #set_property -dict { PACKAGE_PIN C10   IOSTANDARD LVCMOS33 } [get_ports { SWITCH[2] }]; #IO_L13N_T2_MRCC_16 Sch=sw[2]
 #set_property -dict { PACKAGE_PIN A10   IOSTANDARD LVCMOS33 } [get_ports { SWITCH[3] }]; #IO_L14P_T2_SRCC_16 Sch=sw[3]
 
 ##RGB LEDs
 
-set_property -dict {PACKAGE_PIN E1 IOSTANDARD LVCMOS33} [get_ports led0_b]
+set_property -dict { PACKAGE_PIN E1    IOSTANDARD LVCMOS33 } [get_ports { led0_b }]; #IO_L18N_T2_35 Sch=led0_b
 #set_property -dict { PACKAGE_PIN F6    IOSTANDARD LVCMOS33 } [get_ports { led0_g }]; #IO_L19N_T3_VREF_35 Sch=led0_g
 #set_property -dict { PACKAGE_PIN G6    IOSTANDARD LVCMOS33 } [get_ports { led0_r }]; #IO_L19P_T3_35 Sch=led0_r
 #set_property -dict { PACKAGE_PIN G4    IOSTANDARD LVCMOS33 } [get_ports { led1_b }]; #IO_L20P_T3_35 Sch=led1_b
-set_property -dict {PACKAGE_PIN J4 IOSTANDARD LVCMOS33} [get_ports led1_g]
+set_property -dict { PACKAGE_PIN J4    IOSTANDARD LVCMOS33 } [get_ports { led1_g }]; #IO_L21P_T3_DQS_35 Sch=led1_g
 #set_property -dict { PACKAGE_PIN G3    IOSTANDARD LVCMOS33 } [get_ports { led1_r }]; #IO_L20N_T3_35 Sch=led1_r
 ## IGNORE upper 2 RGB LEDs since PYNQ board lacks them:
 #set_property -dict { PACKAGE_PIN H4    IOSTANDARD LVCMOS33 } [get_ports { led2_b }]; #IO_L21N_T3_DQS_35 Sch=led2_b
 #set_property -dict { PACKAGE_PIN J2    IOSTANDARD LVCMOS33 } [get_ports { led2_g }]; #IO_L22N_T3_35 Sch=led2_g
-set_property -dict {PACKAGE_PIN J3 IOSTANDARD LVCMOS33} [get_ports led2_r]
-set_property -dict {PACKAGE_PIN K2 IOSTANDARD LVCMOS33} [get_ports led3_b]
+set_property -dict { PACKAGE_PIN J3    IOSTANDARD LVCMOS33 } [get_ports { led2_r }]; #IO_L22P_T3_35 Sch=led2_r
+set_property -dict { PACKAGE_PIN K2    IOSTANDARD LVCMOS33 } [get_ports { led3_b }]; #IO_L23P_T3_35 Sch=led3_b
 #set_property -dict { PACKAGE_PIN H6    IOSTANDARD LVCMOS33 } [get_ports { led3_g }]; #IO_L24P_T3_35 Sch=led3_g
 #set_property -dict { PACKAGE_PIN K1    IOSTANDARD LVCMOS33 } [get_ports { led3_r }]; #IO_L23N_T3_35 Sch=led3_r
 
 ##LEDs
 
-set_property -dict {PACKAGE_PIN H5 IOSTANDARD LVCMOS33} [get_ports {LED[0]}]
-set_property -dict {PACKAGE_PIN J5 IOSTANDARD LVCMOS33} [get_ports {LED[1]}]
-set_property -dict {PACKAGE_PIN T9 IOSTANDARD LVCMOS33} [get_ports {LED[2]}]
-set_property -dict {PACKAGE_PIN T10 IOSTANDARD LVCMOS33} [get_ports {LED[3]}]
+set_property -dict { PACKAGE_PIN H5    IOSTANDARD LVCMOS33 } [get_ports { LED[0] }]; #IO_L24N_T3_35 Sch=led[4]
+set_property -dict { PACKAGE_PIN J5    IOSTANDARD LVCMOS33 } [get_ports { LED[1] }]; #IO_25_35 Sch=led[5]
+set_property -dict { PACKAGE_PIN T9    IOSTANDARD LVCMOS33 } [get_ports { LED[2] }]; #IO_L24P_T3_A01_D17_14 Sch=led[6]
+set_property -dict { PACKAGE_PIN T10   IOSTANDARD LVCMOS33 } [get_ports { LED[3] }]; #IO_L24N_T3_A00_D16_14 Sch=led[7]
 
 ##Buttons
 
-set_property -dict {PACKAGE_PIN D9 IOSTANDARD LVCMOS33} [get_ports {BUTTON[0]}]
-set_property -dict {PACKAGE_PIN C9 IOSTANDARD LVCMOS33} [get_ports {BUTTON[1]}]
-set_property -dict {PACKAGE_PIN B9 IOSTANDARD LVCMOS33} [get_ports {BUTTON[2]}]
-set_property -dict {PACKAGE_PIN B8 IOSTANDARD LVCMOS33} [get_ports {BUTTON[3]}]
+set_property -dict { PACKAGE_PIN D9    IOSTANDARD LVCMOS33 } [get_ports { BUTTON[0] }]; #IO_L6N_T0_VREF_16 Sch=btn[0]
+set_property -dict { PACKAGE_PIN C9    IOSTANDARD LVCMOS33 } [get_ports { BUTTON[1] }]; #IO_L11P_T1_SRCC_16 Sch=btn[1]
+set_property -dict { PACKAGE_PIN B9    IOSTANDARD LVCMOS33 } [get_ports { BUTTON[2] }]; #IO_L11N_T1_SRCC_16 Sch=btn[2]
+set_property -dict { PACKAGE_PIN B8    IOSTANDARD LVCMOS33 } [get_ports { BUTTON[3] }]; #IO_L12P_T1_MRCC_16 Sch=btn[3]
 
 ##Pmod Header JA
 
@@ -66,29 +87,28 @@ set_property -dict {PACKAGE_PIN B8 IOSTANDARD LVCMOS33} [get_ports {BUTTON[3]}]
 #set_property -dict { PACKAGE_PIN K16   IOSTANDARD LVCMOS33 } [get_ports { ja[7] }]; #IO_25_15 Sch=ja[10]
 
 ##Pmod Header JB
-### First half of PMOD-VGA (takes two full headers)
-set_property -dict {PACKAGE_PIN E15 IOSTANDARD LVCMOS33} [get_ports {VGA_R[0]}]
-set_property -dict {PACKAGE_PIN E16 IOSTANDARD LVCMOS33} [get_ports {VGA_R[1]}]
-set_property -dict {PACKAGE_PIN D15 IOSTANDARD LVCMOS33} [get_ports {VGA_R[2]}]
-set_property -dict {PACKAGE_PIN C15 IOSTANDARD LVCMOS33} [get_ports {VGA_R[3]}]
-set_property -dict {PACKAGE_PIN J17 IOSTANDARD LVCMOS33} [get_ports {VGA_B[0]}]
-set_property -dict {PACKAGE_PIN J18 IOSTANDARD LVCMOS33} [get_ports {VGA_B[1]}]
-set_property -dict {PACKAGE_PIN K15 IOSTANDARD LVCMOS33} [get_ports {VGA_B[2]}]
-set_property -dict {PACKAGE_PIN J15 IOSTANDARD LVCMOS33} [get_ports {VGA_B[3]}]
+    ### First half of PMOD-VGA (takes two full headers)
+set_property -dict { PACKAGE_PIN E15   IOSTANDARD LVCMOS33 } [get_ports { VGA_R[0] }]; #IO_L11P_T1_SRCC_15 Sch=jb_p[1]
+set_property -dict { PACKAGE_PIN E16   IOSTANDARD LVCMOS33 } [get_ports { VGA_R[1] }]; #IO_L11N_T1_SRCC_15 Sch=jb_n[1]
+set_property -dict { PACKAGE_PIN D15   IOSTANDARD LVCMOS33 } [get_ports { VGA_R[2] }]; #IO_L12P_T1_MRCC_15 Sch=jb_p[2]
+set_property -dict { PACKAGE_PIN C15   IOSTANDARD LVCMOS33 } [get_ports { VGA_R[3] }]; #IO_L12N_T1_MRCC_15 Sch=jb_n[2]
+set_property -dict { PACKAGE_PIN J17   IOSTANDARD LVCMOS33 } [get_ports { VGA_B[0] }]; #IO_L23P_T3_FOE_B_15 Sch=jb_p[3]
+set_property -dict { PACKAGE_PIN J18   IOSTANDARD LVCMOS33 } [get_ports { VGA_B[1] }]; #IO_L23N_T3_FWE_B_15 Sch=jb_n[3]
+set_property -dict { PACKAGE_PIN K15   IOSTANDARD LVCMOS33 } [get_ports { VGA_B[2] }]; #IO_L24P_T3_RS1_15 Sch=jb_p[4]
+set_property -dict { PACKAGE_PIN J15   IOSTANDARD LVCMOS33 } [get_ports { VGA_B[3] }]; #IO_L24N_T3_RS0_15 Sch=jb_n[4]
 
 ##Pmod Header JC
-### Second half of PMOD-VGA
-set_property -dict {PACKAGE_PIN U12 IOSTANDARD LVCMOS33} [get_ports {VGA_G[0]}]
-set_property -dict {PACKAGE_PIN V12 IOSTANDARD LVCMOS33} [get_ports {VGA_G[1]}]
-set_property -dict {PACKAGE_PIN V10 IOSTANDARD LVCMOS33} [get_ports {VGA_G[2]}]
-set_property -dict {PACKAGE_PIN V11 IOSTANDARD LVCMOS33} [get_ports {VGA_G[3]}]
-set_property -dict {PACKAGE_PIN U14 IOSTANDARD LVCMOS33} [get_ports VGA_HS_O]
-set_property -dict {PACKAGE_PIN V14 IOSTANDARD LVCMOS33} [get_ports VGA_VS_O]
+    ### Second half of PMOD-VGA
+set_property -dict { PACKAGE_PIN U12   IOSTANDARD LVCMOS33 } [get_ports { VGA_G[0] }]; #IO_L20P_T3_A08_D24_14 Sch=jc_p[1]
+set_property -dict { PACKAGE_PIN V12   IOSTANDARD LVCMOS33 } [get_ports { VGA_G[1] }]; #IO_L20N_T3_A07_D23_14 Sch=jc_n[1]
+set_property -dict { PACKAGE_PIN V10   IOSTANDARD LVCMOS33 } [get_ports { VGA_G[2] }]; #IO_L21P_T3_DQS_14 Sch=jc_p[2]
+set_property -dict { PACKAGE_PIN V11   IOSTANDARD LVCMOS33 } [get_ports { VGA_G[3] }]; #IO_L21N_T3_DQS_A06_D22_14 Sch=jc_n[2]
+set_property -dict { PACKAGE_PIN U14   IOSTANDARD LVCMOS33 } [get_ports { VGA_HS_O }]; #IO_L22P_T3_A05_D21_14 Sch=jc_p[3]
+set_property -dict { PACKAGE_PIN V14   IOSTANDARD LVCMOS33 } [get_ports { VGA_VS_O }]; #IO_L22N_T3_A04_D20_14 Sch=jc_n[3]
 #set_property -dict { PACKAGE_PIN T13   IOSTANDARD LVCMOS33 } [get_ports { jc[6] }]; #IO_L23P_T3_A03_D19_14 Sch=jc_p[4]
 #set_property -dict { PACKAGE_PIN U13   IOSTANDARD LVCMOS33 } [get_ports { jc[7] }]; #IO_L23N_T3_A02_D18_14 Sch=jc_n[4]
 
 ##Pmod Header JD
-
 #set_property -dict { PACKAGE_PIN D4    IOSTANDARD LVCMOS33 } [get_ports { jd[1] }]; #IO_L11N_T1_SRCC_35 Sch=jd[1]
 #set_property -dict { PACKAGE_PIN D3    IOSTANDARD LVCMOS33 } [get_ports { jd[2] }]; #IO_L12N_T1_MRCC_35 Sch=jd[2]
 #set_property -dict { PACKAGE_PIN F4    IOSTANDARD LVCMOS33 } [get_ports { jd[3] }]; #IO_L13P_T2_MRCC_35 Sch=jd[3]
@@ -100,8 +120,8 @@ set_property -dict {PACKAGE_PIN V14 IOSTANDARD LVCMOS33} [get_ports VGA_VS_O]
 
 ##USB-UART Interface
 ## Can use these on Arty-A7 with integrated JTAG/UART<->USB connection to PL fabric
-set_property -dict {PACKAGE_PIN D10 IOSTANDARD LVCMOS33} [get_ports FPGA_SERIAL_TX]
-set_property -dict {PACKAGE_PIN A9 IOSTANDARD LVCMOS33} [get_ports FPGA_SERIAL_RX]
+set_property -dict { PACKAGE_PIN D10   IOSTANDARD LVCMOS33 } [get_ports { FPGA_SERIAL_TX }]; #IO_L19N_T3_VREF_16 Sch=uart_rxd_out
+set_property -dict { PACKAGE_PIN A9    IOSTANDARD LVCMOS33 } [get_ports { FPGA_SERIAL_RX }]; #IO_L14N_T2_SRCC_16 Sch=uart_txd_in
 
 ##ChipKit Single Ended Analog Inputs
 ##NOTE: The ck_an_p pins can be used as single ended analog inputs with voltages from 0-3.3V (Chipkit Analog pins A0-A5).
@@ -194,7 +214,7 @@ set_property -dict {PACKAGE_PIN A9 IOSTANDARD LVCMOS33} [get_ports FPGA_SERIAL_R
 ##Misc. ChipKit signals
 
 #set_property -dict { PACKAGE_PIN M17   IOSTANDARD LVCMOS33 } [get_ports { ck_ioa }]; #IO_L10N_T1_D15_14 Sch=ck_ioa
-set_property -dict {PACKAGE_PIN C2 IOSTANDARD LVCMOS33} [get_ports CK_RST_N]
+set_property -dict { PACKAGE_PIN C2    IOSTANDARD LVCMOS33 } [get_ports { CK_RST_N }]; #IO_L16P_T2_35 Sch=ck_rst
 
 ##SMSC Ethernet PHY
 
@@ -237,190 +257,3 @@ set_property -dict {PACKAGE_PIN C2 IOSTANDARD LVCMOS33} [get_ports CK_RST_N]
 #set_property -dict { PACKAGE_PIN A16   IOSTANDARD LVCMOS33     } [get_ports { isns0v95_n }]; #IO_L8N_T1_AD10N_15 Sch=ad_n[10]
 #set_property -dict { PACKAGE_PIN A15   IOSTANDARD LVCMOS33     } [get_ports { isns0v95_p }]; #IO_L8P_T1_AD10P_15 Sch=ad_p[10]
 
-
-
-create_debug_core u_ila_0 ila
-set_property ALL_PROBE_SAME_MU true [get_debug_cores u_ila_0]
-set_property ALL_PROBE_SAME_MU_CNT 2 [get_debug_cores u_ila_0]
-set_property C_ADV_TRIGGER false [get_debug_cores u_ila_0]
-set_property C_DATA_DEPTH 1024 [get_debug_cores u_ila_0]
-set_property C_EN_STRG_QUAL true [get_debug_cores u_ila_0]
-set_property C_INPUT_PIPE_STAGES 0 [get_debug_cores u_ila_0]
-set_property C_TRIGIN_EN false [get_debug_cores u_ila_0]
-set_property C_TRIGOUT_EN false [get_debug_cores u_ila_0]
-set_property port_width 1 [get_debug_ports u_ila_0/clk]
-connect_debug_port u_ila_0/clk [get_nets [list top_clocks/inst/clk_cpu_50MHz]]
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe0]
-set_property port_width 128 [get_debug_ports u_ila_0/probe0]
-connect_debug_port u_ila_0/probe0 [get_nets [list {MIPS150.mem_arch/ALLR_rdf_data[0]} {MIPS150.mem_arch/ALLR_rdf_data[1]} {MIPS150.mem_arch/ALLR_rdf_data[2]} {MIPS150.mem_arch/ALLR_rdf_data[3]} {MIPS150.mem_arch/ALLR_rdf_data[4]} {MIPS150.mem_arch/ALLR_rdf_data[5]} {MIPS150.mem_arch/ALLR_rdf_data[6]} {MIPS150.mem_arch/ALLR_rdf_data[7]} {MIPS150.mem_arch/ALLR_rdf_data[8]} {MIPS150.mem_arch/ALLR_rdf_data[9]} {MIPS150.mem_arch/ALLR_rdf_data[10]} {MIPS150.mem_arch/ALLR_rdf_data[11]} {MIPS150.mem_arch/ALLR_rdf_data[12]} {MIPS150.mem_arch/ALLR_rdf_data[13]} {MIPS150.mem_arch/ALLR_rdf_data[14]} {MIPS150.mem_arch/ALLR_rdf_data[15]} {MIPS150.mem_arch/ALLR_rdf_data[16]} {MIPS150.mem_arch/ALLR_rdf_data[17]} {MIPS150.mem_arch/ALLR_rdf_data[18]} {MIPS150.mem_arch/ALLR_rdf_data[19]} {MIPS150.mem_arch/ALLR_rdf_data[20]} {MIPS150.mem_arch/ALLR_rdf_data[21]} {MIPS150.mem_arch/ALLR_rdf_data[22]} {MIPS150.mem_arch/ALLR_rdf_data[23]} {MIPS150.mem_arch/ALLR_rdf_data[24]} {MIPS150.mem_arch/ALLR_rdf_data[25]} {MIPS150.mem_arch/ALLR_rdf_data[26]} {MIPS150.mem_arch/ALLR_rdf_data[27]} {MIPS150.mem_arch/ALLR_rdf_data[28]} {MIPS150.mem_arch/ALLR_rdf_data[29]} {MIPS150.mem_arch/ALLR_rdf_data[30]} {MIPS150.mem_arch/ALLR_rdf_data[31]} {MIPS150.mem_arch/ALLR_rdf_data[32]} {MIPS150.mem_arch/ALLR_rdf_data[33]} {MIPS150.mem_arch/ALLR_rdf_data[34]} {MIPS150.mem_arch/ALLR_rdf_data[35]} {MIPS150.mem_arch/ALLR_rdf_data[36]} {MIPS150.mem_arch/ALLR_rdf_data[37]} {MIPS150.mem_arch/ALLR_rdf_data[38]} {MIPS150.mem_arch/ALLR_rdf_data[39]} {MIPS150.mem_arch/ALLR_rdf_data[40]} {MIPS150.mem_arch/ALLR_rdf_data[41]} {MIPS150.mem_arch/ALLR_rdf_data[42]} {MIPS150.mem_arch/ALLR_rdf_data[43]} {MIPS150.mem_arch/ALLR_rdf_data[44]} {MIPS150.mem_arch/ALLR_rdf_data[45]} {MIPS150.mem_arch/ALLR_rdf_data[46]} {MIPS150.mem_arch/ALLR_rdf_data[47]} {MIPS150.mem_arch/ALLR_rdf_data[48]} {MIPS150.mem_arch/ALLR_rdf_data[49]} {MIPS150.mem_arch/ALLR_rdf_data[50]} {MIPS150.mem_arch/ALLR_rdf_data[51]} {MIPS150.mem_arch/ALLR_rdf_data[52]} {MIPS150.mem_arch/ALLR_rdf_data[53]} {MIPS150.mem_arch/ALLR_rdf_data[54]} {MIPS150.mem_arch/ALLR_rdf_data[55]} {MIPS150.mem_arch/ALLR_rdf_data[56]} {MIPS150.mem_arch/ALLR_rdf_data[57]} {MIPS150.mem_arch/ALLR_rdf_data[58]} {MIPS150.mem_arch/ALLR_rdf_data[59]} {MIPS150.mem_arch/ALLR_rdf_data[60]} {MIPS150.mem_arch/ALLR_rdf_data[61]} {MIPS150.mem_arch/ALLR_rdf_data[62]} {MIPS150.mem_arch/ALLR_rdf_data[63]} {MIPS150.mem_arch/ALLR_rdf_data[64]} {MIPS150.mem_arch/ALLR_rdf_data[65]} {MIPS150.mem_arch/ALLR_rdf_data[66]} {MIPS150.mem_arch/ALLR_rdf_data[67]} {MIPS150.mem_arch/ALLR_rdf_data[68]} {MIPS150.mem_arch/ALLR_rdf_data[69]} {MIPS150.mem_arch/ALLR_rdf_data[70]} {MIPS150.mem_arch/ALLR_rdf_data[71]} {MIPS150.mem_arch/ALLR_rdf_data[72]} {MIPS150.mem_arch/ALLR_rdf_data[73]} {MIPS150.mem_arch/ALLR_rdf_data[74]} {MIPS150.mem_arch/ALLR_rdf_data[75]} {MIPS150.mem_arch/ALLR_rdf_data[76]} {MIPS150.mem_arch/ALLR_rdf_data[77]} {MIPS150.mem_arch/ALLR_rdf_data[78]} {MIPS150.mem_arch/ALLR_rdf_data[79]} {MIPS150.mem_arch/ALLR_rdf_data[80]} {MIPS150.mem_arch/ALLR_rdf_data[81]} {MIPS150.mem_arch/ALLR_rdf_data[82]} {MIPS150.mem_arch/ALLR_rdf_data[83]} {MIPS150.mem_arch/ALLR_rdf_data[84]} {MIPS150.mem_arch/ALLR_rdf_data[85]} {MIPS150.mem_arch/ALLR_rdf_data[86]} {MIPS150.mem_arch/ALLR_rdf_data[87]} {MIPS150.mem_arch/ALLR_rdf_data[88]} {MIPS150.mem_arch/ALLR_rdf_data[89]} {MIPS150.mem_arch/ALLR_rdf_data[90]} {MIPS150.mem_arch/ALLR_rdf_data[91]} {MIPS150.mem_arch/ALLR_rdf_data[92]} {MIPS150.mem_arch/ALLR_rdf_data[93]} {MIPS150.mem_arch/ALLR_rdf_data[94]} {MIPS150.mem_arch/ALLR_rdf_data[95]} {MIPS150.mem_arch/ALLR_rdf_data[96]} {MIPS150.mem_arch/ALLR_rdf_data[97]} {MIPS150.mem_arch/ALLR_rdf_data[98]} {MIPS150.mem_arch/ALLR_rdf_data[99]} {MIPS150.mem_arch/ALLR_rdf_data[100]} {MIPS150.mem_arch/ALLR_rdf_data[101]} {MIPS150.mem_arch/ALLR_rdf_data[102]} {MIPS150.mem_arch/ALLR_rdf_data[103]} {MIPS150.mem_arch/ALLR_rdf_data[104]} {MIPS150.mem_arch/ALLR_rdf_data[105]} {MIPS150.mem_arch/ALLR_rdf_data[106]} {MIPS150.mem_arch/ALLR_rdf_data[107]} {MIPS150.mem_arch/ALLR_rdf_data[108]} {MIPS150.mem_arch/ALLR_rdf_data[109]} {MIPS150.mem_arch/ALLR_rdf_data[110]} {MIPS150.mem_arch/ALLR_rdf_data[111]} {MIPS150.mem_arch/ALLR_rdf_data[112]} {MIPS150.mem_arch/ALLR_rdf_data[113]} {MIPS150.mem_arch/ALLR_rdf_data[114]} {MIPS150.mem_arch/ALLR_rdf_data[115]} {MIPS150.mem_arch/ALLR_rdf_data[116]} {MIPS150.mem_arch/ALLR_rdf_data[117]} {MIPS150.mem_arch/ALLR_rdf_data[118]} {MIPS150.mem_arch/ALLR_rdf_data[119]} {MIPS150.mem_arch/ALLR_rdf_data[120]} {MIPS150.mem_arch/ALLR_rdf_data[121]} {MIPS150.mem_arch/ALLR_rdf_data[122]} {MIPS150.mem_arch/ALLR_rdf_data[123]} {MIPS150.mem_arch/ALLR_rdf_data[124]} {MIPS150.mem_arch/ALLR_rdf_data[125]} {MIPS150.mem_arch/ALLR_rdf_data[126]} {MIPS150.mem_arch/ALLR_rdf_data[127]}]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe1]
-set_property port_width 4 [get_debug_ports u_ila_0/probe1]
-connect_debug_port u_ila_0/probe1 [get_nets [list {MIPS150.mem_arch/dcache/we_hold[0]} {MIPS150.mem_arch/dcache/we_hold[1]} {MIPS150.mem_arch/dcache/we_hold[2]} {MIPS150.mem_arch/dcache/we_hold[3]}]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe2]
-set_property port_width 4 [get_debug_ports u_ila_0/probe2]
-connect_debug_port u_ila_0/probe2 [get_nets [list {MIPS150.mem_arch/dcache/wea[0]} {MIPS150.mem_arch/dcache/wea[1]} {MIPS150.mem_arch/dcache/wea[2]} {MIPS150.mem_arch/dcache/wea[3]}]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe3]
-set_property port_width 48 [get_debug_ports u_ila_0/probe3]
-connect_debug_port u_ila_0/probe3 [get_nets [list {MIPS150.mem_arch/dcache/rcon_wdf_mdat[0]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[1]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[2]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[3]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[4]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[5]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[6]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[7]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[8]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[9]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[10]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[11]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[12]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[13]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[14]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[15]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[16]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[17]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[18]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[19]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[20]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[21]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[22]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[23]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[24]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[25]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[26]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[27]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[28]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[29]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[30]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[31]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[32]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[33]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[34]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[35]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[36]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[37]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[38]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[39]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[40]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[41]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[42]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[43]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[44]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[45]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[46]} {MIPS150.mem_arch/dcache/rcon_wdf_mdat[47]}]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe4]
-set_property port_width 4 [get_debug_ports u_ila_0/probe4]
-connect_debug_port u_ila_0/probe4 [get_nets [list {MIPS150.mem_arch/wea[0]} {MIPS150.mem_arch/wea[1]} {MIPS150.mem_arch/wea[2]} {MIPS150.mem_arch/wea[3]}]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe5]
-set_property port_width 1 [get_debug_ports u_ila_0/probe5]
-connect_debug_port u_ila_0/probe5 [get_nets [list {MIPS150.mem_arch/current_state[2]}]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe6]
-set_property port_width 25 [get_debug_ports u_ila_0/probe6]
-connect_debug_port u_ila_0/probe6 [get_nets [list {MIPS150.mem_arch/rcon_caf_cadr[2]} {MIPS150.mem_arch/rcon_caf_cadr[3]} {MIPS150.mem_arch/rcon_caf_cadr[4]} {MIPS150.mem_arch/rcon_caf_cadr[5]} {MIPS150.mem_arch/rcon_caf_cadr[6]} {MIPS150.mem_arch/rcon_caf_cadr[7]} {MIPS150.mem_arch/rcon_caf_cadr[8]} {MIPS150.mem_arch/rcon_caf_cadr[9]} {MIPS150.mem_arch/rcon_caf_cadr[10]} {MIPS150.mem_arch/rcon_caf_cadr[11]} {MIPS150.mem_arch/rcon_caf_cadr[12]} {MIPS150.mem_arch/rcon_caf_cadr[13]} {MIPS150.mem_arch/rcon_caf_cadr[14]} {MIPS150.mem_arch/rcon_caf_cadr[15]} {MIPS150.mem_arch/rcon_caf_cadr[16]} {MIPS150.mem_arch/rcon_caf_cadr[17]} {MIPS150.mem_arch/rcon_caf_cadr[18]} {MIPS150.mem_arch/rcon_caf_cadr[19]} {MIPS150.mem_arch/rcon_caf_cadr[20]} {MIPS150.mem_arch/rcon_caf_cadr[21]} {MIPS150.mem_arch/rcon_caf_cadr[22]} {MIPS150.mem_arch/rcon_caf_cadr[23]} {MIPS150.mem_arch/rcon_caf_cadr[24]} {MIPS150.mem_arch/rcon_caf_cadr[25]} {MIPS150.mem_arch/rcon_caf_cadr[28]}]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe7]
-set_property port_width 48 [get_debug_ports u_ila_0/probe7]
-connect_debug_port u_ila_0/probe7 [get_nets [list {MIPS150.mem_arch/rcon_wdf_mdat[96]} {MIPS150.mem_arch/rcon_wdf_mdat[97]} {MIPS150.mem_arch/rcon_wdf_mdat[98]} {MIPS150.mem_arch/rcon_wdf_mdat[99]} {MIPS150.mem_arch/rcon_wdf_mdat[100]} {MIPS150.mem_arch/rcon_wdf_mdat[101]} {MIPS150.mem_arch/rcon_wdf_mdat[102]} {MIPS150.mem_arch/rcon_wdf_mdat[103]} {MIPS150.mem_arch/rcon_wdf_mdat[104]} {MIPS150.mem_arch/rcon_wdf_mdat[105]} {MIPS150.mem_arch/rcon_wdf_mdat[106]} {MIPS150.mem_arch/rcon_wdf_mdat[107]} {MIPS150.mem_arch/rcon_wdf_mdat[108]} {MIPS150.mem_arch/rcon_wdf_mdat[109]} {MIPS150.mem_arch/rcon_wdf_mdat[110]} {MIPS150.mem_arch/rcon_wdf_mdat[111]} {MIPS150.mem_arch/rcon_wdf_mdat[112]} {MIPS150.mem_arch/rcon_wdf_mdat[113]} {MIPS150.mem_arch/rcon_wdf_mdat[114]} {MIPS150.mem_arch/rcon_wdf_mdat[115]} {MIPS150.mem_arch/rcon_wdf_mdat[116]} {MIPS150.mem_arch/rcon_wdf_mdat[117]} {MIPS150.mem_arch/rcon_wdf_mdat[118]} {MIPS150.mem_arch/rcon_wdf_mdat[119]} {MIPS150.mem_arch/rcon_wdf_mdat[120]} {MIPS150.mem_arch/rcon_wdf_mdat[121]} {MIPS150.mem_arch/rcon_wdf_mdat[122]} {MIPS150.mem_arch/rcon_wdf_mdat[123]} {MIPS150.mem_arch/rcon_wdf_mdat[124]} {MIPS150.mem_arch/rcon_wdf_mdat[125]} {MIPS150.mem_arch/rcon_wdf_mdat[126]} {MIPS150.mem_arch/rcon_wdf_mdat[127]} {MIPS150.mem_arch/rcon_wdf_mdat[128]} {MIPS150.mem_arch/rcon_wdf_mdat[129]} {MIPS150.mem_arch/rcon_wdf_mdat[130]} {MIPS150.mem_arch/rcon_wdf_mdat[131]} {MIPS150.mem_arch/rcon_wdf_mdat[132]} {MIPS150.mem_arch/rcon_wdf_mdat[133]} {MIPS150.mem_arch/rcon_wdf_mdat[134]} {MIPS150.mem_arch/rcon_wdf_mdat[135]} {MIPS150.mem_arch/rcon_wdf_mdat[136]} {MIPS150.mem_arch/rcon_wdf_mdat[137]} {MIPS150.mem_arch/rcon_wdf_mdat[138]} {MIPS150.mem_arch/rcon_wdf_mdat[139]} {MIPS150.mem_arch/rcon_wdf_mdat[140]} {MIPS150.mem_arch/rcon_wdf_mdat[141]} {MIPS150.mem_arch/rcon_wdf_mdat[142]} {MIPS150.mem_arch/rcon_wdf_mdat[143]}]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe8]
-set_property port_width 32 [get_debug_ports u_ila_0/probe8]
-connect_debug_port u_ila_0/probe8 [get_nets [list {MIPS150.mem_arch/MIPS150.dcache_dout[0]} {MIPS150.mem_arch/MIPS150.dcache_dout[1]} {MIPS150.mem_arch/MIPS150.dcache_dout[2]} {MIPS150.mem_arch/MIPS150.dcache_dout[3]} {MIPS150.mem_arch/MIPS150.dcache_dout[4]} {MIPS150.mem_arch/MIPS150.dcache_dout[5]} {MIPS150.mem_arch/MIPS150.dcache_dout[6]} {MIPS150.mem_arch/MIPS150.dcache_dout[7]} {MIPS150.mem_arch/MIPS150.dcache_dout[8]} {MIPS150.mem_arch/MIPS150.dcache_dout[9]} {MIPS150.mem_arch/MIPS150.dcache_dout[10]} {MIPS150.mem_arch/MIPS150.dcache_dout[11]} {MIPS150.mem_arch/MIPS150.dcache_dout[12]} {MIPS150.mem_arch/MIPS150.dcache_dout[13]} {MIPS150.mem_arch/MIPS150.dcache_dout[14]} {MIPS150.mem_arch/MIPS150.dcache_dout[15]} {MIPS150.mem_arch/MIPS150.dcache_dout[16]} {MIPS150.mem_arch/MIPS150.dcache_dout[17]} {MIPS150.mem_arch/MIPS150.dcache_dout[18]} {MIPS150.mem_arch/MIPS150.dcache_dout[19]} {MIPS150.mem_arch/MIPS150.dcache_dout[20]} {MIPS150.mem_arch/MIPS150.dcache_dout[21]} {MIPS150.mem_arch/MIPS150.dcache_dout[22]} {MIPS150.mem_arch/MIPS150.dcache_dout[23]} {MIPS150.mem_arch/MIPS150.dcache_dout[24]} {MIPS150.mem_arch/MIPS150.dcache_dout[25]} {MIPS150.mem_arch/MIPS150.dcache_dout[26]} {MIPS150.mem_arch/MIPS150.dcache_dout[27]} {MIPS150.mem_arch/MIPS150.dcache_dout[28]} {MIPS150.mem_arch/MIPS150.dcache_dout[29]} {MIPS150.mem_arch/MIPS150.dcache_dout[30]} {MIPS150.mem_arch/MIPS150.dcache_dout[31]}]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe9]
-set_property port_width 1 [get_debug_ports u_ila_0/probe9]
-connect_debug_port u_ila_0/probe9 [get_nets [list dcache/din_hold]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe10]
-set_property port_width 1 [get_debug_ports u_ila_0/probe10]
-connect_debug_port u_ila_0/probe10 [get_nets [list MIPS150.mem_arch/rcon_caf_full]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe11]
-set_property port_width 1 [get_debug_ports u_ila_0/probe11]
-connect_debug_port u_ila_0/probe11 [get_nets [list MIPS150.mem_arch/rcon_rdf_rden]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe12]
-set_property port_width 1 [get_debug_ports u_ila_0/probe12]
-connect_debug_port u_ila_0/probe12 [get_nets [list MIPS150.mem_arch/rcon_rdf_wren]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe13]
-set_property port_width 1 [get_debug_ports u_ila_0/probe13]
-connect_debug_port u_ila_0/probe13 [get_nets [list MIPS150.mem_arch/rcon_wdf_full]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe14]
-set_property port_width 1 [get_debug_ports u_ila_0/probe14]
-connect_debug_port u_ila_0/probe14 [get_nets [list MIPS150.mem_arch/rcon_wdf_wren]]
-create_debug_port u_ila_0 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe15]
-set_property port_width 1 [get_debug_ports u_ila_0/probe15]
-connect_debug_port u_ila_0/probe15 [get_nets [list rst_cpu]]
-create_debug_core u_ila_1 ila
-set_property ALL_PROBE_SAME_MU true [get_debug_cores u_ila_1]
-set_property ALL_PROBE_SAME_MU_CNT 2 [get_debug_cores u_ila_1]
-set_property C_ADV_TRIGGER false [get_debug_cores u_ila_1]
-set_property C_DATA_DEPTH 1024 [get_debug_cores u_ila_1]
-set_property C_EN_STRG_QUAL true [get_debug_cores u_ila_1]
-set_property C_INPUT_PIPE_STAGES 0 [get_debug_cores u_ila_1]
-set_property C_TRIGIN_EN false [get_debug_cores u_ila_1]
-set_property C_TRIGOUT_EN false [get_debug_cores u_ila_1]
-set_property port_width 1 [get_debug_ports u_ila_1/clk]
-connect_debug_port u_ila_1/clk [get_nets [list MIPS150.mem_arch/u_mig_arty_a7_100/u_mig_arty_a7_100_mig/u_ddr3_infrastructure/CLK]]
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe0]
-set_property port_width 31 [get_debug_ports u_ila_1/probe0]
-connect_debug_port u_ila_1/probe0 [get_nets [list {MIPS150.mem_arch/fifo_caf_cadr[0]} {MIPS150.mem_arch/fifo_caf_cadr[1]} {MIPS150.mem_arch/fifo_caf_cadr[2]} {MIPS150.mem_arch/fifo_caf_cadr[3]} {MIPS150.mem_arch/fifo_caf_cadr[4]} {MIPS150.mem_arch/fifo_caf_cadr[5]} {MIPS150.mem_arch/fifo_caf_cadr[6]} {MIPS150.mem_arch/fifo_caf_cadr[7]} {MIPS150.mem_arch/fifo_caf_cadr[8]} {MIPS150.mem_arch/fifo_caf_cadr[9]} {MIPS150.mem_arch/fifo_caf_cadr[10]} {MIPS150.mem_arch/fifo_caf_cadr[11]} {MIPS150.mem_arch/fifo_caf_cadr[12]} {MIPS150.mem_arch/fifo_caf_cadr[13]} {MIPS150.mem_arch/fifo_caf_cadr[14]} {MIPS150.mem_arch/fifo_caf_cadr[15]} {MIPS150.mem_arch/fifo_caf_cadr[16]} {MIPS150.mem_arch/fifo_caf_cadr[17]} {MIPS150.mem_arch/fifo_caf_cadr[18]} {MIPS150.mem_arch/fifo_caf_cadr[19]} {MIPS150.mem_arch/fifo_caf_cadr[20]} {MIPS150.mem_arch/fifo_caf_cadr[21]} {MIPS150.mem_arch/fifo_caf_cadr[22]} {MIPS150.mem_arch/fifo_caf_cadr[23]} {MIPS150.mem_arch/fifo_caf_cadr[24]} {MIPS150.mem_arch/fifo_caf_cadr[25]} {MIPS150.mem_arch/fifo_caf_cadr[26]} {MIPS150.mem_arch/fifo_caf_cadr[27]} {MIPS150.mem_arch/fifo_caf_cadr[28]} {MIPS150.mem_arch/fifo_caf_cadr[29]} {MIPS150.mem_arch/fifo_caf_cadr[30]}]]
-create_debug_port u_ila_1 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe1]
-set_property port_width 128 [get_debug_ports u_ila_1/probe1]
-connect_debug_port u_ila_1/probe1 [get_nets [list {MIPS150.mem_arch/fifo_rdf_data[0]} {MIPS150.mem_arch/fifo_rdf_data[1]} {MIPS150.mem_arch/fifo_rdf_data[2]} {MIPS150.mem_arch/fifo_rdf_data[3]} {MIPS150.mem_arch/fifo_rdf_data[4]} {MIPS150.mem_arch/fifo_rdf_data[5]} {MIPS150.mem_arch/fifo_rdf_data[6]} {MIPS150.mem_arch/fifo_rdf_data[7]} {MIPS150.mem_arch/fifo_rdf_data[8]} {MIPS150.mem_arch/fifo_rdf_data[9]} {MIPS150.mem_arch/fifo_rdf_data[10]} {MIPS150.mem_arch/fifo_rdf_data[11]} {MIPS150.mem_arch/fifo_rdf_data[12]} {MIPS150.mem_arch/fifo_rdf_data[13]} {MIPS150.mem_arch/fifo_rdf_data[14]} {MIPS150.mem_arch/fifo_rdf_data[15]} {MIPS150.mem_arch/fifo_rdf_data[16]} {MIPS150.mem_arch/fifo_rdf_data[17]} {MIPS150.mem_arch/fifo_rdf_data[18]} {MIPS150.mem_arch/fifo_rdf_data[19]} {MIPS150.mem_arch/fifo_rdf_data[20]} {MIPS150.mem_arch/fifo_rdf_data[21]} {MIPS150.mem_arch/fifo_rdf_data[22]} {MIPS150.mem_arch/fifo_rdf_data[23]} {MIPS150.mem_arch/fifo_rdf_data[24]} {MIPS150.mem_arch/fifo_rdf_data[25]} {MIPS150.mem_arch/fifo_rdf_data[26]} {MIPS150.mem_arch/fifo_rdf_data[27]} {MIPS150.mem_arch/fifo_rdf_data[28]} {MIPS150.mem_arch/fifo_rdf_data[29]} {MIPS150.mem_arch/fifo_rdf_data[30]} {MIPS150.mem_arch/fifo_rdf_data[31]} {MIPS150.mem_arch/fifo_rdf_data[32]} {MIPS150.mem_arch/fifo_rdf_data[33]} {MIPS150.mem_arch/fifo_rdf_data[34]} {MIPS150.mem_arch/fifo_rdf_data[35]} {MIPS150.mem_arch/fifo_rdf_data[36]} {MIPS150.mem_arch/fifo_rdf_data[37]} {MIPS150.mem_arch/fifo_rdf_data[38]} {MIPS150.mem_arch/fifo_rdf_data[39]} {MIPS150.mem_arch/fifo_rdf_data[40]} {MIPS150.mem_arch/fifo_rdf_data[41]} {MIPS150.mem_arch/fifo_rdf_data[42]} {MIPS150.mem_arch/fifo_rdf_data[43]} {MIPS150.mem_arch/fifo_rdf_data[44]} {MIPS150.mem_arch/fifo_rdf_data[45]} {MIPS150.mem_arch/fifo_rdf_data[46]} {MIPS150.mem_arch/fifo_rdf_data[47]} {MIPS150.mem_arch/fifo_rdf_data[48]} {MIPS150.mem_arch/fifo_rdf_data[49]} {MIPS150.mem_arch/fifo_rdf_data[50]} {MIPS150.mem_arch/fifo_rdf_data[51]} {MIPS150.mem_arch/fifo_rdf_data[52]} {MIPS150.mem_arch/fifo_rdf_data[53]} {MIPS150.mem_arch/fifo_rdf_data[54]} {MIPS150.mem_arch/fifo_rdf_data[55]} {MIPS150.mem_arch/fifo_rdf_data[56]} {MIPS150.mem_arch/fifo_rdf_data[57]} {MIPS150.mem_arch/fifo_rdf_data[58]} {MIPS150.mem_arch/fifo_rdf_data[59]} {MIPS150.mem_arch/fifo_rdf_data[60]} {MIPS150.mem_arch/fifo_rdf_data[61]} {MIPS150.mem_arch/fifo_rdf_data[62]} {MIPS150.mem_arch/fifo_rdf_data[63]} {MIPS150.mem_arch/fifo_rdf_data[64]} {MIPS150.mem_arch/fifo_rdf_data[65]} {MIPS150.mem_arch/fifo_rdf_data[66]} {MIPS150.mem_arch/fifo_rdf_data[67]} {MIPS150.mem_arch/fifo_rdf_data[68]} {MIPS150.mem_arch/fifo_rdf_data[69]} {MIPS150.mem_arch/fifo_rdf_data[70]} {MIPS150.mem_arch/fifo_rdf_data[71]} {MIPS150.mem_arch/fifo_rdf_data[72]} {MIPS150.mem_arch/fifo_rdf_data[73]} {MIPS150.mem_arch/fifo_rdf_data[74]} {MIPS150.mem_arch/fifo_rdf_data[75]} {MIPS150.mem_arch/fifo_rdf_data[76]} {MIPS150.mem_arch/fifo_rdf_data[77]} {MIPS150.mem_arch/fifo_rdf_data[78]} {MIPS150.mem_arch/fifo_rdf_data[79]} {MIPS150.mem_arch/fifo_rdf_data[80]} {MIPS150.mem_arch/fifo_rdf_data[81]} {MIPS150.mem_arch/fifo_rdf_data[82]} {MIPS150.mem_arch/fifo_rdf_data[83]} {MIPS150.mem_arch/fifo_rdf_data[84]} {MIPS150.mem_arch/fifo_rdf_data[85]} {MIPS150.mem_arch/fifo_rdf_data[86]} {MIPS150.mem_arch/fifo_rdf_data[87]} {MIPS150.mem_arch/fifo_rdf_data[88]} {MIPS150.mem_arch/fifo_rdf_data[89]} {MIPS150.mem_arch/fifo_rdf_data[90]} {MIPS150.mem_arch/fifo_rdf_data[91]} {MIPS150.mem_arch/fifo_rdf_data[92]} {MIPS150.mem_arch/fifo_rdf_data[93]} {MIPS150.mem_arch/fifo_rdf_data[94]} {MIPS150.mem_arch/fifo_rdf_data[95]} {MIPS150.mem_arch/fifo_rdf_data[96]} {MIPS150.mem_arch/fifo_rdf_data[97]} {MIPS150.mem_arch/fifo_rdf_data[98]} {MIPS150.mem_arch/fifo_rdf_data[99]} {MIPS150.mem_arch/fifo_rdf_data[100]} {MIPS150.mem_arch/fifo_rdf_data[101]} {MIPS150.mem_arch/fifo_rdf_data[102]} {MIPS150.mem_arch/fifo_rdf_data[103]} {MIPS150.mem_arch/fifo_rdf_data[104]} {MIPS150.mem_arch/fifo_rdf_data[105]} {MIPS150.mem_arch/fifo_rdf_data[106]} {MIPS150.mem_arch/fifo_rdf_data[107]} {MIPS150.mem_arch/fifo_rdf_data[108]} {MIPS150.mem_arch/fifo_rdf_data[109]} {MIPS150.mem_arch/fifo_rdf_data[110]} {MIPS150.mem_arch/fifo_rdf_data[111]} {MIPS150.mem_arch/fifo_rdf_data[112]} {MIPS150.mem_arch/fifo_rdf_data[113]} {MIPS150.mem_arch/fifo_rdf_data[114]} {MIPS150.mem_arch/fifo_rdf_data[115]} {MIPS150.mem_arch/fifo_rdf_data[116]} {MIPS150.mem_arch/fifo_rdf_data[117]} {MIPS150.mem_arch/fifo_rdf_data[118]} {MIPS150.mem_arch/fifo_rdf_data[119]} {MIPS150.mem_arch/fifo_rdf_data[120]} {MIPS150.mem_arch/fifo_rdf_data[121]} {MIPS150.mem_arch/fifo_rdf_data[122]} {MIPS150.mem_arch/fifo_rdf_data[123]} {MIPS150.mem_arch/fifo_rdf_data[124]} {MIPS150.mem_arch/fifo_rdf_data[125]} {MIPS150.mem_arch/fifo_rdf_data[126]} {MIPS150.mem_arch/fifo_rdf_data[127]}]]
-create_debug_port u_ila_1 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe2]
-set_property port_width 1 [get_debug_ports u_ila_1/probe2]
-connect_debug_port u_ila_1/probe2 [get_nets [list MIPS150.mem_arch/fifo_caf_rdy]]
-create_debug_port u_ila_1 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe3]
-set_property port_width 1 [get_debug_ports u_ila_1/probe3]
-connect_debug_port u_ila_1/probe3 [get_nets [list MIPS150.mem_arch/fifo_caf_wren]]
-create_debug_port u_ila_1 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe4]
-set_property port_width 1 [get_debug_ports u_ila_1/probe4]
-connect_debug_port u_ila_1/probe4 [get_nets [list MIPS150.mem_arch/fifo_rdf_wren]]
-create_debug_port u_ila_1 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe5]
-set_property port_width 1 [get_debug_ports u_ila_1/probe5]
-connect_debug_port u_ila_1/probe5 [get_nets [list MIPS150.mem_arch/fifo_wdf_rdy]]
-create_debug_port u_ila_1 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe6]
-set_property port_width 1 [get_debug_ports u_ila_1/probe6]
-connect_debug_port u_ila_1/probe6 [get_nets [list MIPS150.mem_arch/fifo_wdf_wren]]
-create_debug_port u_ila_1 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe7]
-set_property port_width 1 [get_debug_ports u_ila_1/probe7]
-connect_debug_port u_ila_1/probe7 [get_nets [list MIPS150.mem_arch/init_done]]
-create_debug_port u_ila_1 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe8]
-set_property port_width 1 [get_debug_ports u_ila_1/probe8]
-connect_debug_port u_ila_1/probe8 [get_nets [list MIPS150.mem_arch/rst_mig_ui]]
-create_debug_core u_ila_2 ila
-set_property ALL_PROBE_SAME_MU true [get_debug_cores u_ila_2]
-set_property ALL_PROBE_SAME_MU_CNT 2 [get_debug_cores u_ila_2]
-set_property C_ADV_TRIGGER false [get_debug_cores u_ila_2]
-set_property C_DATA_DEPTH 1024 [get_debug_cores u_ila_2]
-set_property C_EN_STRG_QUAL true [get_debug_cores u_ila_2]
-set_property C_INPUT_PIPE_STAGES 0 [get_debug_cores u_ila_2]
-set_property C_TRIGIN_EN false [get_debug_cores u_ila_2]
-set_property C_TRIGOUT_EN false [get_debug_cores u_ila_2]
-set_property port_width 1 [get_debug_ports u_ila_2/clk]
-connect_debug_port u_ila_2/clk [get_nets [list clk_in_100MHz_BUFG]]
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_2/probe0]
-set_property port_width 1 [get_debug_ports u_ila_2/probe0]
-connect_debug_port u_ila_2/probe0 [get_nets [list CK_RST_N_IBUF]]
-create_debug_port u_ila_2 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_2/probe1]
-set_property port_width 1 [get_debug_ports u_ila_2/probe1]
-connect_debug_port u_ila_2/probe1 [get_nets [list clean_rst_top/CK_RST_N_IBUF]]
-create_debug_port u_ila_2 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_2/probe2]
-set_property port_width 1 [get_debug_ports u_ila_2/probe2]
-connect_debug_port u_ila_2/probe2 [get_nets [list top_clocks/inst/locked]]
-create_debug_port u_ila_2 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_2/probe3]
-set_property port_width 1 [get_debug_ports u_ila_2/probe3]
-connect_debug_port u_ila_2/probe3 [get_nets [list top_clocks/locked]]
-create_debug_port u_ila_2 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_2/probe4]
-set_property port_width 1 [get_debug_ports u_ila_2/probe4]
-connect_debug_port u_ila_2/probe4 [get_nets [list locked_top_clocks]]
-create_debug_port u_ila_2 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_2/probe5]
-set_property port_width 1 [get_debug_ports u_ila_2/probe5]
-connect_debug_port u_ila_2/probe5 [get_nets [list {clean_rst_top/genblk1[0].DbounceIt/out}]]
-create_debug_port u_ila_2 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_2/probe6]
-set_property port_width 1 [get_debug_ports u_ila_2/probe6]
-connect_debug_port u_ila_2/probe6 [get_nets [list clean_rst_top/reset]]
-create_debug_port u_ila_2 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_2/probe7]
-set_property port_width 1 [get_debug_ports u_ila_2/probe7]
-connect_debug_port u_ila_2/probe7 [get_nets [list top_clocks/reset]]
-create_debug_port u_ila_2 probe
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_2/probe8]
-set_property port_width 1 [get_debug_ports u_ila_2/probe8]
-connect_debug_port u_ila_2/probe8 [get_nets [list reset_top_clocks]]
-create_debug_core u_ila_3 ila
-set_property ALL_PROBE_SAME_MU true [get_debug_cores u_ila_3]
-set_property ALL_PROBE_SAME_MU_CNT 2 [get_debug_cores u_ila_3]
-set_property C_ADV_TRIGGER false [get_debug_cores u_ila_3]
-set_property C_DATA_DEPTH 1024 [get_debug_cores u_ila_3]
-set_property C_EN_STRG_QUAL true [get_debug_cores u_ila_3]
-set_property C_INPUT_PIPE_STAGES 0 [get_debug_cores u_ila_3]
-set_property C_TRIGIN_EN false [get_debug_cores u_ila_3]
-set_property C_TRIGOUT_EN false [get_debug_cores u_ila_3]
-set_property port_width 1 [get_debug_ports u_ila_3/clk]
-connect_debug_port u_ila_3/clk [get_nets [list top_clocks/inst/clkfbout_buf_clk_wiz_0]]
-set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_3/probe0]
-set_property port_width 1 [get_debug_ports u_ila_3/probe0]
-connect_debug_port u_ila_3/probe0 [get_nets [list MIPS150.mem_arch/locked]]
-set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
-set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
-set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]
-#connect_debug_port dbg_hub/clk [get_nets u_ila_3_clkfbout_buf_clk_wiz_0]
-connect_debug_port dbg_hub/clk [get_nets clk_in_100MHz_BUFG]

@@ -1,0 +1,814 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="sim_tb_top_behav.wdb" id="1">
+         <top_modules>
+            <top_module name="glbl" />
+            <top_module name="sim_tb_top" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="146546883000fs"></ZoomStartTime>
+      <ZoomEndTime time="146683083001fs"></ZoomEndTime>
+      <Cursor1Time time="146660383000fs"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="190"></NameColumnWidth>
+      <ValueColumnWidth column_width="154"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="24" />
+   <wvobject type="logic" fp_name="/sim_tb_top/CLK_100MHz">
+      <obj_property name="ElementShortName">CLK_100MHz</obj_property>
+      <obj_property name="ObjectShortName">CLK_100MHz</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/sim_tb_top/DUT/clk_pix">
+      <obj_property name="ElementShortName">clk_pix</obj_property>
+      <obj_property name="ObjectShortName">clk_pix</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/sim_tb_top/DUT/top_clocks/clk_mig_100MHz">
+      <obj_property name="ElementShortName">clk_mig_100MHz</obj_property>
+      <obj_property name="ObjectShortName">clk_mig_100MHz</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/sim_tb_top/DUT/top_clocks/clk_cpu_50MHz">
+      <obj_property name="ElementShortName">clk_cpu_50MHz</obj_property>
+      <obj_property name="ObjectShortName">clk_cpu_50MHz</obj_property>
+   </wvobject>
+   <wvobject type="group" fp_name="group285">
+      <obj_property name="label">RST</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/CK_RST_N">
+         <obj_property name="ElementShortName">CK_RST_N</obj_property>
+         <obj_property name="ObjectShortName">CK_RST_N</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/reset_top_clocks">
+         <obj_property name="ElementShortName">reset_top_clocks</obj_property>
+         <obj_property name="ObjectShortName">reset_top_clocks</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/locked_top_clocks">
+         <obj_property name="ElementShortName">locked_top_clocks</obj_property>
+         <obj_property name="ObjectShortName">locked_top_clocks</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/rst_cpu">
+         <obj_property name="ElementShortName">rst_cpu</obj_property>
+         <obj_property name="ObjectShortName">rst_cpu</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/rst_pix">
+         <obj_property name="ElementShortName">rst_pix</obj_property>
+         <obj_property name="ObjectShortName">rst_pix</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/rst_mig_sys_n">
+         <obj_property name="ElementShortName">rst_mig_sys_n</obj_property>
+         <obj_property name="ObjectShortName">rst_mig_sys_n</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/ddr3_reset_n">
+         <obj_property name="ElementShortName">ddr3_reset_n</obj_property>
+         <obj_property name="ObjectShortName">ddr3_reset_n</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/init_calib_complete">
+         <obj_property name="ElementShortName">init_calib_complete</obj_property>
+         <obj_property name="ObjectShortName">init_calib_complete</obj_property>
+         <obj_property name="CustomSignalColor">#FF0080</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group133">
+      <obj_property name="label">GPIO</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="array" fp_name="/sim_tb_top/SWITCH">
+         <obj_property name="ElementShortName">SWITCH[1:0]</obj_property>
+         <obj_property name="ObjectShortName">SWITCH[1:0]</obj_property>
+         <obj_property name="Radix">BINARYRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/BUTTON">
+         <obj_property name="ElementShortName">BUTTON[3:0]</obj_property>
+         <obj_property name="ObjectShortName">BUTTON[3:0]</obj_property>
+         <obj_property name="Radix">BINARYRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/LED">
+         <obj_property name="ElementShortName">LED[3:0]</obj_property>
+         <obj_property name="ObjectShortName">LED[3:0]</obj_property>
+         <obj_property name="Radix">BINARYRADIX</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/led0_b">
+         <obj_property name="ElementShortName">led0_b</obj_property>
+         <obj_property name="ObjectShortName">led0_b</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/led1_g">
+         <obj_property name="ElementShortName">led1_g</obj_property>
+         <obj_property name="ObjectShortName">led1_g</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/led2_r">
+         <obj_property name="ElementShortName">led2_r</obj_property>
+         <obj_property name="ObjectShortName">led2_r</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/led3_b">
+         <obj_property name="ElementShortName">led3_b</obj_property>
+         <obj_property name="ObjectShortName">led3_b</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group132">
+      <obj_property name="label">PARAMETERS</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="array" fp_name="/sim_tb_top/COL_WIDTH">
+         <obj_property name="ElementShortName">COL_WIDTH[31:0]</obj_property>
+         <obj_property name="ObjectShortName">COL_WIDTH[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DRAM_WIDTH">
+         <obj_property name="ElementShortName">DRAM_WIDTH[31:0]</obj_property>
+         <obj_property name="ObjectShortName">DRAM_WIDTH[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/ROW_WIDTH">
+         <obj_property name="ElementShortName">ROW_WIDTH[31:0]</obj_property>
+         <obj_property name="ObjectShortName">ROW_WIDTH[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/ADDR_WIDTH">
+         <obj_property name="ElementShortName">ADDR_WIDTH[31:0]</obj_property>
+         <obj_property name="ObjectShortName">ADDR_WIDTH[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/CLKIN_PERIOD">
+         <obj_property name="ElementShortName">CLKIN_PERIOD[31:0]</obj_property>
+         <obj_property name="ObjectShortName">CLKIN_PERIOD[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="other" fp_name="/sim_tb_top/REFCLK_FREQ">
+         <obj_property name="ElementShortName">REFCLK_FREQ</obj_property>
+         <obj_property name="ObjectShortName">REFCLK_FREQ</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/tCK">
+         <obj_property name="ElementShortName">tCK[31:0]</obj_property>
+         <obj_property name="ObjectShortName">tCK[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/nCK_PER_CLK">
+         <obj_property name="ElementShortName">nCK_PER_CLK[31:0]</obj_property>
+         <obj_property name="ObjectShortName">nCK_PER_CLK[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/MEMORY_WIDTH">
+         <obj_property name="ElementShortName">MEMORY_WIDTH[31:0]</obj_property>
+         <obj_property name="ObjectShortName">MEMORY_WIDTH[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="other" fp_name="/sim_tb_top/REFCLK_PERIOD">
+         <obj_property name="ElementShortName">REFCLK_PERIOD</obj_property>
+         <obj_property name="ObjectShortName">REFCLK_PERIOD</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/RESET_PERIOD">
+         <obj_property name="ElementShortName">RESET_PERIOD[31:0]</obj_property>
+         <obj_property name="ObjectShortName">RESET_PERIOD[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="other" fp_name="/sim_tb_top/SYSCLK_PERIOD">
+         <obj_property name="ElementShortName">SYSCLK_PERIOD</obj_property>
+         <obj_property name="ObjectShortName">SYSCLK_PERIOD</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MIPS.core /PC_BOOT">
+         <obj_property name="ElementShortName">PC_BOOT[31:0]</obj_property>
+         <obj_property name="ObjectShortName">PC_BOOT[31:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group134">
+      <obj_property name="label">COMMS</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/FPGA_SERIAL_RX">
+         <obj_property name="ElementShortName">FPGA_SERIAL_RX</obj_property>
+         <obj_property name="ObjectShortName">FPGA_SERIAL_RX</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/FPGA_SERIAL_TX">
+         <obj_property name="ElementShortName">FPGA_SERIAL_TX</obj_property>
+         <obj_property name="ObjectShortName">FPGA_SERIAL_TX</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/VGA_HS_O">
+         <obj_property name="ElementShortName">VGA_HS_O</obj_property>
+         <obj_property name="ObjectShortName">VGA_HS_O</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/VGA_VS_O">
+         <obj_property name="ElementShortName">VGA_VS_O</obj_property>
+         <obj_property name="ObjectShortName">VGA_VS_O</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/VGA_R">
+         <obj_property name="ElementShortName">VGA_R[3:0]</obj_property>
+         <obj_property name="ObjectShortName">VGA_R[3:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/VGA_G">
+         <obj_property name="ElementShortName">VGA_G[3:0]</obj_property>
+         <obj_property name="ObjectShortName">VGA_G[3:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/VGA_B">
+         <obj_property name="ElementShortName">VGA_B[3:0]</obj_property>
+         <obj_property name="ObjectShortName">VGA_B[3:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /DBG_dcache">
+      <obj_property name="ElementShortName">DBG_dcache[3:0]</obj_property>
+      <obj_property name="ObjectShortName">DBG_dcache[3:0]</obj_property>
+      <obj_property name="Radix">BINARYRADIX</obj_property>
+   </wvobject>
+   <wvobject type="group" fp_name="group188">
+      <obj_property name="label">DCACHE</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/current_state">
+         <obj_property name="ElementShortName">current_state[2:0]</obj_property>
+         <obj_property name="ObjectShortName">current_state[2:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/next_state">
+         <obj_property name="ElementShortName">next_state[2:0]</obj_property>
+         <obj_property name="ObjectShortName">next_state[2:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/stall">
+         <obj_property name="ElementShortName">stall</obj_property>
+         <obj_property name="ObjectShortName">stall</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/f_cmd">
+         <obj_property name="ElementShortName">f_cmd[2:0]</obj_property>
+         <obj_property name="ObjectShortName">f_cmd[2:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/f_addr_base">
+         <obj_property name="ElementShortName">f_addr_base[27:0]</obj_property>
+         <obj_property name="ObjectShortName">f_addr_base[27:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/f_addr">
+         <obj_property name="ElementShortName">f_addr[27:0]</obj_property>
+         <obj_property name="ObjectShortName">f_addr[27:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/isSecond">
+         <obj_property name="ElementShortName">isSecond</obj_property>
+         <obj_property name="ObjectShortName">isSecond</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/f_data">
+         <obj_property name="ElementShortName">f_data[127:0]</obj_property>
+         <obj_property name="ObjectShortName">f_data[127:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/f_mask">
+         <obj_property name="ElementShortName">f_mask[15:0]</obj_property>
+         <obj_property name="ObjectShortName">f_mask[15:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/tag_hit">
+         <obj_property name="ElementShortName">tag_hit</obj_property>
+         <obj_property name="ObjectShortName">tag_hit</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/tag_valid">
+         <obj_property name="ElementShortName">tag_valid</obj_property>
+         <obj_property name="ObjectShortName">tag_valid</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/tag_equal">
+         <obj_property name="ElementShortName">tag_equal</obj_property>
+         <obj_property name="ObjectShortName">tag_equal</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/write_hit_hold">
+         <obj_property name="ElementShortName">write_hit_hold</obj_property>
+         <obj_property name="ObjectShortName">write_hit_hold</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/read_miss">
+         <obj_property name="ElementShortName">read_miss</obj_property>
+         <obj_property name="ObjectShortName">read_miss</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/isWriting">
+         <obj_property name="ElementShortName">isWriting</obj_property>
+         <obj_property name="ObjectShortName">isWriting</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/isFetching">
+         <obj_property name="ElementShortName">isFetching</obj_property>
+         <obj_property name="ObjectShortName">isFetching</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/isReading">
+         <obj_property name="ElementShortName">isReading</obj_property>
+         <obj_property name="ObjectShortName">isReading</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/addr_hold">
+         <obj_property name="ElementShortName">addr_hold[31:0]</obj_property>
+         <obj_property name="ObjectShortName">addr_hold[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/re">
+         <obj_property name="ElementShortName">re</obj_property>
+         <obj_property name="ObjectShortName">re</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/re_hold">
+         <obj_property name="ElementShortName">re_hold</obj_property>
+         <obj_property name="ObjectShortName">re_hold</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/we">
+         <obj_property name="ElementShortName">we[3:0]</obj_property>
+         <obj_property name="ObjectShortName">we[3:0]</obj_property>
+         <obj_property name="Radix">BINARYRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/we_hold">
+         <obj_property name="ElementShortName">we_hold[3:0]</obj_property>
+         <obj_property name="ObjectShortName">we_hold[3:0]</obj_property>
+         <obj_property name="Radix">BINARYRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/din">
+         <obj_property name="ElementShortName">din[31:0]</obj_property>
+         <obj_property name="ObjectShortName">din[31:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/din_hold">
+         <obj_property name="ElementShortName">din_hold[31:0]</obj_property>
+         <obj_property name="ObjectShortName">din_hold[31:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/we_mask_hold">
+         <obj_property name="ElementShortName">we_mask_hold[31:0]</obj_property>
+         <obj_property name="ObjectShortName">we_mask_hold[31:0]</obj_property>
+         <obj_property name="Radix">BINARYRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group766">
+      <obj_property name="label">CACHE_DATA</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_data/clka">
+         <obj_property name="ElementShortName">clka</obj_property>
+         <obj_property name="ObjectShortName">clka</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_data/ena">
+         <obj_property name="ElementShortName">ena</obj_property>
+         <obj_property name="ObjectShortName">ena</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_data/wea">
+         <obj_property name="ElementShortName">wea[31:0]</obj_property>
+         <obj_property name="ObjectShortName">wea[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_data/addra">
+         <obj_property name="ElementShortName">addra[7:0]</obj_property>
+         <obj_property name="ObjectShortName">addra[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_data/dina">
+         <obj_property name="ElementShortName">dina[255:0]</obj_property>
+         <obj_property name="ObjectShortName">dina[255:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_data/clkb">
+         <obj_property name="ElementShortName">clkb</obj_property>
+         <obj_property name="ObjectShortName">clkb</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_data/rstb">
+         <obj_property name="ElementShortName">rstb</obj_property>
+         <obj_property name="ObjectShortName">rstb</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_data/enb">
+         <obj_property name="ElementShortName">enb</obj_property>
+         <obj_property name="ObjectShortName">enb</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_data/addrb">
+         <obj_property name="ElementShortName">addrb[7:0]</obj_property>
+         <obj_property name="ObjectShortName">addrb[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_data/doutb">
+         <obj_property name="ElementShortName">doutb[255:0]</obj_property>
+         <obj_property name="ObjectShortName">doutb[255:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group767">
+      <obj_property name="label">CACHE_TAG</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_tag/clka">
+         <obj_property name="ElementShortName">clka</obj_property>
+         <obj_property name="ObjectShortName">clka</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_tag/ena">
+         <obj_property name="ElementShortName">ena</obj_property>
+         <obj_property name="ObjectShortName">ena</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_tag/wea">
+         <obj_property name="ElementShortName">wea[0:0]</obj_property>
+         <obj_property name="ObjectShortName">wea[0:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_tag/addra">
+         <obj_property name="ElementShortName">addra[7:0]</obj_property>
+         <obj_property name="ObjectShortName">addra[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_tag/dina">
+         <obj_property name="ElementShortName">dina[20:0]</obj_property>
+         <obj_property name="ObjectShortName">dina[20:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_tag/clkb">
+         <obj_property name="ElementShortName">clkb</obj_property>
+         <obj_property name="ObjectShortName">clkb</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_tag/rstb">
+         <obj_property name="ElementShortName">rstb</obj_property>
+         <obj_property name="ObjectShortName">rstb</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_tag/enb">
+         <obj_property name="ElementShortName">enb</obj_property>
+         <obj_property name="ObjectShortName">enb</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_tag/addrb">
+         <obj_property name="ElementShortName">addrb[7:0]</obj_property>
+         <obj_property name="ObjectShortName">addrb[7:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache/cache_tag/doutb">
+         <obj_property name="ElementShortName">doutb[20:0]</obj_property>
+         <obj_property name="ObjectShortName">doutb[20:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group243">
+      <obj_property name="label">MemoryDDR</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache_addr">
+         <obj_property name="ElementShortName">dcache_addr[31:0]</obj_property>
+         <obj_property name="ObjectShortName">dcache_addr[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache_we">
+         <obj_property name="ElementShortName">dcache_we[3:0]</obj_property>
+         <obj_property name="ObjectShortName">dcache_we[3:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache_re">
+         <obj_property name="ElementShortName">dcache_re</obj_property>
+         <obj_property name="ObjectShortName">dcache_re</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache_din">
+         <obj_property name="ElementShortName">dcache_din[31:0]</obj_property>
+         <obj_property name="ObjectShortName">dcache_din[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /dcache_dout">
+         <obj_property name="ElementShortName">dcache_dout[31:0]</obj_property>
+         <obj_property name="ObjectShortName">dcache_dout[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /DBG_dcache">
+         <obj_property name="ElementShortName">DBG_dcache[3:0]</obj_property>
+         <obj_property name="ObjectShortName">DBG_dcache[3:0]</obj_property>
+         <obj_property name="Radix">BINARYRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group247">
+      <obj_property name="label">MemMapIO</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /memmap/CNT_Cycle">
+         <obj_property name="ElementShortName">CNT_Cycle[31:0]</obj_property>
+         <obj_property name="ObjectShortName">CNT_Cycle[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /memmap/CNT_Inst">
+         <obj_property name="ElementShortName">CNT_Inst[31:0]</obj_property>
+         <obj_property name="ObjectShortName">CNT_Inst[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /memmap/rst_CNT">
+         <obj_property name="ElementShortName">rst_CNT</obj_property>
+         <obj_property name="ObjectShortName">rst_CNT</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /memmap/addra">
+         <obj_property name="ElementShortName">addra[11:0]</obj_property>
+         <obj_property name="ObjectShortName">addra[11:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /memmap/wea">
+         <obj_property name="ElementShortName">wea[3:0]</obj_property>
+         <obj_property name="ObjectShortName">wea[3:0]</obj_property>
+         <obj_property name="Radix">BINARYRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /memmap/dina">
+         <obj_property name="ElementShortName">dina[31:0]</obj_property>
+         <obj_property name="ObjectShortName">dina[31:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /memmap/douta">
+         <obj_property name="ElementShortName">douta[31:0]</obj_property>
+         <obj_property name="ObjectShortName">douta[31:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /memmap/isWrite">
+         <obj_property name="ElementShortName">isWrite</obj_property>
+         <obj_property name="ObjectShortName">isWrite</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /memmap/isRead">
+         <obj_property name="ElementShortName">isRead</obj_property>
+         <obj_property name="ObjectShortName">isRead</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /memmap/HOT_ADDR">
+         <obj_property name="ElementShortName">HOT_ADDR[9:0]</obj_property>
+         <obj_property name="ObjectShortName">HOT_ADDR[9:0]</obj_property>
+         <obj_property name="Radix">BINARYRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group255">
+      <obj_property name="label">CPUMIPS</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MIPS.core /stall">
+         <obj_property name="ElementShortName">stall</obj_property>
+         <obj_property name="ObjectShortName">stall</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MIPS.core /IMEM_ADDR">
+         <obj_property name="ElementShortName">IMEM_ADDR[31:0]</obj_property>
+         <obj_property name="ObjectShortName">IMEM_ADDR[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MIPS.core /IMEM_DATA">
+         <obj_property name="ElementShortName">IMEM_DATA[31:0]</obj_property>
+         <obj_property name="ObjectShortName">IMEM_DATA[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MIPS.core /DMEM_ADDR">
+         <obj_property name="ElementShortName">DMEM_ADDR[31:0]</obj_property>
+         <obj_property name="ObjectShortName">DMEM_ADDR[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MIPS.core /DMEM_DATA">
+         <obj_property name="ElementShortName">DMEM_DATA[31:0]</obj_property>
+         <obj_property name="ObjectShortName">DMEM_DATA[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MIPS.core /CNT_Stall">
+         <obj_property name="ElementShortName">CNT_Stall[31:0]</obj_property>
+         <obj_property name="ObjectShortName">CNT_Stall[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MIPS.core /CNT_Inst">
+         <obj_property name="ElementShortName">CNT_Inst[31:0]</obj_property>
+         <obj_property name="ObjectShortName">CNT_Inst[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MIPS.core /CNT_Cycle">
+         <obj_property name="ElementShortName">CNT_Cycle[31:0]</obj_property>
+         <obj_property name="ObjectShortName">CNT_Cycle[31:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /DMEM_ADDR">
+         <obj_property name="ElementShortName">DMEM_ADDR[31:0]</obj_property>
+         <obj_property name="ObjectShortName">DMEM_ADDR[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /DMEM_DATA">
+         <obj_property name="ElementShortName">DMEM_DATA[31:0]</obj_property>
+         <obj_property name="ObjectShortName">DMEM_DATA[31:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group275">
+      <obj_property name="label">MEMBANK</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /stall">
+         <obj_property name="ElementShortName">stall</obj_property>
+         <obj_property name="ObjectShortName">stall</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /DMEM_ADDR">
+         <obj_property name="ElementShortName">DMEM_ADDR[31:0]</obj_property>
+         <obj_property name="ObjectShortName">DMEM_ADDR[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /DMEM_DATA">
+         <obj_property name="ElementShortName">DMEM_DATA[31:0]</obj_property>
+         <obj_property name="ObjectShortName">DMEM_DATA[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /dcache_addr">
+         <obj_property name="ElementShortName">dcache_addr[31:0]</obj_property>
+         <obj_property name="ObjectShortName">dcache_addr[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /dcache_we">
+         <obj_property name="ElementShortName">dcache_we[3:0]</obj_property>
+         <obj_property name="ObjectShortName">dcache_we[3:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /dcache_re">
+         <obj_property name="ElementShortName">dcache_re</obj_property>
+         <obj_property name="ObjectShortName">dcache_re</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /dcache_din">
+         <obj_property name="ElementShortName">dcache_din[31:0]</obj_property>
+         <obj_property name="ObjectShortName">dcache_din[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /dcache_dout">
+         <obj_property name="ElementShortName">dcache_dout[31:0]</obj_property>
+         <obj_property name="ObjectShortName">dcache_dout[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /_hot_DC">
+         <obj_property name="ElementShortName">_hot_DC</obj_property>
+         <obj_property name="ObjectShortName">_hot_DC</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.CPU /\MEMS.bank /MUX_DMEM">
+         <obj_property name="ElementShortName">MUX_DMEM[31:0]</obj_property>
+         <obj_property name="ObjectShortName">MUX_DMEM[31:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group268">
+      <obj_property name="label">FIFO_CAF</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/rst">
+         <obj_property name="ElementShortName">rst</obj_property>
+         <obj_property name="ObjectShortName">rst</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/wr_clk">
+         <obj_property name="ElementShortName">wr_clk</obj_property>
+         <obj_property name="ObjectShortName">wr_clk</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/wr_en">
+         <obj_property name="ElementShortName">wr_en</obj_property>
+         <obj_property name="ObjectShortName">wr_en</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/full">
+         <obj_property name="ElementShortName">full</obj_property>
+         <obj_property name="ObjectShortName">full</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/din">
+         <obj_property name="ElementShortName">din[30:0]</obj_property>
+         <obj_property name="ObjectShortName">din[30:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/wr_ack">
+         <obj_property name="ElementShortName">wr_ack</obj_property>
+         <obj_property name="ObjectShortName">wr_ack</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/rd_clk">
+         <obj_property name="ElementShortName">rd_clk</obj_property>
+         <obj_property name="ObjectShortName">rd_clk</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/rd_en">
+         <obj_property name="ElementShortName">rd_en</obj_property>
+         <obj_property name="ObjectShortName">rd_en</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/valid">
+         <obj_property name="ElementShortName">valid</obj_property>
+         <obj_property name="ObjectShortName">valid</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/dout">
+         <obj_property name="ElementShortName">dout[30:0]</obj_property>
+         <obj_property name="ObjectShortName">dout[30:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/underflow">
+         <obj_property name="ElementShortName">underflow</obj_property>
+         <obj_property name="ObjectShortName">underflow</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/empty">
+         <obj_property name="ElementShortName">empty</obj_property>
+         <obj_property name="ObjectShortName">empty</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group279">
+      <obj_property name="label">FIFO_WDF</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/rst">
+         <obj_property name="ElementShortName">rst</obj_property>
+         <obj_property name="ObjectShortName">rst</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/wr_clk">
+         <obj_property name="ElementShortName">wr_clk</obj_property>
+         <obj_property name="ObjectShortName">wr_clk</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/wr_en">
+         <obj_property name="ElementShortName">wr_en</obj_property>
+         <obj_property name="ObjectShortName">wr_en</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/full">
+         <obj_property name="ElementShortName">full</obj_property>
+         <obj_property name="ObjectShortName">full</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/din">
+         <obj_property name="ElementShortName">din[143:0]</obj_property>
+         <obj_property name="ObjectShortName">din[143:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/wr_ack">
+         <obj_property name="ElementShortName">wr_ack</obj_property>
+         <obj_property name="ObjectShortName">wr_ack</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/rd_clk">
+         <obj_property name="ElementShortName">rd_clk</obj_property>
+         <obj_property name="ObjectShortName">rd_clk</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/rd_en">
+         <obj_property name="ElementShortName">rd_en</obj_property>
+         <obj_property name="ObjectShortName">rd_en</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/valid">
+         <obj_property name="ElementShortName">valid</obj_property>
+         <obj_property name="ObjectShortName">valid</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/dout">
+         <obj_property name="ElementShortName">dout[143:0]</obj_property>
+         <obj_property name="ObjectShortName">dout[143:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/underflow">
+         <obj_property name="ElementShortName">underflow</obj_property>
+         <obj_property name="ObjectShortName">underflow</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_mdat_fifo/empty">
+         <obj_property name="ElementShortName">empty</obj_property>
+         <obj_property name="ObjectShortName">empty</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group124">
+      <obj_property name="label">FIFO_RDF</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/rst">
+         <obj_property name="ElementShortName">rst</obj_property>
+         <obj_property name="ObjectShortName">rst</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/wr_clk">
+         <obj_property name="ElementShortName">wr_clk</obj_property>
+         <obj_property name="ObjectShortName">wr_clk</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/wr_en">
+         <obj_property name="ElementShortName">wr_en</obj_property>
+         <obj_property name="ObjectShortName">wr_en</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/full">
+         <obj_property name="ElementShortName">full</obj_property>
+         <obj_property name="ObjectShortName">full</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/din">
+         <obj_property name="ElementShortName">din[127:0]</obj_property>
+         <obj_property name="ObjectShortName">din[127:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/wr_ack">
+         <obj_property name="ElementShortName">wr_ack</obj_property>
+         <obj_property name="ObjectShortName">wr_ack</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/rd_clk">
+         <obj_property name="ElementShortName">rd_clk</obj_property>
+         <obj_property name="ObjectShortName">rd_clk</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/rd_en">
+         <obj_property name="ElementShortName">rd_en</obj_property>
+         <obj_property name="ObjectShortName">rd_en</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/valid">
+         <obj_property name="ElementShortName">valid</obj_property>
+         <obj_property name="ObjectShortName">valid</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/dout">
+         <obj_property name="ElementShortName">dout[127:0]</obj_property>
+         <obj_property name="ObjectShortName">dout[127:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/underflow">
+         <obj_property name="ElementShortName">underflow</obj_property>
+         <obj_property name="ObjectShortName">underflow</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/empty">
+         <obj_property name="ElementShortName">empty</obj_property>
+         <obj_property name="ObjectShortName">empty</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group116">
+      <obj_property name="label">MIG</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rdy">
+         <obj_property name="ElementShortName">app_rdy</obj_property>
+         <obj_property name="ObjectShortName">app_rdy</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rd_data_valid">
+         <obj_property name="ElementShortName">app_rd_data_valid</obj_property>
+         <obj_property name="ObjectShortName">app_rd_data_valid</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rd_data">
+         <obj_property name="ElementShortName">app_rd_data[127:0]</obj_property>
+         <obj_property name="ObjectShortName">app_rd_data[127:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rd_data_end">
+         <obj_property name="ElementShortName">app_rd_data_end</obj_property>
+         <obj_property name="ObjectShortName">app_rd_data_end</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_addr">
+         <obj_property name="ElementShortName">app_addr[27:0]</obj_property>
+         <obj_property name="ObjectShortName">app_addr[27:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_cmd">
+         <obj_property name="ElementShortName">app_cmd[2:0]</obj_property>
+         <obj_property name="ObjectShortName">app_cmd[2:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_en">
+         <obj_property name="ElementShortName">app_en</obj_property>
+         <obj_property name="ObjectShortName">app_en</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_wdf_rdy">
+         <obj_property name="ElementShortName">app_wdf_rdy</obj_property>
+         <obj_property name="ObjectShortName">app_wdf_rdy</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_wdf_wren">
+         <obj_property name="ElementShortName">app_wdf_wren</obj_property>
+         <obj_property name="ObjectShortName">app_wdf_wren</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/ui_clk">
+         <obj_property name="ElementShortName">ui_clk</obj_property>
+         <obj_property name="ObjectShortName">ui_clk</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/ui_clk_sync_rst">
+         <obj_property name="ElementShortName">ui_clk_sync_rst</obj_property>
+         <obj_property name="ObjectShortName">ui_clk_sync_rst</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/init_calib_complete">
+         <obj_property name="ElementShortName">init_calib_complete</obj_property>
+         <obj_property name="ObjectShortName">init_calib_complete</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="logic" fp_name="/sim_tb_top/DUT/top_clocks/clk_cpu_50MHz">
+      <obj_property name="ElementShortName">clk_cpu_50MHz</obj_property>
+      <obj_property name="ObjectShortName">clk_cpu_50MHz</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/sim_tb_top/DUT/top_clocks/clk_mig_100MHz">
+      <obj_property name="ElementShortName">clk_mig_100MHz</obj_property>
+      <obj_property name="ObjectShortName">clk_mig_100MHz</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/sim_tb_top/DUT/clk_pix">
+      <obj_property name="ElementShortName">clk_pix</obj_property>
+      <obj_property name="ObjectShortName">clk_pix</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/sim_tb_top/CLK_100MHz">
+      <obj_property name="ElementShortName">CLK_100MHz</obj_property>
+      <obj_property name="ObjectShortName">CLK_100MHz</obj_property>
+   </wvobject>
+</wave_config>

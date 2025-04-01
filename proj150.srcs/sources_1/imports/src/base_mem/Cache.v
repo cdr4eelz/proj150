@@ -35,23 +35,24 @@ module Cache #(
     input [31:0]    din,
     input [3:0]     we,
     input           re,
-    //DDR-FIFO inputs:
+//DDR-FIFO inputs:
     input           caf_full,
     input           wdf_full,
     input           rdf_wren,
     input [127:0]   rdf_data,
-
-    output          stall,
-    output [31:0]   dout,
+//DDR-FIFO outputs:
     output          rdf_rden,
     output [30:0]   caf_cadr, //{cmd-3,addr-28}  WAS: [33:0]
     output          caf_wren,
     output [143:0]  wdf_mdat, //{mask-16,data-128}
     output          wdf_wren,
-
-    // Needed for set-associative cache
+// Control/Result signals:
+    output          stall,
+    output [31:0]   dout,
+// Needed for set-associative cache
     output          tag_hit,
     output          tag_valid,
+// Debug state machine current-state:
     output [2:0]    DBG_cache_cs
 );
 
@@ -166,17 +167,26 @@ module Cache #(
         else
             current_state <= next_state;
 
-        if(next_state == IDLE) begin
+        if(rst) begin
+            addr_hold <= 32'h_0000_0000;
+            re_hold   <= 1'b0;
+            we_hold   <= 4'b_0000;
+            din_hold  <= 32'h_0000_0000;
+        end else if((next_state == IDLE)) begin //&& (|we || (re == 1'b1))) begin
             addr_hold <= addr;
             re_hold   <= re;
             we_hold   <= we;
             din_hold  <= din;
         end
 
-        if(current_state == READ1)
+        if(rst)
+            first_read = 128'd0;
+        else if(current_state == READ1)
             first_read <= rdf_data;
 
-        if(current_state == IDLE)
+        if(rst)
+            active_data_line = 256'd0;
+        else if(current_state == IDLE)
             active_data_line <= data_line_out;
         else if(next_state == CWRITEB)
             active_data_line <= {first_read, rdf_data};
@@ -190,10 +200,10 @@ module Cache #(
                                     : ((read_miss) ? FETCH1  : IDLE );
             WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
             WRITE2 : next_state = (!wdf_full && !caf_full) ? IDLE    : WRITE2; // WAS: "!wdf_full" only
-            FETCH1 : next_state = (             !caf_full) ? FETCH2  : FETCH1;
-            FETCH2 : next_state = (             !caf_full) ? READ1   : FETCH2;
-            READ1  : next_state = (       rdf_wren       ) ? READ2   : READ1;
-            READ2  : next_state = (       rdf_wren       ) ? CWRITEB : READ2;
+            FETCH1 : next_state = (             !caf_full) ? READ1   : FETCH1;
+            READ1  : next_state = ( rdf_rden && rdf_wren ) ? FETCH2  : READ1;
+            FETCH2 : next_state = (             !caf_full) ? READ2   : FETCH2;
+            READ2  : next_state = ( rdf_rden && rdf_wren ) ? CWRITEB : READ2;
             CWRITEB: next_state = IDLE;
             default: next_state = IDLE;
         endcase
@@ -202,7 +212,9 @@ module Cache #(
     wire    isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
     wire    isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
     wire    isReading   = (current_state == READ1 ) || (current_state == READ2 );
-    wire    isSecond    = (current_state == WRITE2) || (current_state == FETCH2);
+    wire    isSecond    = (current_state == WRITE2)
+                            || (current_state == FETCH2)
+                            || (current_state == READ2);
 
     // FIFO output partial values:
     wire [  2:0]  f_cmd;
