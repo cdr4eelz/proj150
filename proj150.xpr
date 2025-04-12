@@ -35,20 +35,20 @@
     <Option Name="DSAVendor" Val="xilinx"/>
     <Option Name="DSABoardId" Val="arty-a7-100"/>
     <Option Name="DSANumComputeUnits" Val="60"/>
-    <Option Name="WTXSimLaunchSim" Val="72"/>
+    <Option Name="WTXSimLaunchSim" Val="76"/>
     <Option Name="WTModelSimLaunchSim" Val="0"/>
     <Option Name="WTQuestaLaunchSim" Val="0"/>
     <Option Name="WTIesLaunchSim" Val="0"/>
     <Option Name="WTVcsLaunchSim" Val="0"/>
     <Option Name="WTRivieraLaunchSim" Val="0"/>
     <Option Name="WTActivehdlLaunchSim" Val="0"/>
-    <Option Name="WTXSimExportSim" Val="56"/>
-    <Option Name="WTModelSimExportSim" Val="53"/>
-    <Option Name="WTQuestaExportSim" Val="53"/>
-    <Option Name="WTIesExportSim" Val="53"/>
-    <Option Name="WTVcsExportSim" Val="53"/>
-    <Option Name="WTRivieraExportSim" Val="53"/>
-    <Option Name="WTActivehdlExportSim" Val="53"/>
+    <Option Name="WTXSimExportSim" Val="58"/>
+    <Option Name="WTModelSimExportSim" Val="55"/>
+    <Option Name="WTQuestaExportSim" Val="55"/>
+    <Option Name="WTIesExportSim" Val="55"/>
+    <Option Name="WTVcsExportSim" Val="55"/>
+    <Option Name="WTRivieraExportSim" Val="55"/>
+    <Option Name="WTActivehdlExportSim" Val="55"/>
     <Option Name="GenerateIPUpgradeLog" Val="TRUE"/>
     <Option Name="XSimRadix" Val="hex"/>
     <Option Name="XSimTimeUnit" Val="ns"/>
@@ -694,6 +694,14 @@
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/imports/echo_i/echo_i.inst.coe">
+        <FileInfo>
+          <Attr Name="ImportPath" Val="$PPRDIR/../cs150/software/echo_i/echo_i.inst.coe"/>
+          <Attr Name="ImportTime" Val="1743377864"/>
+          <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>

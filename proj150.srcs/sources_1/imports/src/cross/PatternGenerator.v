@@ -1,5 +1,5 @@
 module PatternGenerator #(
-  parameter CLOCK_HZ = 50_000_000,
+  parameter CLOCK_HZ = 40_000_000,
   parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600,
   parameter SCENES_PER_SEC = 1)
 (
@@ -26,7 +26,8 @@ reg         validRGB;
 wire rollCOL = (curCOL >= SCREEN_WIDTH-1);
 wire rollROW = (curROW >= SCREEN_HEIGHT-1);
 wire [ 2:0] scale = curFRAME[6:4];
-wire [ 2:0] idx   = {curSCENE, curROW[scale], curCOL[scale+1]}; //Scene in MSB
+//wire [ 2:0] idx   = {curSCENE, curROW[scale], curCOL[scale+1]}; //Scene in MSB
+wire [ 2:0] idx   = {curSCENE, 1'b0, curCOL[scale+1]}; //Scene in MSB
 wire advanceRVA  = video_valid && video_ready; //reset will trump this
 
 assign video       = curRGB;

@@ -4,6 +4,7 @@
 /proj150.ip_user_files/
 /proj150.runs/
 /proj150.sim/
+.Xil/
 *.jou
 *.log
 vivado_*.zip

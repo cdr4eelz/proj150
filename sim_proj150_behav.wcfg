@@ -11,15 +11,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="365944338691fs"></ZoomStartTime>
-      <ZoomEndTime time="366053938692fs"></ZoomEndTime>
-      <Cursor1Time time="366035672025fs"></Cursor1Time>
+      <ZoomStartTime time="482463713739fs"></ZoomStartTime>
+      <ZoomEndTime time="482532613740fs"></ZoomEndTime>
+      <Cursor1Time time="482521130406fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="190"></NameColumnWidth>
-      <ValueColumnWidth column_width="150"></ValueColumnWidth>
+      <ValueColumnWidth column_width="146"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="26" />
+   <WVObjectSize size="27" />
    <wvobject type="logic" fp_name="/sim_tb_top/CLK_100MHz">
       <obj_property name="ElementShortName">CLK_100MHz</obj_property>
       <obj_property name="ObjectShortName">CLK_100MHz</obj_property>
@@ -399,6 +399,7 @@
    <wvobject type="group" fp_name="group268">
       <obj_property name="label">FIFO_CAF</obj_property>
       <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
       <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/rst">
          <obj_property name="ElementShortName">rst</obj_property>
          <obj_property name="ObjectShortName">rst</obj_property>
@@ -415,13 +416,13 @@
          <obj_property name="ElementShortName">full</obj_property>
          <obj_property name="ObjectShortName">full</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/din">
-         <obj_property name="ElementShortName">din[30:0]</obj_property>
-         <obj_property name="ObjectShortName">din[30:0]</obj_property>
-      </wvobject>
       <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/wr_ack">
          <obj_property name="ElementShortName">wr_ack</obj_property>
          <obj_property name="ObjectShortName">wr_ack</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/din">
+         <obj_property name="ElementShortName">din[30:0]</obj_property>
+         <obj_property name="ObjectShortName">din[30:0]</obj_property>
       </wvobject>
       <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_cadr_fifo/rd_clk">
          <obj_property name="ElementShortName">rd_clk</obj_property>
@@ -503,9 +504,14 @@
    <wvobject type="group" fp_name="group124">
       <obj_property name="label">FIFO_RDF</obj_property>
       <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
       <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/rst">
          <obj_property name="ElementShortName">rst</obj_property>
          <obj_property name="ObjectShortName">rst</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/full">
+         <obj_property name="ElementShortName">full</obj_property>
+         <obj_property name="ObjectShortName">full</obj_property>
       </wvobject>
       <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/wr_clk">
          <obj_property name="ElementShortName">wr_clk</obj_property>
@@ -515,17 +521,13 @@
          <obj_property name="ElementShortName">wr_en</obj_property>
          <obj_property name="ObjectShortName">wr_en</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/full">
-         <obj_property name="ElementShortName">full</obj_property>
-         <obj_property name="ObjectShortName">full</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/wr_ack">
+         <obj_property name="ElementShortName">wr_ack</obj_property>
+         <obj_property name="ObjectShortName">wr_ack</obj_property>
       </wvobject>
       <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/din">
          <obj_property name="ElementShortName">din[127:0]</obj_property>
          <obj_property name="ObjectShortName">din[127:0]</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/wr_ack">
-         <obj_property name="ElementShortName">wr_ack</obj_property>
-         <obj_property name="ObjectShortName">wr_ack</obj_property>
       </wvobject>
       <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /ddr3_read_fifo/rd_clk">
          <obj_property name="ElementShortName">rd_clk</obj_property>
@@ -555,33 +557,40 @@
    <wvobject type="group" fp_name="group116">
       <obj_property name="label">MIG</obj_property>
       <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/ui_clk">
+         <obj_property name="ElementShortName">ui_clk</obj_property>
+         <obj_property name="ObjectShortName">ui_clk</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/ui_clk_sync_rst">
+         <obj_property name="ElementShortName">ui_clk_sync_rst</obj_property>
+         <obj_property name="ObjectShortName">ui_clk_sync_rst</obj_property>
+      </wvobject>
       <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rdy">
          <obj_property name="ElementShortName">app_rdy</obj_property>
          <obj_property name="ObjectShortName">app_rdy</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rd_data_valid">
-         <obj_property name="ElementShortName">app_rd_data_valid</obj_property>
-         <obj_property name="ObjectShortName">app_rd_data_valid</obj_property>
-      </wvobject>
-      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rd_data">
-         <obj_property name="ElementShortName">app_rd_data[127:0]</obj_property>
-         <obj_property name="ObjectShortName">app_rd_data[127:0]</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rd_data_end">
-         <obj_property name="ElementShortName">app_rd_data_end</obj_property>
-         <obj_property name="ObjectShortName">app_rd_data_end</obj_property>
-      </wvobject>
-      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_addr">
-         <obj_property name="ElementShortName">app_addr[27:0]</obj_property>
-         <obj_property name="ObjectShortName">app_addr[27:0]</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_en">
+         <obj_property name="ElementShortName">app_en</obj_property>
+         <obj_property name="ObjectShortName">app_en</obj_property>
       </wvobject>
       <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_cmd">
          <obj_property name="ElementShortName">app_cmd[2:0]</obj_property>
          <obj_property name="ObjectShortName">app_cmd[2:0]</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_en">
-         <obj_property name="ElementShortName">app_en</obj_property>
-         <obj_property name="ObjectShortName">app_en</obj_property>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_addr">
+         <obj_property name="ElementShortName">app_addr[27:0]</obj_property>
+         <obj_property name="ObjectShortName">app_addr[27:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rd_data_valid">
+         <obj_property name="ElementShortName">app_rd_data_valid</obj_property>
+         <obj_property name="ObjectShortName">app_rd_data_valid</obj_property>
+         <obj_property name="CustomSignalColor">#00FFFF</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rd_data">
+         <obj_property name="ElementShortName">app_rd_data[127:0]</obj_property>
+         <obj_property name="ObjectShortName">app_rd_data[127:0]</obj_property>
       </wvobject>
       <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_wdf_rdy">
          <obj_property name="ElementShortName">app_wdf_rdy</obj_property>
@@ -591,13 +600,9 @@
          <obj_property name="ElementShortName">app_wdf_wren</obj_property>
          <obj_property name="ObjectShortName">app_wdf_wren</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/ui_clk">
-         <obj_property name="ElementShortName">ui_clk</obj_property>
-         <obj_property name="ObjectShortName">ui_clk</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/ui_clk_sync_rst">
-         <obj_property name="ElementShortName">ui_clk_sync_rst</obj_property>
-         <obj_property name="ObjectShortName">ui_clk_sync_rst</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/app_rd_data_end">
+         <obj_property name="ElementShortName">app_rd_data_end</obj_property>
+         <obj_property name="ObjectShortName">app_rd_data_end</obj_property>
       </wvobject>
       <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /u_mig_arty_a7_100/init_calib_complete">
          <obj_property name="ElementShortName">init_calib_complete</obj_property>
@@ -693,37 +698,82 @@
       <obj_property name="label">PIXFO</obj_property>
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="isExpanded"></obj_property>
-      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/pf_fifo/din">
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/\BYPASS_FIFO.pf_fifo /din">
          <obj_property name="ElementShortName">din[127:0]</obj_property>
          <obj_property name="ObjectShortName">din[127:0]</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/pf_fifo/full">
-         <obj_property name="ElementShortName">full</obj_property>
-         <obj_property name="ObjectShortName">full</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/pf_fifo/wr_en">
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/\BYPASS_FIFO.pf_fifo /wr_en">
          <obj_property name="ElementShortName">wr_en</obj_property>
          <obj_property name="ObjectShortName">wr_en</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/pf_fifo/dout">
-         <obj_property name="ElementShortName">dout[31:0]</obj_property>
-         <obj_property name="ObjectShortName">dout[31:0]</obj_property>
-      </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/pf_fifo/rd_en">
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/\BYPASS_FIFO.pf_fifo /rd_en">
          <obj_property name="ElementShortName">rd_en</obj_property>
          <obj_property name="ObjectShortName">rd_en</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/pf_fifo/empty">
-         <obj_property name="ElementShortName">empty</obj_property>
-         <obj_property name="ObjectShortName">empty</obj_property>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/\BYPASS_FIFO.pf_fifo /dout">
+         <obj_property name="ElementShortName">dout[31:0]</obj_property>
+         <obj_property name="ObjectShortName">dout[31:0]</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/pf_fifo/valid">
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/\BYPASS_FIFO.pf_fifo /valid">
          <obj_property name="ElementShortName">valid</obj_property>
          <obj_property name="ObjectShortName">valid</obj_property>
       </wvobject>
-      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/pf_fifo/rst">
-         <obj_property name="ElementShortName">rst</obj_property>
-         <obj_property name="ObjectShortName">rst</obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/\BYPASS_FIFO.pf_fifo /full">
+         <obj_property name="ElementShortName">full</obj_property>
+         <obj_property name="ObjectShortName">full</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.mem_arch /pf/\BYPASS_FIFO.pf_fifo /empty">
+         <obj_property name="ElementShortName">empty</obj_property>
+         <obj_property name="ObjectShortName">empty</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="group" fp_name="group177">
+      <obj_property name="label">VGAFramer</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /rst_pix">
+         <obj_property name="ElementShortName">rst_pix</obj_property>
+         <obj_property name="ObjectShortName">rst_pix</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /active">
+         <obj_property name="ElementShortName">active</obj_property>
+         <obj_property name="ObjectShortName">active</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /liveActive">
+         <obj_property name="ElementShortName">liveActive</obj_property>
+         <obj_property name="ObjectShortName">liveActive</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /h_cntr_reg">
+         <obj_property name="ElementShortName">h_cntr_reg[11:0]</obj_property>
+         <obj_property name="ObjectShortName">h_cntr_reg[11:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /v_cntr_reg">
+         <obj_property name="ElementShortName">v_cntr_reg[11:0]</obj_property>
+         <obj_property name="ObjectShortName">v_cntr_reg[11:0]</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /video_valid">
+         <obj_property name="ElementShortName">video_valid</obj_property>
+         <obj_property name="ObjectShortName">video_valid</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /video_ready">
+         <obj_property name="ElementShortName">video_ready</obj_property>
+         <obj_property name="ObjectShortName">video_ready</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /video">
+         <obj_property name="ElementShortName">video[31:0]</obj_property>
+         <obj_property name="ObjectShortName">video[31:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /VGA_R">
+         <obj_property name="ElementShortName">VGA_R[3:0]</obj_property>
+         <obj_property name="ObjectShortName">VGA_R[3:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /VGA_G">
+         <obj_property name="ElementShortName">VGA_G[3:0]</obj_property>
+         <obj_property name="ObjectShortName">VGA_G[3:0]</obj_property>
+      </wvobject>
+      <wvobject type="array" fp_name="/sim_tb_top/DUT/\MIPS150.VGA /VGA_B">
+         <obj_property name="ElementShortName">VGA_B[3:0]</obj_property>
+         <obj_property name="ObjectShortName">VGA_B[3:0]</obj_property>
       </wvobject>
    </wvobject>
 </wave_config>
