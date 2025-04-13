@@ -80,7 +80,7 @@ module PixelFeeder #(
     reg  [ 3:0] count_dviread; //Rolls over on every 16 pixel "read-chunk"
 
     wire video_adv = (video_valid && video_ready); //reset will trump this
-    wire rollCOL = (curCOL >= SCREEN_WIDTH - 1); //Could use fast-counter/pixelrange
+    wire rollCOL = (curCOL >= SCREEN_WIDTH  - 1);//***TEMP*** //Could use fast-counter/pixelrange
     wire rollROW = (curROW >= SCREEN_HEIGHT - 1);
 
     always @(posedge dvi_clk_g) begin
@@ -121,11 +121,17 @@ module PixelFeeder #(
     wire         feeder_wren, feeder_full, feeder_empty;
     wire [ 31:0] ignore_pixel = {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
-    assign feeder_dout = (isRunning) ? {8'd0, feeder_raw[23:16], 8'hFF, feeder_raw[7:0]} : ignore_pixel;
+    wire fakeALL = (curCOL == curROW);
+    wire [  7:0] fakeR = (fakeALL || (curCOL % 80 == 0) || (curCOL % 80 == 1) || (curCOL % 80 == 2)) ? 8'hFF : 8'h00;
+    wire [  7:0] fakeG = (fakeALL || (curCOL % 80 == 2) || (curCOL % 80 == 3) || (curCOL % 80 == 4)) ? 8'hFF : 8'h00;
+    wire [  7:0] fakeB = (fakeALL || (curCOL % 77 == 0) || (curCOL % 77 == 1) || (curCOL % 77 == 2)) ? 8'hFF : 8'h00;
+
+    assign feeder_dout = (isRunning) ? {8'd0, fakeR, fakeG, fakeB} : ignore_pixel;
+//  assign feeder_dout = (isRunning) ? {8'd0, feeder_raw[23:16], bandComponent, feeder_raw[7:0]} : ignore_pixel;
     assign rdf_rden    = 1'b1; //Always ready to read (want to fill up)!
 
 //TODO:Insert DDRStage before pixel_fifo to allow LITTLEWORDIAN flip
-generate if (COLT45_TESTPAT != 3) begin:BYPASS_FIFO
+generate if (COLT45_TESTPAT != 3) begin:WITH_FIFO
     pixel_fifo pf_fifo (
         .rst(cpu_rst_g), //Internal cross-clock sync
         //WRITE: CPU clock domain
@@ -138,10 +144,7 @@ generate if (COLT45_TESTPAT != 3) begin:BYPASS_FIFO
         .empty(feeder_empty),   // output
         .rd_en(video_ready && isRunning), // input
         .dout(feeder_raw),      // output  NOTE: First-word-fallthrough but no "valid" signal avail!
-        .valid( ),              // output  NOTE: Why is this unused???? Forced to read regardless!
-        // NEW UNKNOWN SIGNALS
-        .wr_rst_busy( ),        // wr_rst_busy : output wire wr_rst_busy
-        .rd_rst_busy( )         // rd_rst_busy : output wire rd_rst_busy
+        .valid( )               // output  NOTE: Why is this unused???? Forced to read regardless!
     );
 end endgenerate
 
