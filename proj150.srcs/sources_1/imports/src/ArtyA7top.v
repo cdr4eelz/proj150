@@ -72,10 +72,12 @@ module ArtyA7top #(
         .clk_in_100MHz(clk_in_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
         //.clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board)
     // Clock out ports (rebuild clk_wiz if needs change)
-        .clk_mig_100MHz     (clk_mig_sys),  // output MIG primary clk
+        .clk_mig_100MHz     ( ),            // output MIG primary clk
         .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG
         .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
         .clk_cpu_50MHz      (clk_cpu),      // output modest CPU speed
+        .clk_mig_77         (clk_mig_sys),  // output MIG alternate clk
+
         // Status and control signals
         .reset(reset_top_clocks),  // input reset (ACTIVE HIGH)
         .locked(locked_top_clocks)  // output locked (ACTIVE HIGH)
@@ -265,7 +267,7 @@ module ArtyA7top #(
         (* mark_debug = "true" *) wire DBG_STUCK_MIG = DBG_dcache_MIG[3];
 
         VGAFramer #(
-            .GEN_PATTERN(1)
+            .GEN_PATTERN(0)
         ) VGA (
             .clk_pix(clk_pix), // input
 

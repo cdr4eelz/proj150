@@ -5,128 +5,160 @@
 
 ## Clock signal
 
-set_property -dict {PACKAGE_PIN E3 IOSTANDARD LVCMOS33} [get_ports CLK_100MHz]
-create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} -add [get_ports CLK_100MHz]
+set_property -dict { PACKAGE_PIN  E3 IOSTANDARD LVCMOS33 } [get_ports { CLK_100MHz }]
+#create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} -add [get_ports { CLK_100MHz }]
+create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} -verbose [get_ports { CLK_100MHz }]
+
 
 # Address a warning about these 2 properies being missing: *** SEE: ug470_7Series_Config.pdf (page 29) ***
-#set_property CFGBVS value1 [current_design];  #where value1 is either VCCO or GND
+#set_property CFGBVS         value1 [current_design];  #where value1 is either VCCO or GND
 #set_property CONFIG_VOLTAGE value2 [current_design];  #where value2 is the voltage provided to configuration bank 0
-set_property CFGBVS VCCO [current_design]
-set_property CONFIG_VOLTAGE 3.3 [current_design]
+ set_property CFGBVS           VCCO [current_design]
+ set_property CONFIG_VOLTAGE    3.3 [current_design]
 
-## TIMING adjustments (mostly false paths)
-set_false_path -from [get_ports CK_RST_N]
-#set_false_path -to [get_ports ddr3_reset_n]
-set_false_path -to [get_ports {LED[*]}]
-set_false_path -to [get_ports led*]
-#set_false_path -from [get_cells por_counter_reg[*]]
-# Below removes path analysis related to init_calib_complete
-#set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_out_50MHz_clk_wiz_fetcher]
-set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_mig_100MHz_clk_wiz_0]
-set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_cpu_50MHz_clk_wiz_0]
-set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_pixel_40MHz_clk_wiz_0]
-set_false_path -from [get_clocks clk_mig_100MHz_clk_wiz_0] -to [get_clocks clk_pll_i]
-set_false_path -from [get_clocks clk_cpu_50MHz_clk_wiz_0] -to [get_clocks clk_pll_i]
-set_false_path -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks clk_pll_i]
+## Loose TIMING constraints on I/O pins
+create_clock -period 10.000 -name virtual_clock -waveform {0.000 5.000}
 
-set_false_path -to [get_ports {VGA_R[*]}]
-set_false_path -to [get_ports {VGA_G[*]}]
-set_false_path -to [get_ports {VGA_B[*]}]
-set_false_path -to [get_ports VGA_HS_O]
-set_false_path -to [get_ports VGA_VS_O]
-set_false_path -from [get_ports {BUTTON[*]}]
-set_false_path -from [get_ports {SWITCH[*]}]
-set_false_path -from [get_ports CK_RST_N]
-set_false_path -to [get_ports FPGA_SERIAL_TX]
-set_false_path -from [get_ports FPGA_SERIAL_RX]
+set_input_delay  -clock virtual_clock -max  0.000 [get_ports { CK_RST_N }]
+set_input_delay  -clock virtual_clock -min -0.500 [get_ports { CK_RST_N }]
+set_input_delay  -clock virtual_clock -max  0.000 [get_ports { BUTTON[*] }]
+set_input_delay  -clock virtual_clock -min -0.500 [get_ports { BUTTON[*] }]
+set_input_delay  -clock virtual_clock -max  0.000 [get_ports { SWITCH[*] }]
+set_input_delay  -clock virtual_clock -min -0.500 [get_ports { SWITCH[*] }]
+#set_input_delay  -clock virtual_clock -max  0.000 [get_ports { FPGA_SERIAL_RX }]
+#set_input_delay  -clock virtual_clock -min -0.500 [get_ports { FPGA_SERIAL_RX }]
+#set_output_delay -clock virtual_clock      -5.000 [get_ports { FPGA_SERIAL_TX }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { FPGA_SERIAL_TX }]
+#set_output_delay -clock virtual_clock      -5.000 [get_ports { LED[*] }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { LED[*] }]
+#set_output_delay -clock virtual_clock      -5.000 [get_ports { led* }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { led* }]
+
+# ### TIMING adjustments (mostly false paths)
+# set_false_path -from [get_ports CK_RST_N]
+# set_false_path -from [get_ports {BUTTON[*]}]
+# set_false_path -from [get_ports {SWITCH[*]}]
+set_false_path -from [get_ports { FPGA_SERIAL_RX }]
+set_false_path -to   [get_ports { FPGA_SERIAL_TX }]
+set_false_path -to   [get_ports { LED[*] }]
+set_false_path -to   [get_ports { led* }]
+
+# #set_false_path -to [get_ports ddr3_reset_n]
+# #set_false_path -from [get_cells {por_counter_reg[*]}]
+
+# # Below removes path analysis related to init_calib_complete
+# #set_false_path -from [get_clocks clk_pll_i]                -to [get_clocks clk_out_50MHz_clk_wiz_fetcher]
+# set_false_path -from [get_clocks clk_pll_i]                 -to [get_clocks clk_mig_100MHz_clk_wiz_0]
+set_false_path -from [get_clocks clk_pll_i]                 -to [get_clocks clk_cpu_50MHz_clk_wiz_0]
+set_false_path -from [get_clocks clk_pll_i]                 -to [get_clocks clk_pixel_40MHz_clk_wiz_0]
+# set_false_path -from [get_clocks clk_mig_100MHz_clk_wiz_0]  -to [get_clocks clk_pll_i]
+set_false_path -from [get_clocks clk_cpu_50MHz_clk_wiz_0]   -to [get_clocks clk_pll_i]
+# set_false_path -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks clk_pll_i]
+# set_false_path -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks virtual_clock]
+# set_false_path -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks virtual_clock]
+
+#set_multicycle_path -setup -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks virtual_clock] 3
+#set_output_delay -clock virtual_clock      -5.000 [get_ports { VGA_R[*] }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_R[*] }]
+#set_output_delay -clock virtual_clock      -5.000 [get_ports { VGA_G[*] }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_G[*] }]
+#set_output_delay -clock virtual_clock      -5.000 [get_ports { VGA_B[*] }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_B[*] }]
+#set_output_delay -clock virtual_clock      -5.000 [get_ports { VGA_HS_O }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_HS_O }]
+#set_output_delay -clock virtual_clock      -5.000 [get_ports { VGA_VS_O }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_VS_O }]
+# NOT SURE WHY EXPLICIT DELAYS ARE BETTER THAN FALSE_PATH DECLARATION...
+set_false_path -to   [get_ports { VGA_R[*] }]
+set_false_path -to   [get_ports { VGA_G[*] }]
+set_false_path -to   [get_ports { VGA_B[*] }]
+set_false_path -to   [get_ports { VGA_HS_O }]
+set_false_path -to   [get_ports { VGA_VS_O }]
 
 
 ##Switches
 
-set_property -dict {PACKAGE_PIN A8 IOSTANDARD LVCMOS33} [get_ports {SWITCH[0]}]
-set_property -dict {PACKAGE_PIN C11 IOSTANDARD LVCMOS33} [get_ports {SWITCH[1]}]
+set_property -dict { PACKAGE_PIN  A8 IOSTANDARD LVCMOS33 } [get_ports { SWITCH[0] }]
+set_property -dict { PACKAGE_PIN C11 IOSTANDARD LVCMOS33 } [get_ports { SWITCH[1] }]
 ## IGNORE upper 2 switches since PYNQ boards lack them:
 #set_property -dict { PACKAGE_PIN C10   IOSTANDARD LVCMOS33 } [get_ports { SWITCH[2] }]; #IO_L13N_T2_MRCC_16 Sch=sw[2]
 #set_property -dict { PACKAGE_PIN A10   IOSTANDARD LVCMOS33 } [get_ports { SWITCH[3] }]; #IO_L14P_T2_SRCC_16 Sch=sw[3]
 
 ##RGB LEDs
 
-set_property -dict {PACKAGE_PIN E1 IOSTANDARD LVCMOS33} [get_ports led0_b]
-#set_property -dict { PACKAGE_PIN F6    IOSTANDARD LVCMOS33 } [get_ports { led0_g }]; #IO_L19N_T3_VREF_35 Sch=led0_g
-#set_property -dict { PACKAGE_PIN G6    IOSTANDARD LVCMOS33 } [get_ports { led0_r }]; #IO_L19P_T3_35 Sch=led0_r
-#set_property -dict { PACKAGE_PIN G4    IOSTANDARD LVCMOS33 } [get_ports { led1_b }]; #IO_L20P_T3_35 Sch=led1_b
-set_property -dict {PACKAGE_PIN J4 IOSTANDARD LVCMOS33} [get_ports led1_g]
-#set_property -dict { PACKAGE_PIN G3    IOSTANDARD LVCMOS33 } [get_ports { led1_r }]; #IO_L20N_T3_35 Sch=led1_r
+set_property -dict { PACKAGE_PIN  E1 IOSTANDARD LVCMOS33 } [get_ports { led0_b }]
+#set_property -dict { PACKAGE_PIN  F6 IOSTANDARD LVCMOS33 } [get_ports { led0_g }]; #IO_L19N_T3_VREF_35 Sch=led0_g
+#set_property -dict { PACKAGE_PIN  G6 IOSTANDARD LVCMOS33 } [get_ports { led0_r }]; #IO_L19P_T3_35 Sch=led0_r
+#set_property -dict { PACKAGE_PIN  G4 IOSTANDARD LVCMOS33 } [get_ports { led1_b }]; #IO_L20P_T3_35 Sch=led1_b
+set_property -dict { PACKAGE_PIN  J4 IOSTANDARD LVCMOS33 } [get_ports { led1_g }]
+#set_property -dict { PACKAGE_PIN  G3 IOSTANDARD LVCMOS33 } [get_ports { led1_r }]; #IO_L20N_T3_35 Sch=led1_r
 ## IGNORE upper 2 RGB LEDs since PYNQ board lacks them:
-#set_property -dict { PACKAGE_PIN H4    IOSTANDARD LVCMOS33 } [get_ports { led2_b }]; #IO_L21N_T3_DQS_35 Sch=led2_b
-#set_property -dict { PACKAGE_PIN J2    IOSTANDARD LVCMOS33 } [get_ports { led2_g }]; #IO_L22N_T3_35 Sch=led2_g
-set_property -dict {PACKAGE_PIN J3 IOSTANDARD LVCMOS33} [get_ports led2_r]
-set_property -dict {PACKAGE_PIN K2 IOSTANDARD LVCMOS33} [get_ports led3_b]
-#set_property -dict { PACKAGE_PIN H6    IOSTANDARD LVCMOS33 } [get_ports { led3_g }]; #IO_L24P_T3_35 Sch=led3_g
-#set_property -dict { PACKAGE_PIN K1    IOSTANDARD LVCMOS33 } [get_ports { led3_r }]; #IO_L23N_T3_35 Sch=led3_r
+#set_property -dict { PACKAGE_PIN  H4 IOSTANDARD LVCMOS33 } [get_ports { led2_b }]; #IO_L21N_T3_DQS_35 Sch=led2_b
+#set_property -dict { PACKAGE_PIN  J2 IOSTANDARD LVCMOS33 } [get_ports { led2_g }]; #IO_L22N_T3_35 Sch=led2_g
+set_property -dict { PACKAGE_PIN  J3 IOSTANDARD LVCMOS33 } [get_ports { led2_r }]
+set_property -dict { PACKAGE_PIN  K2 IOSTANDARD LVCMOS33 } [get_ports { led3_b }]
+#set_property -dict { PACKAGE_PIN  H6 IOSTANDARD LVCMOS33 } [get_ports { led3_g }]; #IO_L24P_T3_35 Sch=led3_g
+#set_property -dict { PACKAGE_PIN  K1 IOSTANDARD LVCMOS33 } [get_ports { led3_r }]; #IO_L23N_T3_35 Sch=led3_r
 
 ##LEDs
-
-set_property -dict {PACKAGE_PIN H5 IOSTANDARD LVCMOS33} [get_ports {LED[0]}]
-set_property -dict {PACKAGE_PIN J5 IOSTANDARD LVCMOS33} [get_ports {LED[1]}]
-set_property -dict {PACKAGE_PIN T9 IOSTANDARD LVCMOS33} [get_ports {LED[2]}]
-set_property -dict {PACKAGE_PIN T10 IOSTANDARD LVCMOS33} [get_ports {LED[3]}]
+set_property -dict { PACKAGE_PIN  H5 IOSTANDARD LVCMOS33 } [get_ports { LED[0] }]
+set_property -dict { PACKAGE_PIN  J5 IOSTANDARD LVCMOS33 } [get_ports { LED[1] }]
+set_property -dict { PACKAGE_PIN  T9 IOSTANDARD LVCMOS33 } [get_ports { LED[2] }]
+set_property -dict { PACKAGE_PIN T10 IOSTANDARD LVCMOS33 } [get_ports { LED[3] }]
 
 ##Buttons
-
-set_property -dict {PACKAGE_PIN D9 IOSTANDARD LVCMOS33} [get_ports {BUTTON[0]}]
-set_property -dict {PACKAGE_PIN C9 IOSTANDARD LVCMOS33} [get_ports {BUTTON[1]}]
-set_property -dict {PACKAGE_PIN B9 IOSTANDARD LVCMOS33} [get_ports {BUTTON[2]}]
-set_property -dict {PACKAGE_PIN B8 IOSTANDARD LVCMOS33} [get_ports {BUTTON[3]}]
+set_property -dict { PACKAGE_PIN  D9 IOSTANDARD LVCMOS33 } [get_ports { BUTTON[0] }]
+set_property -dict { PACKAGE_PIN  C9 IOSTANDARD LVCMOS33 } [get_ports { BUTTON[1] }]
+set_property -dict { PACKAGE_PIN  B9 IOSTANDARD LVCMOS33 } [get_ports { BUTTON[2] }]
+set_property -dict { PACKAGE_PIN  B8 IOSTANDARD LVCMOS33 } [get_ports { BUTTON[3] }]
 
 ##Pmod Header JA
-
 ## IF USING PMOD-UART, THESE ARE ALIGNED (OR PERHAPS BACKWARDS???)
-#set_property -dict { PACKAGE_PIN G13   IOSTANDARD LVCMOS33 } [get_ports { CTS }]; #IO_0_15 Sch=ja[1]
-#set_property -dict { PACKAGE_PIN B11   IOSTANDARD LVCMOS33 } [get_ports { FPGA_SERIAL_TX }]; #IO_L4P_T0_15 Sch=ja[2]
-#set_property -dict { PACKAGE_PIN A11   IOSTANDARD LVCMOS33 } [get_ports { FPGA_SERIAL_RX }]; #IO_L4N_T0_15 Sch=ja[3]
-#set_property -dict { PACKAGE_PIN D12   IOSTANDARD LVCMOS33 } [get_ports { RTS }]; #IO_L6P_T0_15 Sch=ja[4]
-#set_property -dict { PACKAGE_PIN D13   IOSTANDARD LVCMOS33 } [get_ports { ja[4] }]; #IO_L6N_T0_VREF_15 Sch=ja[7]
-#set_property -dict { PACKAGE_PIN B18   IOSTANDARD LVCMOS33 } [get_ports { ja[5] }]; #IO_L10P_T1_AD11P_15 Sch=ja[8]
-#set_property -dict { PACKAGE_PIN A18   IOSTANDARD LVCMOS33 } [get_ports { ja[6] }]; #IO_L10N_T1_AD11N_15 Sch=ja[9]
-#set_property -dict { PACKAGE_PIN K16   IOSTANDARD LVCMOS33 } [get_ports { ja[7] }]; #IO_25_15 Sch=ja[10]
+#set_property -dict { PACKAGE_PIN G13 IOSTANDARD LVCMOS33 } [get_ports { CTS }]; #IO_0_15 Sch=ja[1]
+#set_property -dict { PACKAGE_PIN B11 IOSTANDARD LVCMOS33 } [get_ports { FPGA_SERIAL_TX }]; #IO_L4P_T0_15 Sch=ja[2]
+#set_property -dict { PACKAGE_PIN A11 IOSTANDARD LVCMOS33 } [get_ports { FPGA_SERIAL_RX }]; #IO_L4N_T0_15 Sch=ja[3]
+#set_property -dict { PACKAGE_PIN D12 IOSTANDARD LVCMOS33 } [get_ports { RTS }]; #IO_L6P_T0_15 Sch=ja[4]
+#set_property -dict { PACKAGE_PIN D13 IOSTANDARD LVCMOS33 } [get_ports { ja[4] }]; #IO_L6N_T0_VREF_15 Sch=ja[7]
+#set_property -dict { PACKAGE_PIN B18 IOSTANDARD LVCMOS33 } [get_ports { ja[5] }]; #IO_L10P_T1_AD11P_15 Sch=ja[8]
+#set_property -dict { PACKAGE_PIN A18 IOSTANDARD LVCMOS33 } [get_ports { ja[6] }]; #IO_L10N_T1_AD11N_15 Sch=ja[9]
+#set_property -dict { PACKAGE_PIN K16 IOSTANDARD LVCMOS33 } [get_ports { ja[7] }]; #IO_25_15 Sch=ja[10]
 
 ##Pmod Header JB
 ### First half of PMOD-VGA (takes two full headers)
-set_property -dict {PACKAGE_PIN E15 IOSTANDARD LVCMOS33} [get_ports {VGA_R[0]}]
-set_property -dict {PACKAGE_PIN E16 IOSTANDARD LVCMOS33} [get_ports {VGA_R[1]}]
-set_property -dict {PACKAGE_PIN D15 IOSTANDARD LVCMOS33} [get_ports {VGA_R[2]}]
-set_property -dict {PACKAGE_PIN C15 IOSTANDARD LVCMOS33} [get_ports {VGA_R[3]}]
-set_property -dict {PACKAGE_PIN J17 IOSTANDARD LVCMOS33} [get_ports {VGA_B[0]}]
-set_property -dict {PACKAGE_PIN J18 IOSTANDARD LVCMOS33} [get_ports {VGA_B[1]}]
-set_property -dict {PACKAGE_PIN K15 IOSTANDARD LVCMOS33} [get_ports {VGA_B[2]}]
-set_property -dict {PACKAGE_PIN J15 IOSTANDARD LVCMOS33} [get_ports {VGA_B[3]}]
+set_property -dict { PACKAGE_PIN E15 IOSTANDARD LVCMOS33 } [get_ports { VGA_R[0] }]
+set_property -dict { PACKAGE_PIN E16 IOSTANDARD LVCMOS33 } [get_ports { VGA_R[1] }]
+set_property -dict { PACKAGE_PIN D15 IOSTANDARD LVCMOS33 } [get_ports { VGA_R[2] }]
+set_property -dict { PACKAGE_PIN C15 IOSTANDARD LVCMOS33 } [get_ports { VGA_R[3] }]
+set_property -dict { PACKAGE_PIN J17 IOSTANDARD LVCMOS33 } [get_ports { VGA_B[0] }]
+set_property -dict { PACKAGE_PIN J18 IOSTANDARD LVCMOS33 } [get_ports { VGA_B[1] }]
+set_property -dict { PACKAGE_PIN K15 IOSTANDARD LVCMOS33 } [get_ports { VGA_B[2] }]
+set_property -dict { PACKAGE_PIN J15 IOSTANDARD LVCMOS33 } [get_ports { VGA_B[3] }]
 
 ##Pmod Header JC
 ### Second half of PMOD-VGA
-set_property -dict {PACKAGE_PIN U12 IOSTANDARD LVCMOS33} [get_ports {VGA_G[0]}]
-set_property -dict {PACKAGE_PIN V12 IOSTANDARD LVCMOS33} [get_ports {VGA_G[1]}]
-set_property -dict {PACKAGE_PIN V10 IOSTANDARD LVCMOS33} [get_ports {VGA_G[2]}]
-set_property -dict {PACKAGE_PIN V11 IOSTANDARD LVCMOS33} [get_ports {VGA_G[3]}]
-set_property -dict {PACKAGE_PIN U14 IOSTANDARD LVCMOS33} [get_ports VGA_HS_O]
-set_property -dict {PACKAGE_PIN V14 IOSTANDARD LVCMOS33} [get_ports VGA_VS_O]
-#set_property -dict { PACKAGE_PIN T13   IOSTANDARD LVCMOS33 } [get_ports { jc[6] }]; #IO_L23P_T3_A03_D19_14 Sch=jc_p[4]
-#set_property -dict { PACKAGE_PIN U13   IOSTANDARD LVCMOS33 } [get_ports { jc[7] }]; #IO_L23N_T3_A02_D18_14 Sch=jc_n[4]
+set_property -dict { PACKAGE_PIN U12 IOSTANDARD LVCMOS33 } [get_ports { VGA_G[0] }]
+set_property -dict { PACKAGE_PIN V12 IOSTANDARD LVCMOS33 } [get_ports { VGA_G[1] }]
+set_property -dict { PACKAGE_PIN V10 IOSTANDARD LVCMOS33 } [get_ports { VGA_G[2] }]
+set_property -dict { PACKAGE_PIN V11 IOSTANDARD LVCMOS33 } [get_ports { VGA_G[3] }]
+set_property -dict { PACKAGE_PIN U14 IOSTANDARD LVCMOS33 } [get_ports { VGA_HS_O }]
+set_property -dict { PACKAGE_PIN V14 IOSTANDARD LVCMOS33 } [get_ports { VGA_VS_O }]
+#set_property -dict { PACKAGE_PIN T13 IOSTANDARD LVCMOS33 } [get_ports { jc[6] }]; #IO_L23P_T3_A03_D19_14 Sch=jc_p[4]
+#set_property -dict { PACKAGE_PIN U13 IOSTANDARD LVCMOS33 } [get_ports { jc[7] }]; #IO_L23N_T3_A02_D18_14 Sch=jc_n[4]
 
 ##Pmod Header JD
-#set_property -dict { PACKAGE_PIN D4    IOSTANDARD LVCMOS33 } [get_ports { jd[1] }]; #IO_L11N_T1_SRCC_35 Sch=jd[1]
-#set_property -dict { PACKAGE_PIN D3    IOSTANDARD LVCMOS33 } [get_ports { jd[2] }]; #IO_L12N_T1_MRCC_35 Sch=jd[2]
-#set_property -dict { PACKAGE_PIN F4    IOSTANDARD LVCMOS33 } [get_ports { jd[3] }]; #IO_L13P_T2_MRCC_35 Sch=jd[3]
-#set_property -dict { PACKAGE_PIN F3    IOSTANDARD LVCMOS33 } [get_ports { jd[4] }]; #IO_L13N_T2_MRCC_35 Sch=jd[4]
-#set_property -dict { PACKAGE_PIN E2    IOSTANDARD LVCMOS33 } [get_ports { jd[7] }]; #IO_L14P_T2_SRCC_35 Sch=jd[7]
-#set_property -dict { PACKAGE_PIN D2    IOSTANDARD LVCMOS33 } [get_ports { jd[5] }]; #IO_L14N_T2_SRCC_35 Sch=jd[8]
-#set_property -dict { PACKAGE_PIN H2    IOSTANDARD LVCMOS33 } [get_ports { jd[6] }]; #IO_L15P_T2_DQS_35 Sch=jd[9]
-#set_property -dict { PACKAGE_PIN G2    IOSTANDARD LVCMOS33 } [get_ports { jd[7] }]; #IO_L15N_T2_DQS_35 Sch=jd[10]
+#set_property -dict { PACKAGE_PIN  D4    IOSTANDARD LVCMOS33 } [get_ports { jd[1] }]; #IO_L11N_T1_SRCC_35 Sch=jd[1]
+#set_property -dict { PACKAGE_PIN  D3    IOSTANDARD LVCMOS33 } [get_ports { jd[2] }]; #IO_L12N_T1_MRCC_35 Sch=jd[2]
+#set_property -dict { PACKAGE_PIN  F4    IOSTANDARD LVCMOS33 } [get_ports { jd[3] }]; #IO_L13P_T2_MRCC_35 Sch=jd[3]
+#set_property -dict { PACKAGE_PIN  F3    IOSTANDARD LVCMOS33 } [get_ports { jd[4] }]; #IO_L13N_T2_MRCC_35 Sch=jd[4]
+#set_property -dict { PACKAGE_PIN  E2    IOSTANDARD LVCMOS33 } [get_ports { jd[7] }]; #IO_L14P_T2_SRCC_35 Sch=jd[7]
+#set_property -dict { PACKAGE_PIN  D2    IOSTANDARD LVCMOS33 } [get_ports { jd[5] }]; #IO_L14N_T2_SRCC_35 Sch=jd[8]
+#set_property -dict { PACKAGE_PIN  H2    IOSTANDARD LVCMOS33 } [get_ports { jd[6] }]; #IO_L15P_T2_DQS_35 Sch=jd[9]
+#set_property -dict { PACKAGE_PIN  G2    IOSTANDARD LVCMOS33 } [get_ports { jd[7] }]; #IO_L15N_T2_DQS_35 Sch=jd[10]
 
 ##USB-UART Interface
 ## Can use these on Arty-A7 with integrated JTAG/UART<->USB connection to PL fabric
-set_property -dict {PACKAGE_PIN D10 IOSTANDARD LVCMOS33} [get_ports FPGA_SERIAL_TX]
-set_property -dict {PACKAGE_PIN A9 IOSTANDARD LVCMOS33} [get_ports FPGA_SERIAL_RX]
+set_property -dict { PACKAGE_PIN D10 IOSTANDARD LVCMOS33 } [get_ports { FPGA_SERIAL_TX }]
+set_property -dict { PACKAGE_PIN  A9 IOSTANDARD LVCMOS33 } [get_ports { FPGA_SERIAL_RX }]
 
 ##ChipKit Single Ended Analog Inputs
 ##NOTE: The ck_an_p pins can be used as single ended analog inputs with voltages from 0-3.3V (Chipkit Analog pins A0-A5).
@@ -218,8 +250,8 @@ set_property -dict {PACKAGE_PIN A9 IOSTANDARD LVCMOS33} [get_ports FPGA_SERIAL_R
 
 ##Misc. ChipKit signals
 
-#set_property -dict { PACKAGE_PIN M17   IOSTANDARD LVCMOS33 } [get_ports { ck_ioa }]; #IO_L10N_T1_D15_14 Sch=ck_ioa
-set_property -dict {PACKAGE_PIN C2 IOSTANDARD LVCMOS33} [get_ports CK_RST_N]
+#set_property -dict { PACKAGE_PIN M17 IOSTANDARD LVCMOS33 } [get_ports { ck_ioa }]; #IO_L10N_T1_D15_14 Sch=ck_ioa
+set_property -dict { PACKAGE_PIN  C2 IOSTANDARD LVCMOS33 } [get_ports { CK_RST_N }]
 
 ##SMSC Ethernet PHY
 

@@ -164,10 +164,11 @@ module Cache #(
     assign read_miss = re_hold && !tag_hit;
 
     localparam STUCK_MAX_CYCLES = 8'd48;
+    localparam READ_HACK_ENABLED = 1'b0; //Disable the effect of the hack
     (* mark_debug = "true" *) reg [7:0] stuckCycles;
     (* mark_debug = "true" *) wire stuckTrigger = (stuckCycles == 0);
     (* mark_debug = "true" *) reg [31:0] stuckResets;
-    assign DBG_cache_cs = {stuckTrigger, current_state};
+    assign DBG_cache_cs = {stuckTrigger, current_state[2:0]};
 
     // synchronous logic:
     always @(posedge clk) begin
@@ -212,7 +213,7 @@ module Cache #(
 
     // State transition logic:
     always @(*) begin
-        if(stuckTrigger && isReading) begin // Start again if results didn't reach us (major HACK)
+        if(stuckTrigger && isReading && READ_HACK_ENABLED) begin // Start again if results didn't reach us (major HACK)
             next_state = FETCH1;
         end else begin
             next_state = IDLE;

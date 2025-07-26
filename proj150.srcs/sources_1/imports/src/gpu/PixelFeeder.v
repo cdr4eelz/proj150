@@ -100,7 +100,8 @@ module PixelFeeder #(
                     (2'b11): begin
                         curFRAME <= curFRAME + 1;
                         {curCOL, curROW} <= {32'd0, 32'd0};
-                        if (fifo_start_clkDVI) isRunning <= 1'b1; //Switch to FIFO on frame boundary
+                        //if (fifo_start_clkDVI) isRunning <= 1'b1; //Switch to FIFO on frame boundary
+                        isRunning <= 1'b1; //Switch to FIFO on frame boundary
                     end
                     (2'b01): begin
                         curCOL  <= 32'd0;
@@ -119,15 +120,15 @@ module PixelFeeder #(
     wire [ 31:0] feeder_raw, feeder_dout;
     wire [127:0] feeder_data;
     wire         feeder_wren, feeder_full, feeder_empty;
-    wire [ 31:0] ignore_pixel = {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
+    wire [ 31:0] ignore_pixel = 32'h004488FF; // {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
     wire fakeALL = (curCOL == curROW);
     wire [  7:0] fakeR = (fakeALL || (curCOL % 80 == 0) || (curCOL % 80 == 1) || (curCOL % 80 == 2)) ? 8'hFF : 8'h00;
     wire [  7:0] fakeG = (fakeALL || (curCOL % 80 == 2) || (curCOL % 80 == 3) || (curCOL % 80 == 4)) ? 8'hFF : 8'h00;
     wire [  7:0] fakeB = (fakeALL || (curCOL % 77 == 0) || (curCOL % 77 == 1) || (curCOL % 77 == 2)) ? 8'hFF : 8'h00;
 
-    assign feeder_dout = (isRunning) ? {8'd0, fakeR, fakeG, fakeB} : ignore_pixel;
-//  assign feeder_dout = (isRunning) ? {8'd0, feeder_raw[23:16], bandComponent, feeder_raw[7:0]} : ignore_pixel;
+    //assign feeder_dout = (isRunning) ? {8'd0, fakeR, fakeG, fakeB} : ignore_pixel;
+    assign feeder_dout = (isRunning) ? {8'd0, feeder_raw[23:16], feeder_raw[15:8], feeder_raw[7:0]} : ignore_pixel;
     assign rdf_rden    = 1'b1; //Always ready to read (want to fill up)!
 
 //TODO:Insert DDRStage before pixel_fifo to allow LITTLEWORDIAN flip
@@ -137,14 +138,16 @@ generate if (COLT45_TESTPAT != 3) begin:WITH_FIFO
         //WRITE: CPU clock domain
         .wr_clk(cpu_clk_g),     // input
         .full(feeder_full),     // output
-        .wr_en(feeder_wren),    //input              rdf_wren
+        .wr_en(feeder_wren),    // input               rdf_wren
         .din(feeder_data),      // input wire [127:0]  rdf_data
         //READ: DVI clock domain
-        .rd_clk(dvi_clk_g),     // inputfeeder_raw
+        .rd_clk(dvi_clk_g),     // input
         .empty(feeder_empty),   // output
         .rd_en(video_ready && isRunning), // input
         .dout(feeder_raw),      // output  NOTE: First-word-fallthrough but no "valid" signal avail!
         .valid( )               // output  NOTE: Why is this unused???? Forced to read regardless!
+//  .wr_rst_busy(wr_rst_busy),  // output wire wr_rst_busy
+//  .rd_rst_busy(rd_rst_busy),  // output wire rd_rst_busy
     );
 end endgenerate
 
@@ -285,6 +288,9 @@ end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
     reg [63:0] sweep_cnt;
     always @(posedge cpu_clk_g) begin
         if (cpu_rst_r) begin
+            sweep_RGB <= 16'hE2A2;
+            sweep_cnt <= 0;
+        end else if (feeder_wren && (sweep_cnt == (200 - 1))) begin
             sweep_RGB <= 16'hE2A2;
             sweep_cnt <= 0;
         end else if (feeder_wren) begin

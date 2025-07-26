@@ -439,8 +439,9 @@ module MemoryDDR #(
 */  assign i_stall = 1'b0;
     assign DBG_icache_cs = 4'b0000;
 
+//ENABLE-DATA...
     // Data cache:
-/*  Cache #(
+    Cache #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) dcache (
         .clk(clk_cpu),
@@ -468,9 +469,10 @@ module MemoryDDR #(
         .tag_hit(), .tag_valid(),
         .DBG_cache_cs(DBG_dcache_cs)
     );
-*/  assign d_stall = 1'b0;
+//...ENABLE-DATA...
+/*  assign d_stall = 1'b0;
     assign DBG_dcache_cs = 4'b0000;
-
+*/
     assign DBG_dcache = DBG_dcache_cs;
     assign DBG_icache = DBG_icache_cs;
 
@@ -478,7 +480,7 @@ module MemoryDDR #(
     PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
-.COLT45_TESTPAT(0)  //TEMP
+.COLT45_TESTPAT(1)  //TEMP
     ) pf (
         .cpu_clk_g(clk_cpu),
         .cpu_rst_g(rst_cpu_bus),
@@ -556,7 +558,7 @@ module MemoryDDR #(
     ); */
 
     // Patch DataCache directly with FIFOs (like RCON)
-/*  assign  data_caf_full   = rcon_caf_full,
+    assign  data_caf_full   = rcon_caf_full,
             data_wdf_full   = rcon_wdf_full,
             data_rdf_wren   = rcon_rdf_wren;
     assign  rcon_rdf_rden   = data_rdf_rden,
@@ -564,14 +566,14 @@ module MemoryDDR #(
             rcon_caf_cadr   = data_caf_cadr,
             rcon_wdf_wren   = data_wdf_wren,
             rcon_wdf_mdat   = data_wdf_mdat;
-*/
-    assign  pixf_raf_full   = rcon_caf_full,
-            //data_wdf_full   = rcon_wdf_full,
+
+/*  assign  pixf_raf_full   = rcon_caf_full,
+            //xxxx_wdf_full   = rcon_wdf_full, //No writing
             pixf_rdf_wren   = rcon_rdf_wren;
     assign  rcon_rdf_rden   = pixf_rdf_rden,
             rcon_caf_wren   = pixf_raf_wren,
             rcon_caf_cadr   = {3'b001, pixf_raf_addr}, //READ command
-            rcon_wdf_wren   = 0,
+            rcon_wdf_wren   = 0, //No writing
             rcon_wdf_mdat   = 0;
-
+*/
 endmodule
