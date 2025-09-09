@@ -51,6 +51,7 @@ module ArtyA7top #(
 
     // BUFFER the board clock (manually switch between Arty-A7 vs PYNQ)
     wire clk_in_100MHz; //, clk_in_100MHz_g;  // Arty-A7 or PYNQ ARM-CPU clk-out
+    //IBUF vs BUFG
     IBUF board_clk_ibuf (.I(CLK_100MHz), .O(clk_in_100MHz));  // Vivado refuses IBUFG!
     //BUFG board_clk_bufg (.I(clk_temp_1), .O(clk_in_100MHz_g));  // Must explicitly add BUFG.
     //wire clk_in_125MHz_G;  // PYNQ board clockDDR
@@ -72,12 +73,10 @@ module ArtyA7top #(
         .clk_in_100MHz(clk_in_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
         //.clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board)
     // Clock out ports (rebuild clk_wiz if needs change)
-        .clk_mig_100MHz     ( ),            // output MIG primary clk
+        .clk_mig_167MHz     (clk_mig_sys),  // output MIG primary clk
         .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG
         .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
         .clk_cpu_50MHz      (clk_cpu),      // output modest CPU speed
-        .clk_mig_77         (clk_mig_sys),  // output MIG alternate clk
-
         // Status and control signals
         .reset(reset_top_clocks),  // input reset (ACTIVE HIGH)
         .locked(locked_top_clocks)  // output locked (ACTIVE HIGH)
@@ -88,7 +87,7 @@ module ArtyA7top #(
     (* mark_debug = "true" *) wire rst_cpu, init_done;  // TODO: CPU comes out of reset after everything else
     wire rst_mig_sys_n, rst_pix; // Avoid debug on these since it brings in 2 extra clock domains
     Synchronizer #( .Width(1) ) sync_rst_mig_sys_n (
-        .async_signal(!locked_top_clocks || !reset_top_clocks),
+        .async_signal(locked_top_clocks && !reset_top_clocks),
         .Clock(clk_mig_sys),  .sync_signal(rst_mig_sys_n));  // NOTE: This clock is bad when PLL not locked!
     Synchronizer #( .Width(1) ) sync_rst_cpu (
         .async_signal(!locked_top_clocks || !init_done ),
