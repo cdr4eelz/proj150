@@ -231,7 +231,7 @@ module MemoryDDR #(
         .app_zq_req (1'b0), .app_zq_ack     ( ), // input / output  UNUSED
 
         // System Clock Port (MIG generates various other clocks from this)
-        .sys_clk_i          (clk_mig_sys),      // input  Currently 100MHz
+        .sys_clk_i          (clk_mig_sys),      // input  Currently 166.667MHz
         // Reference Clock Port (Always 200MHz, drives "iodelay" lines)app_zq_ack
         .clk_ref_i          (clk_mig_ref),      // input  ALWAYS 200MHz
         // Reset MIG, presumably in ".sys_clk_i" clock domain???

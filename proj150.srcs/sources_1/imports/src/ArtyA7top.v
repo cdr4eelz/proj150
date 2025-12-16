@@ -63,7 +63,7 @@ module ArtyA7top #(
     ButtonClean #( .Width(1) ) clean_rst_top (
         .IN(!CK_RST_N),
         .Clock(clk_in_100MHz), .Reset(1'b0),
-        .OUT(reset_top_clocks)
+        .OUT(reset_top_clocks) // Reset Button (Active HIGH)
     );  //assign reset_top_clocks = !CK_RST_N;  // Top CLocks are first to come out of reset
 
     wire locked_top_clocks;  // Participate in startup sequence
@@ -87,14 +87,14 @@ module ArtyA7top #(
     (* mark_debug = "true" *) wire rst_cpu, init_done;  // TODO: CPU comes out of reset after everything else
     wire rst_mig_sys_n, rst_pix; // Avoid debug on these since it brings in 2 extra clock domains
     Synchronizer #( .Width(1) ) sync_rst_mig_sys_n (
-        .async_signal(locked_top_clocks && !reset_top_clocks),
-        .Clock(clk_mig_sys),  .sync_signal(rst_mig_sys_n));  // NOTE: This clock is bad when PLL not locked!
+        .async_signal(locked_top_clocks && !reset_top_clocks), BAD BAD BAD
+        .Clock(clk_mig_sys),  .sync_signal(rst_mig_sys_n));  // ACTIVE HIGH??? NOTE: This clock is bad when PLL not locked!
     Synchronizer #( .Width(1) ) sync_rst_cpu (
         .async_signal(!locked_top_clocks || !init_done ),
-        .Clock(clk_cpu),  .sync_signal(rst_cpu));  // NOTE: This clock is bad when PLL not locked!
+        .Clock(clk_cpu),  .sync_signal(rst_cpu)); // (ACTIVE HIGH) NOTE: clk_cpu itself is bad until locked_top_clocks is HIGH
     Synchronizer #( .Width(1) ) sync_rst_pix (
         .async_signal(!locked_top_clocks || !init_done),
-        .Clock(clk_pix),  .sync_signal(rst_pix));  // NOTE: This clock is bad when PLL not locked!
+        .Clock(clk_pix),  .sync_signal(rst_pix));  // (ACTIVE HIGH) NOTE: clk_pix itself is bad until locked_top_clocks is HIGH
 
 
     // Debounce all switch & button signals
