@@ -73,7 +73,7 @@ module ArtyA7top #(
         .clk_in_100MHz(clk_in_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
         //.clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board)
     // Clock out ports (rebuild clk_wiz if needs change)
-        .clk_mig_167MHz     (clk_mig_sys),  // output MIG primary clk
+        .clk_mig_191MHz     (clk_mig_sys),  // output MIG primary clk
         .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG
         .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
         .clk_cpu_50MHz      (clk_cpu),      // output modest CPU speed
@@ -87,7 +87,7 @@ module ArtyA7top #(
     (* mark_debug = "true" *) wire rst_cpu, init_done;  // TODO: CPU comes out of reset after everything else
     wire rst_mig_sys_n, rst_pix; // Avoid debug on these since it brings in 2 extra clock domains
     Synchronizer #( .Width(1) ) sync_rst_mig_sys_n (
-        .async_signal(locked_top_clocks && !reset_top_clocks), BAD BAD BAD
+        .async_signal(locked_top_clocks && !reset_top_clocks), //BAD BAD BAD
         .Clock(clk_mig_sys),  .sync_signal(rst_mig_sys_n));  // ACTIVE HIGH??? NOTE: This clock is bad when PLL not locked!
     Synchronizer #( .Width(1) ) sync_rst_cpu (
         .async_signal(!locked_top_clocks || !init_done ),

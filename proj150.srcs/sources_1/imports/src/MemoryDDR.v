@@ -285,7 +285,7 @@ module MemoryDDR #(
         .din    (rcon_caf_cadr),  //input[30:0] : FIFO  <= RCON: {cmd-3,addr-28} = 31
         .wr_ack (rcon_caf_wrack),
     // FIFO-RD: DDR3 clock-domain
-        .rd_clk (clk_mig_ui),       // input    : MIG sys_clk_i clock
+        .rd_clk (clk_mig_ui),       // input    : MIG controller clock (2:1 or 4:1 of PHY clock)
         .empty  (fifo_caf_empty),   // output   : <Unused> For waveform debugging
         .rd_en  (fifo_caf_rdy),     // input    : FIFO  <= DDR3: "ready"  WAS: !fifo_caf_full
         .valid  (fifo_caf_wren),    // output   : FIFO =>  DDR3: "valid"
@@ -303,7 +303,7 @@ module MemoryDDR #(
         .din    (rcon_wdf_mdat), //input[143:0] : FIFO  <= RCON: {mask-16,data-128} = 144
         .wr_ack (rcon_wdf_wrack),
         // FIFO-RD: DDR3 clock-domain
-        .rd_clk (clk_mig_ui),       // input    : MIG sys_clk_i clock
+        .rd_clk (clk_mig_ui),       // input    : MIG controller clock (2:1 or 4:1 of PHY clock)
         .empty  (fifo_wdf_empty),   // output : <Unused> FOR debugging waveform
         .rd_en  (fifo_wdf_rdy),     // input    : FIFO  <= DDR3: "ready"  WAS: !fifo_wdf_full
         .valid  (fifo_wdf_wren),    // output   : FIFO =>  DDR3: "valid"
@@ -315,7 +315,7 @@ module MemoryDDR #(
     mig_rdf  ddr3_read_fifo (
         .rst(rst_mig_ui),           // input    : rst_cpu_bus vs rst_mig_ui
         // FIFO-WR: DDR3 clock-domain
-        .wr_clk(clk_mig_ui),        // input    : MIG sys_clk_i
+        .wr_clk(clk_mig_ui),        // input    : MIG controller clock (2:1 or 4:1 of PHY clock)
         .full  (fifo_rdf_full),     // output   : FIFO =>  DDR3: N/A (always ready) MIG doesn't check this 
         .wr_en (fifo_rdf_wren),     // input    : FIFO  <= DDR3: "ready"
         .din   (fifo_rdf_data),  //input[127:0] : FIFO  <= DDR3: data-128

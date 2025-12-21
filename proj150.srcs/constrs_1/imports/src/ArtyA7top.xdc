@@ -43,7 +43,7 @@ set_false_path -to   [get_ports { FPGA_SERIAL_TX }]
 set_false_path -to   [get_ports { LED[*] }]
 set_false_path -to   [get_ports { led* }]
 
-set_false_path -to   [get_ports { ddr3_reset_n }]
+#??? set_false_path -to   [get_ports { ddr3_reset_n }]
 # #set_false_path -from [get_cells { por_counter_reg[*] }]
 
 # # Below removes path analysis related to init_calib_complete
