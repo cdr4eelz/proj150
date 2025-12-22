@@ -68,12 +68,13 @@ module ArtyA7top #(
 
     wire locked_top_clocks;  // Participate in startup sequence
     wire clk_mig_sys, clk_mig_ref, clk_cpu, clk_pix;
+    assign clk_mig_sys = clk_in_100MHz; // Temporary bypass of clock wizard for MIG testing
     clk_wiz_0 top_clocks (  // Generate various clocks for components
     // Clock in ports
         .clk_in_100MHz(clk_in_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
         //.clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board)
     // Clock out ports (rebuild clk_wiz if needs change)
-        .clk_mig_100MHz     (clk_mig_sys),  // output MIG primary clk
+        .clk_mig_100MHz     (/*clk_mig_sys*/),  // output MIG primary clk
         .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG
         .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
         .clk_cpu_50MHz      (clk_cpu),      // output modest CPU speed
