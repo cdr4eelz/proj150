@@ -29,7 +29,7 @@ module MemoryDDR #(
     output wire         init_done,  // init_calib_complete (related to ddr3_reset_n below???)
 
 // DDR3 Pads:
-    // DDR3 Inouts
+    // DDR3 InOuts
     inout wire[15:0]    ddr3_dq,        // inout    WAS: DDR2_D[63:0]
     inout wire[ 1:0]    ddr3_dqs_n,     // inout    WAS: DDR2_DQS_N[7:0]
     inout wire[ 1:0]    ddr3_dqs_p,     // inout    WAS: DDR2_DQS_P[7:0]
@@ -45,7 +45,7 @@ module MemoryDDR #(
     output wire[ 0:0]   ddr3_cs_n,      // output   WAS: DDR2_CS0_B,
     output wire[ 1:0]   ddr3_dm,        // output   WAS: [7:0] DDR2_DM
     output wire[ 0:0]   ddr3_odt,       // output   WAS: DDR2_ODT0
-    output wire         ddr3_reset_n,   // ???
+    output wire         ddr3_reset_n,   // output, hardware reset?
 
 // Cache <=> CPU:
     input  wire[31:0]   dcache_addr,    icache_addr,
@@ -186,44 +186,21 @@ module MemoryDDR #(
         .ddr3_reset_n           (ddr3_reset_n),         // output
         .init_calib_complete    (init_calib_complete),  // output
 
-//DONE: .app_af_addr      (fifo_caf_cadr[30:0])     //DDR2  <= FIFO: address  BECOMES: .app_addr [27:0]
-//DONE: .app_af_cmd       (fifo_caf_cadr[33:31])    //DDR2  <= FIFO: command  BECOMES: .app_cmd [30:28]
-//DONE: .app_af_afull     (fifo_caf_full),          //DDR2 =>  FIFO: "!ready" BECOMES: .app_rdy(fifo_caf_rdy)
-//DONE: .app_af_wren      (fifo_caf_wren),          //DDR2  <= FIFO: "valid"  BECOMES: .app_en
-//DONE: .app_wdf_afull    (fifo_wdf_full)           //DDR2 =>  FIFO: "!ready" BECOMES: .app_wdf_rdy(app_wdf_rdy)
-//DONE: .app_wdf_wren     (fifo_wdf_wren)           //DDR2  <= FIFO: "valid"  STAYS:   .app_wdf_wren
-//DONE: .app_wdf_mask_data(fifo_wdf_mdat[143:128])  //DDR2  <= FIFO: mask     BECOMES: .app_wdf_mask
-//DONE: .app_wdf_data     (fifo_wdf_mdat[127:  0])  //DDR2  <= FIFO: data     STAYS:   .app_wdf_data
-//DONE: .rd_data_valid    (fifo_rdf_wren)           //DDR2 =>  FIFO: "valid"  BECOMES: .app_rd_data_valid
-//DONE: .rd_data_fifo_out (fifo_rdf_data)           //DDR2 =>  FIFO: data     BECOMES: .app_rd_data
-
         // Application interface ports (NOTE: ADDR_WIDTH=28 CMD_WIDTH=3)
         .app_addr           (fifo_caf_cadr[27:0]),  // input  [27:0]  WAS .app_af_addr [30:0]
-      //.app_af_addr(fifo_caf_cadr[30:0]) //DDR2  <= FIFO: address
         .app_cmd            (fifo_caf_cadr[30:28]), // input  [2:0]   WAS .app_af_cmd [33:31]
-      //.app_af_cmd(fifo_caf_cadr[33:31]) //DDR2  <= FIFO: command
         .app_en             (fifo_caf_wren),        // input          WAS: .app_af_wren
-      //.app_af_wren(fifo_caf_wren) //DDR2   <= FIFO: "valid"
         .app_rdy            (fifo_caf_rdy),         // output         WAS: !.app_af_afull(fifo_caf_full)
-      //.app_af_afull(fifo_caf_full) //DDR2  =>  FIFO: "!ready"
 
         .app_wdf_data       (fifo_wdf_mdat[127:  0]),   // input  [127:0]  STAYS: .app_wdf_data
-      //.app_wdf_data(fifo_wdf_mdat[127:0]) //DDR2  <= FIFO: data-128
         .app_wdf_mask       (fifo_wdf_mdat[143:128]),   // input  [15:0]  WAS: .app_wdf_mask_data
-      //.app_wdf_mask_data(fifo_wdf_mdat[143:128]) //DDR2 <= FIFO: mask-16
         .app_wdf_wren       (fifo_wdf_wren),    // input  : DDR3  <= FIFO: "valid"  STAYS: .app_wdf_wren
-      //.app_wdf_wren(fifo_wdf_wren)        //DDR2  <= FIFO: "valid"
         .app_wdf_rdy        (fifo_wdf_rdy),     // output         WAS: !.app_wdf_afull(fifo_wdf_full)
-      //.app_wdf_afull(fifo_wdf_full)       //DDR2 =>  FIFO: "!ready"
         .app_wdf_end        (fifo_wdf_wren),    // input  Obsolete, drive with "wdf_wren"
-      //NOTE: The "_end" are obsolete & will be removed in future.
 
         .app_rd_data        (fifo_rdf_data),    // output [127:0] WAS: .rd_data_fifo_out
-      //.rd_data_fifo_out(fifo_rdf_data)    //DDR2 =>  FIFO: data
         .app_rd_data_valid  (fifo_rdf_wren),    // output         WAS: .rd_data_valid
-      //.rd_data_valid(fifo_rdf_wren)       //DDR2 =>  FIFO: "valid"
         .app_rd_data_end    ( ),     // output  UNUSED
-      //NOTE: The "_end" are depricated & unused, to be removed from MIG
 
         // Unknown new signals, appearing to have a "request/acknowledge" pattern to them
         .app_sr_req (1'b0), .app_sr_active  ( ), // input / output  UNUSED
@@ -231,7 +208,7 @@ module MemoryDDR #(
         .app_zq_req (1'b0), .app_zq_ack     ( ), // input / output  UNUSED
 
         // System Clock Port (MIG generates various other clocks from this)
-        .sys_clk_i          (clk_mig_sys),      // input  Currently 166.667MHz
+        .sys_clk_i          (clk_mig_sys),      // input (Much match choice in MIG GUI)
         // Reference Clock Port (Always 200MHz, drives "iodelay" lines)app_zq_ack
         .clk_ref_i          (clk_mig_ref),      // input  ALWAYS 200MHz
         // Reset MIG, presumably in ".sys_clk_i" clock domain???

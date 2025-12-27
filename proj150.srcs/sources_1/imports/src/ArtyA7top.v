@@ -30,7 +30,7 @@ module ArtyA7top #(
     output wire[3:0]    VGA_G,      // PMOD VGA: 4-bit green
     output wire[3:0]    VGA_B,      // PMOD VGA: 4-bit blue
 
-    // DDR3 Inouts
+    // DDR3 InOuts
     inout  wire[15:0]   ddr3_dq,        // inout WAS: [63:0] DDR2_D
     inout  wire[1:0]    ddr3_dqs_n,     // inout WAS: [7:0] DDR2_DQS_N
     inout  wire[1:0]    ddr3_dqs_p,     // inout WAS: [7:0] DDR2_DQS_P
@@ -68,22 +68,23 @@ module ArtyA7top #(
 
     wire locked_top_clocks;  // Participate in startup sequence
     wire clk_mig_sys, clk_mig_ref, clk_cpu, clk_pix;
-    assign clk_mig_sys = clk_in_100MHz; // Temporary bypass of clock wizard for MIG testing
+//TODO: Figure out if we need BUFG on these clocks???
     clk_wiz_0 top_clocks (  // Generate various clocks for components
     // Clock in ports
         .clk_in_100MHz(clk_in_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
         //.clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board)
     // Clock out ports (rebuild clk_wiz if needs change)
-        .clk_mig_100MHz     (/*clk_mig_sys*/),  // output MIG primary clk
-        .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG
+        .clk_mig_100MHz     (/*clk_mig_sys*/),  // output MIG primary clk (See "assign" below)
+        .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG (must be 200MHz)
         .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
         .clk_cpu_50MHz      (clk_cpu),      // output modest CPU speed
-        .clk_mig_167MHz     (),  // output UNUSED
+        .clk_mig_167MHz     (/*clk_mig_sys*/),  // output alternate MIG clk (not used)
         // Status and control signals
         .reset(reset_top_clocks),  // input reset (ACTIVE HIGH)
         .locked(locked_top_clocks)  // output locked (ACTIVE HIGH)
     );  // NOTE: clk_wiz puts BUFG on its output clocks
-//TODO: Figure out if we need BUFG on these clocks???
+    assign clk_mig_sys = clk_in_100MHz; // Drive MIG (input) clock directly from board clock (100MHz)
+    // ^^^ Using clk_in_100MHz directly is approximate (wants 101.01MHz) but hopefully a cleaner clock!
 
     // Then some other support components come out of reset (like DRAM)
     (* mark_debug = "true" *) wire rst_cpu, init_done;  // TODO: CPU comes out of reset after everything else
@@ -172,7 +173,7 @@ module ArtyA7top #(
             .clk_mig_ref    (clk_mig_ref),
             .clk_pix        (clk_pix),
             .rst_pix        (rst_pix),
-            .locked         (locked_top_clocks),  //Acts as an active HIGH reset
+            .locked         (locked_top_clocks),  //Acts as an active LOW? reset
             .init_done      (init_done),  // Output HIGH when MIG is ready
             .DBG_clk_mig_ui (DBG_clk_mig_ui),
             .DBG_rst_mig_ui (DBG_rst_mig_ui),
