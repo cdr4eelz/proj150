@@ -74,11 +74,6 @@ module MemoryDDR #(
     assign init_done = init_calib_complete; //Assign rather than renaming
     (* mark_debug = "true" *) wire [3:0]  DBG_dcache_cs,  DBG_icache_cs;
 
-
-//TODO: Check use of "fifo_caf_rdy" vs. old "!fifo_caf_full"
-//        Also check "fifo_wdf_rdy" vs. old "!fifo_wdf_full"
-//      Seems like current use is okay. It controls a FIFO but doesn't propagate.
-
 // MIG feeds clock/rst back to us (use for clock-crossing FIFOs)
     wire            clk_mig_ui;
     (* mark_debug = "true" *) wire            rst_mig_ui;
@@ -86,30 +81,30 @@ module MemoryDDR #(
 
 // FIFOs <=> DDR3/MIG:                      [clk_mig_ui domain]
     (* mark_debug = "true" *) wire            fifo_caf_empty; //FIFO: <Unused>  // FOR Debugging waveform
-    (* mark_debug = "true" *) wire            fifo_caf_rdy;   //DDR3: "ready"             WAS: !fifo_caf_full
-    (* mark_debug = "true" *) wire            fifo_caf_wren;  //FIFO: "valid"
-    (* mark_debug = "true" *) wire [ 30:0]    fifo_caf_cadr;  //FIFO: {cmd-3,addr-28}     NOTE:Width WAS: [33:0]
+    (* mark_debug = "true" *) wire            fifo_caf_rd_en; //  DDR3: "ready"             WAS: !fifo_caf_full
+    (* mark_debug = "true" *) wire            fifo_caf_valid; //FIFO: "valid"
+    (* mark_debug = "true" *) wire [ 30:0]    fifo_caf_dout;  //FIFO: {cmd-3,addr-28}     NOTE:Width WAS: [33:0]
     (* mark_debug = "true" *) wire            fifo_wdf_empty; //FIFO: <Unused>  // FOR Debugging waveform
-    (* mark_debug = "true" *) wire            fifo_wdf_rdy;   //DDR3: "ready"             WAS: !fifo_wdf_full
-    (* mark_debug = "true" *) wire            fifo_wdf_wren;  //FIFO: "valid"
-    (* mark_debug = "true" *) wire [143:0]    fifo_wdf_mdat;  //FIFO: {mask-16,data-128}  NOTE:Same width
-    (* mark_debug = "true" *) wire            fifo_rdf_full;  //FIFO: N/A (always-ready) FOR Debugging waveform
-    (* mark_debug = "true" *) wire            fifo_rdf_wren;  //DDR3: "valid"
-    (* mark_debug = "true" *) wire [127:0]    fifo_rdf_data;  //DDR3: data                NOTE:Same width
-    (* mark_debug = "true" *) wire            fifo_caf_under, fifo_wdf_under, fifo_rdf_wrack; //FOR DEBUG
+    (* mark_debug = "true" *) wire            fifo_wdf_rd_en; //  DDR3: "ready"             WAS: !fifo_wdf_full
+    (* mark_debug = "true" *) wire            fifo_wdf_valid; //FIFO: "valid"
+    (* mark_debug = "true" *) wire [143:0]    fifo_wdf_dout;  //FIFO: {mask-16,data-128}  NOTE:Same width
+    (* mark_debug = "true" *) wire            fifo_rdf_full;  //FIFO: Note that MIG writes without checking full
+    (* mark_debug = "true" *) wire            fifo_rdf_wr_en; //  DDR3: "valid"
+    (* mark_debug = "true" *) wire [127:0]    fifo_rdf_din;   //  DDR3: data                NOTE:Same width
+    (* mark_debug = "true" *) wire fifo_caf_under, fifo_wdf_under, fifo_rdf_wr_ack; //FOR DEBUG
     
 // RequestController/MASTER <=> FIFOs:      [clk_cpu domain]
     (* mark_debug = "true" *) wire            rcon_caf_full;  //FIFO: "!ready"
-    (* mark_debug = "true" *) wire            rcon_caf_wren;  //RCON: "valid"
-    (* mark_debug = "true" *) wire [ 30:0]    rcon_caf_cadr;  //RCON: {cmd-3,addr-28}     NOTE:Width WAS: [33:0]
+    (* mark_debug = "true" *) wire            rcon_caf_wr_en; //  RCON: "valid"
+    (* mark_debug = "true" *) wire [ 30:0]    rcon_caf_din;   //  RCON: {cmd-3,addr-28}     NOTE:Width WAS: [33:0]
     (* mark_debug = "true" *) wire            rcon_wdf_full;  //FIFO: "!ready"
-    (* mark_debug = "true" *) wire            rcon_wdf_wren;  //RCON: "valid"
-    (* mark_debug = "true" *) wire [143:0]    rcon_wdf_mdat;  //RCON: {mask-16,data-128}  NOTE:Same width
+    (* mark_debug = "true" *) wire            rcon_wdf_wr_en; //  RCON: "valid"
+    (* mark_debug = "true" *) wire [143:0]    rcon_wdf_din;   //  RCON: {mask-16,data-128}  NOTE:Same width
     (* mark_debug = "true" *) wire            rcon_rdf_empty; //FIFO: <Unused>  // FOR Debugging waveform
-    (* mark_debug = "true" *) wire            rcon_rdf_rden;  //RCON: "ready"
-    (* mark_debug = "true" *) wire            rcon_rdf_wren;  //FIFO: "valid"
+    (* mark_debug = "true" *) wire            rcon_rdf_rd_en; //  RCON: "ready"
+    (* mark_debug = "true" *) wire            rcon_rdf_valid; //FIFO: "valid"
     (* mark_debug = "true" *) wire [127:0]    ALLR_rdf_data;  //FIFO: ALL-Readers         NOTE:Same width
-    (* mark_debug = "true" *) wire            rcon_caf_wrack, rcon_wdf_wrack, rcon_rdf_under; //FOR DEBUG
+    (* mark_debug = "true" *) wire            rcon_caf_wr_ack, rcon_wdf_wr_ack, rcon_rdf_under; //FOR DEBUG
 
     //Inst/Data-Caches <=> RequestController:   [Read-Write]
     wire         inst_caf_full,     data_caf_full;
@@ -165,6 +160,17 @@ module MemoryDDR #(
     wire [127:0] bpas_wdf_data;
     wire [143:0] bpas_wdf_mdat = {bpas_wdf_mask,bpas_wdf_data};
 
+    // MIG Application Interface Signals:
+    wire [ 27:0]    app_addr;
+    wire [  2:0]    app_cmd;
+    wire            app_en;
+    wire            app_rdy;
+    wire [ 63:0]    app_wdf_data;
+    wire [  7:0]    app_wdf_mask;
+    wire            app_wdf_wren;
+    wire            app_wdf_rdy;
+    wire [ 63:0]    app_rd_data;
+    wire            app_rd_data_valid;
 
     mig_arty_a7_100 u_mig_arty_a7_100 ( // There are no parameters available
         // DDR3 InOuts
@@ -187,22 +193,22 @@ module MemoryDDR #(
         .init_calib_complete    (init_calib_complete),  // output
 
         // Application interface ports (NOTE: ADDR_WIDTH=28 CMD_WIDTH=3)
-        .app_addr           (fifo_caf_cadr[27:0]),  // input  [27:0]  WAS .app_af_addr [30:0]
-        .app_cmd            (fifo_caf_cadr[30:28]), // input  [2:0]   WAS .app_af_cmd [33:31]
-        .app_en             (fifo_caf_wren),        // input          WAS: .app_af_wren
-        .app_rdy            (fifo_caf_rdy),         // output         WAS: !.app_af_afull(fifo_caf_full)
+        .app_addr           (app_addr),         // input  [ 27:0]  WAS .app_af_addr [30:0]
+        .app_cmd            (app_cmd),          // input  [  2:0]   WAS .app_af_cmd [33:31]
+        .app_en             (app_en),           // input          WAS: .app_af_wren
+        .app_rdy            (app_rdy),          // output         WAS: !.app_af_afull(fifo_caf_full)
 
-        .app_wdf_data       (fifo_wdf_mdat[127:  0]),   // input  [127:0]  STAYS: .app_wdf_data
-        .app_wdf_mask       (fifo_wdf_mdat[143:128]),   // input  [15:0]  WAS: .app_wdf_mask_data
-        .app_wdf_wren       (fifo_wdf_wren),    // input  : DDR3  <= FIFO: "valid"  STAYS: .app_wdf_wren
-        .app_wdf_rdy        (fifo_wdf_rdy),     // output         WAS: !.app_wdf_afull(fifo_wdf_full)
-        .app_wdf_end        (fifo_wdf_wren),    // input  Obsolete, drive with "wdf_wren"
+        .app_wdf_data       (app_wdf_data),     // input  [ 63:0]  STAYS: .app_wdf_data
+        .app_wdf_mask       (app_wdf_mask),     // input  [ 15:0]  WAS: .app_wdf_mask_data
+        .app_wdf_wren       (app_wdf_wren),     // input  : DDR3  <= FIFO: "valid"  STAYS: .app_wdf_wren
+        .app_wdf_rdy        (app_wdf_rdy),      // output         WAS: !.app_wdf_afull(fifo_wdf_full)
+        .app_wdf_end        (app_wdf_wren),     // input  Obsolete, drive with "app_wdf_wren"
 
-        .app_rd_data        (fifo_rdf_data),    // output [127:0] WAS: .rd_data_fifo_out
-        .app_rd_data_valid  (fifo_rdf_wren),    // output         WAS: .rd_data_valid
-        .app_rd_data_end    ( ),     // output  UNUSED
+        .app_rd_data        (app_rd_data),      // output [ 63:0] WAS: .rd_data_fifo_out
+        .app_rd_data_valid  (app_rd_data_valid),// output         WAS: .rd_data_valid
+        .app_rd_data_end    ( ),     // output  UNUSED / OBSOLETE
 
-        // Unknown new signals, appearing to have a "request/acknowledge" pattern to them
+        // Unneeded new signals, related to low-level DRAM management
         .app_sr_req (1'b0), .app_sr_active  ( ), // input / output  UNUSED
         .app_ref_req(1'b0), .app_ref_ack    ( ), // input / output  UNUSED
         .app_zq_req (1'b0), .app_zq_ack     ( ), // input / output  UNUSED
@@ -220,35 +226,39 @@ module MemoryDDR #(
         .device_temp        ( ) // output [11:0]  UNUSED
     );
 
-    // OLD DDR2 (MIG) module:
-/*  mig_v3_61 #(
-        .SIM_ONLY(SIM_ONLY),
-        .CAS_LAT(3), //CAS 3 matches 200MHz (like -53E), CAS 4 matches 266MHz (like -667)
-        .BURST_LEN(4),
-        .CLK_PERIOD(5000), //5000ns==200MHz (3750ns==266MHz, challenging for SpeedGrade-1)
-        .APPDATA_WIDTH(128),
-        .RST_ACT_LOW(0) // was 1: flipped this to avoid double inversion
-    ) ddr2 (
-        .clk0 (clk0_g), .clk90 (clk90_g), .clkdiv0(clkdiv0_g), .clk200 (clk200_g),
-        .locked (locked), .sys_rst_n(rst_cpu_mem), .phy_init_done(init_done),
-        .clk0_tb(ddr2_clock_tb), .rst0_tb(ddr2_rst_tb),
+    MIGAdapter MIGAdapt ( // Performs extra manipulations to match FIFO with MIG specs
+        // Entire adapter lives in clk_mig_ui clock domain
+        .ui_clk(clk_mig_ui),  .ui_rst(rst_mig_ui),
 
-        .ddr2_dq(DDR2_D),  .ddr2_a(DDR2_A),  .ddr2_ba(DDR2_BA),  .ddr2_ras_n(DDR2_RAS_B),
-        .ddr2_cas_n(DDR2_CAS_B),  .ddr2_we_n(DDR2_WE_B),  .ddr2_cs_n(DDR2_CS_B),
-        .ddr2_odt(DDR2_ODT),  .ddr2_cke(DDR2_CKE),  .ddr2_dm(DDR2_DM),  .ddr2_dqs(DDR2_DQS_P),
-        .ddr2_dqs_n(DDR2_DQS_N),  .ddr2_ck(DDR2_CLK_P),  .ddr2_ck_n(DDR2_CLK_N),
-        .app_af_afull     (fifo_caf_full),          //DDR2 =>  FIFO: "!ready" BECOMES: .app_rdy(fifo_caf_rdy)
-        .app_af_wren      (fifo_caf_wren),          //DDR2  <= FIFO: "valid"
-        .app_af_cmd       (fifo_caf_cadr[33:31]),   //DDR2  <= FIFO: command  BECOMES: .app_cmd [30:28]
-        .app_af_addr      (fifo_caf_cadr[30:0]),    //DDR2  <= FIFO: address  BECOMES: .app_addr [27:0]
-        .app_wdf_afull    (fifo_wdf_full),          //DDR2 =>  FIFO: "!ready" BECOMES: .app_wdf_rdy(!fifo_wdf_rdy)
-        .app_wdf_wren     (fifo_wdf_wren),          //DDR2  <= FIFO: "valid"
-        .app_wdf_mask_data(fifo_wdf_mdat[143:128]), //DDR2  <= FIFO: mask     BECOMES: .app_wdf_mask
-        .app_wdf_data     (fifo_wdf_mdat[127:  0]), //DDR2  <= FIFO: data
-                                                    //DDR2  <= FIFO: always-ready
-        .rd_data_valid    (fifo_rdf_wren),          //DDR2 =>  FIFO: "valid"  BECOMES: .app_rd_data_valid
-        .rd_data_fifo_out (fifo_rdf_data)           //DDR2 =>  FIFO: data     BECOMES: .app_rd_data
-    ); */
+        // Command/Address FIFO input (from mig_caf, 31 bits: {cmd[2:0], addr[27:0]})
+        .fifo_caf_dout  (fifo_caf_dout),
+        .fifo_caf_valid (fifo_caf_valid),
+        .fifo_caf_rd_en (fifo_caf_rd_en),
+        // Write Data FIFO input (from mig_wdf dout, 143:0)
+        .fifo_wdf_dout  (fifo_wdf_dout),
+        .fifo_wdf_valid (fifo_wdf_valid),
+        .fifo_wdf_rd_en (fifo_wdf_rd_en),
+        // Read Data FIFO output (to mig_rdf din, 127:0 → pure 128-bit read data)
+        .fifo_rdf_din   (fifo_rdf_din),
+        .fifo_rdf_wr_en (fifo_rdf_wr_en),
+        .fifo_rdf_full  (fifo_rdf_full),
+
+        // MIG standard interface ports (UG586)
+        .app_addr   (app_addr),
+        .app_cmd    (app_cmd),         // 000 = WRITE, 001 = READ
+        .app_en     (app_en),
+        .app_rdy    (app_rdy),
+        // Write Data interface
+        .app_wdf_data   (app_wdf_data),
+        .app_wdf_mask   (app_wdf_mask),
+        .app_wdf_wren   (app_wdf_wren),
+        .app_wdf_rdy    (app_wdf_rdy),
+        // Read Data interface
+        .app_rd_data        (app_rd_data),
+        .app_rd_data_valid  (app_rd_data_valid)
+        // NOTE: No "ready" signal. MIG read data is output when it wants, no holding it back!
+);
+
 
 // Clock-crossing FIFOs (RCON[clk_cpu] <=> FIFOs <=> MIG[clk_mig_ui]):
 
@@ -258,16 +268,16 @@ module MemoryDDR #(
     // FIFO-WR: RCON clock-domain
         .wr_clk (clk_cpu),          // input    : CPU/RCON clock
         .full   (rcon_caf_full),    // output   : FIFO =>  RCON: "!ready"
-        .wr_en  (rcon_caf_wren),    // input    : FIFO  <= RCON: "valid"
-        .din    (rcon_caf_cadr),  //input[30:0] : FIFO  <= RCON: {cmd-3,addr-28} = 31
-        .wr_ack (rcon_caf_wrack),
+        .wr_en  (rcon_caf_wr_en),   // input    : FIFO  <= RCON: "valid"
+        .din    (rcon_caf_din),   //input[30:0] : FIFO  <= RCON: {cmd-3,addr-28} = 31
+        .wr_ack (rcon_caf_wr_ack),  // output   : FIFO =>  DDR3: "valid"
     // FIFO-RD: DDR3 clock-domain
         .rd_clk (clk_mig_ui),       // input    : MIG controller clock (2:1 or 4:1 of PHY clock)
         .empty  (fifo_caf_empty),   // output   : <Unused> For waveform debugging
-        .rd_en  (fifo_caf_rdy),     // input    : FIFO  <= DDR3: "ready"  WAS: !fifo_caf_full
-        .valid  (fifo_caf_wren),    // output   : FIFO =>  DDR3: "valid"
-        .underflow(fifo_caf_under),
-        .dout   (fifo_caf_cadr)  //output[30:0] : FIFO =>  DDR3: {cmd-3,addr-28} = 31
+        .rd_en  (fifo_caf_rd_en),   // input    : FIFO  <= DDR3: "ready"  WAS: !fifo_caf_full
+        .valid  (fifo_caf_valid),   // output   : FIFO =>  DDR3: "valid"
+        .dout   (fifo_caf_dout),// output[30:0] : FIFO =>  DDR3: {cmd-3,addr-28} = 31
+        .underflow(fifo_caf_under)  // output   : <Unused> For waveform debugging
     );
 
     //Write-mask/Data Fifo (RCON => FIFO => DDR3-MIG)...
@@ -275,17 +285,17 @@ module MemoryDDR #(
         .rst    (rst_cpu_bus),      // input    : rst_cpu_bus vs rst_mig_ui
         // FIFO-WR: RCON clock-domain
         .wr_clk (clk_cpu),          // input    : CPU/RCON clock
-        .full   (rcon_wdf_full),     // output  : FIFO =>  RCON: "!ready"
-        .wr_en  (rcon_wdf_wren),    // input    : FIFO  <= RCON: "valid"
-        .din    (rcon_wdf_mdat), //input[143:0] : FIFO  <= RCON: {mask-16,data-128} = 144
-        .wr_ack (rcon_wdf_wrack),
+        .full   (rcon_wdf_full),    // output   : FIFO =>  RCON: "!ready"
+        .wr_en  (rcon_wdf_wr_en),   // input    : FIFO  <= RCON: "valid"
+        .din    (rcon_wdf_din),  //input[143:0] : FIFO  <= RCON: {mask-16,data-128} = 144
+        .wr_ack (rcon_wdf_wr_ack),  // output   : <Unused> For waveform debugging
         // FIFO-RD: DDR3 clock-domain
         .rd_clk (clk_mig_ui),       // input    : MIG controller clock (2:1 or 4:1 of PHY clock)
-        .empty  (fifo_wdf_empty),   // output : <Unused> FOR debugging waveform
-        .rd_en  (fifo_wdf_rdy),     // input    : FIFO  <= DDR3: "ready"  WAS: !fifo_wdf_full
-        .valid  (fifo_wdf_wren),    // output   : FIFO =>  DDR3: "valid"
-        .underflow(fifo_wdf_under),
-        .dout   (fifo_wdf_mdat) //output[143:0] : FIFO =>  DDR3: {mask-16,data-128} = 144
+        .empty  (fifo_wdf_empty),   // output   : <Unused> For waveform debugging
+        .rd_en  (fifo_wdf_rd_en),   // input    : FIFO  <= DDR3: "ready"  WAS: !fifo_wdf_full
+        .valid  (fifo_wdf_valid),   // output   : FIFO =>  DDR3: "valid"
+        .dout   (fifo_wdf_dout),//output[143:0] : FIFO =>  DDR3: {mask-16,data-128} = 144
+        .underflow(fifo_wdf_under)  // output   : <Unused> For waveform debugging
     );
 
     //Read Data Fifo (DDR3 => FIFO => RCON):
@@ -294,20 +304,17 @@ module MemoryDDR #(
         // FIFO-WR: DDR3 clock-domain
         .wr_clk(clk_mig_ui),        // input    : MIG controller clock (2:1 or 4:1 of PHY clock)
         .full  (fifo_rdf_full),     // output   : FIFO =>  DDR3: N/A (always ready) MIG doesn't check this 
-        .wr_en (fifo_rdf_wren),     // input    : FIFO  <= DDR3: "ready"
-        .din   (fifo_rdf_data),  //input[127:0] : FIFO  <= DDR3: data-128
-        .wr_ack(fifo_rdf_wrack),
+        .wr_en (fifo_rdf_wr_en),    // input    : FIFO  <= DDR3: "ready"
+        .din   (fifo_rdf_din),      // input[127:0] : FIFO  <= DDR3: data-128
+        .wr_ack(fifo_rdf_wr_ack),   // output   : <Unused> FOR debugging waveform
         // FIFO-RD: RCON clock-domain
         .rd_clk(clk_cpu),           // input    : CPU/RCON clock
         .empty (rcon_rdf_empty),    // output   : <Unused>  FOR debugging waveform
-        .rd_en (rcon_rdf_rden),     // input    : FIFO  <= RCON: "ready"
-        .valid (rcon_rdf_wren),     // output   : FIFO =>  RCON: "valid"
-        .underflow(rcon_rdf_under),
+        .rd_en (rcon_rdf_rd_en),    // input    : FIFO  <= RCON: "ready"
+        .valid (rcon_rdf_valid),    // output   : FIFO =>  RCON: "valid"
+        .underflow(rcon_rdf_under), // output   : <Unused>  FOR debugging waveform
         .dout  (ALLR_rdf_data)  //output[127:0] : FIFO => ALL-Readers (direct) data-128
     );
-
-//assign fifo_caf_wren = 0, fifo_caf_cadr = 0;
-//assign fifo_wdf_wren = 0, fifo_wdf_mdat = 0;
 
 
     // The RequestController gives each cache the illusion of having
@@ -318,13 +325,13 @@ module MemoryDDR #(
     // Master/RequestController interface:
 
 //        .caf_full(rcon_caf_full),   //input  RCON  <= FIFO  : "!ready"
-//        .caf_wren(rcon_caf_wren),   //RCON =>  FIFO         : "valid"
-//        .caf_cadr(rcon_caf_cadr),   //RCON =>  FIFO         : {cmd,addr}
+//        .caf_wren(rcon_caf_wr_en),  //RCON =>  FIFO         : "valid"
+//        .caf_cadr(rcon_caf_din),    //RCON =>  FIFO         : {cmd,addr}
 //        .wdf_full(rcon_wdf_full),   //input  RCON  <= FIFO  : "!ready"
-//        .wdf_wren(rcon_wdf_wren),   //RCON =>  FIFO         : "valid"
-//        .wdf_mdat(rcon_wdf_mdat),   //RCON =>  FIFO         : {mask,data}
-//        .rdf_rden(rcon_rdf_rden),   //RCON =>  FIFO         : "ready" (ignored?)
-//        .rdf_wren(rcon_rdf_wren),   //input  RCON  <= FIFO  : "valid"
+//        .wdf_wren(rcon_wdf_wr_en),  //RCON =>  FIFO         : "valid"
+//        .wdf_mdat(rcon_wdf_din),    //RCON =>  FIFO         : {mask,data}
+//        .rdf_rden(rcon_rdf_rd_en),  //RCON =>  FIFO         : "ready" (ignored?)
+//        .rdf_wren(rcon_rdf_valid),  //input  RCON  <= FIFO  : "valid"
 
         .caf_full(1'b1),   //input  RCON  <= FIFO  : "!ready"
         .caf_wren( ),   //RCON =>  FIFO         : "valid"
@@ -537,20 +544,51 @@ module MemoryDDR #(
     // Patch DataCache directly with FIFOs (like RCON)
     assign  data_caf_full   = rcon_caf_full,
             data_wdf_full   = rcon_wdf_full,
-            data_rdf_wren   = rcon_rdf_wren;
-    assign  rcon_rdf_rden   = data_rdf_rden,
-            rcon_caf_wren   = data_caf_wren,
-            rcon_caf_cadr   = data_caf_cadr,
-            rcon_wdf_wren   = data_wdf_wren,
-            rcon_wdf_mdat   = data_wdf_mdat;
+            data_rdf_wren   = rcon_rdf_valid;
+    assign  rcon_rdf_rd_en  = data_rdf_rden,
+            rcon_caf_wr_en  = data_caf_wren,
+            rcon_caf_din    = data_caf_cadr,
+            rcon_wdf_wr_en  = data_wdf_wren,
+            rcon_wdf_din    = data_wdf_mdat;
 
 /*  assign  pixf_raf_full   = rcon_caf_full,
             //xxxx_wdf_full   = rcon_wdf_full, //No writing
-            pixf_rdf_wren   = rcon_rdf_wren;
-    assign  rcon_rdf_rden   = pixf_rdf_rden,
-            rcon_caf_wren   = pixf_raf_wren,
-            rcon_caf_cadr   = {3'b001, pixf_raf_addr}, //READ command
-            rcon_wdf_wren   = 0, //No writing
-            rcon_wdf_mdat   = 0;
+            pixf_rdf_wren   = rcon_rdf_valid;
+    assign  rcon_rdf_rd_en  = pixf_rdf_rden,
+            rcon_caf_wr_en  = pixf_raf_wren,
+            rcon_caf_din    = {3'b001, pixf_raf_addr}, //READ command
+            rcon_wdf_wr_en  = 0, //No writing
+            rcon_wdf_din    = 0;
 */
+
+    // OLD DDR2 (MIG) module:
+/*  mig_v3_61 #(
+        .SIM_ONLY(SIM_ONLY),
+        .CAS_LAT(3), //CAS 3 matches 200MHz (like -53E), CAS 4 matches 266MHz (like -667)
+        .BURST_LEN(4),
+        .CLK_PERIOD(5000), //5000ns==200MHz (3750ns==266MHz, challenging for SpeedGrade-1)
+        .APPDATA_WIDTH(128),
+        .RST_ACT_LOW(0) // was 1: flipped this to avoid double inversion
+    ) ddr2 (
+        .clk0 (clk0_g), .clk90 (clk90_g), .clkdiv0(clkdiv0_g), .clk200 (clk200_g),
+        .locked (locked), .sys_rst_n(rst_cpu_mem), .phy_init_done(init_done),
+        .clk0_tb(ddr2_clock_tb), .rst0_tb(ddr2_rst_tb),
+
+        .ddr2_dq(DDR2_D),  .ddr2_a(DDR2_A),  .ddr2_ba(DDR2_BA),  .ddr2_ras_n(DDR2_RAS_B),
+        .ddr2_cas_n(DDR2_CAS_B),  .ddr2_we_n(DDR2_WE_B),  .ddr2_cs_n(DDR2_CS_B),
+        .ddr2_odt(DDR2_ODT),  .ddr2_cke(DDR2_CKE),  .ddr2_dm(DDR2_DM),  .ddr2_dqs(DDR2_DQS_P),
+        .ddr2_dqs_n(DDR2_DQS_N),  .ddr2_ck(DDR2_CLK_P),  .ddr2_ck_n(DDR2_CLK_N),
+        .app_af_afull     (fifo_caf_full),          //DDR2 =>  FIFO: "!ready" BECOMES: .app_rdy(fifo_caf_rd_en)
+        .app_af_wren      (fifo_caf_valid),         //DDR2  <= FIFO: "valid"
+        .app_af_cmd       (fifo_caf_dout[33:31]),   //DDR2  <= FIFO: command  BECOMES: .app_cmd [30:28]
+        .app_af_addr      (fifo_caf_dout[30:0]),    //DDR2  <= FIFO: address  BECOMES: .app_addr [27:0]
+        .app_wdf_afull    (fifo_wdf_full),          //DDR2 =>  FIFO: "!ready" BECOMES: .app_wdf_rdy(!fifo_wdf_rdy)
+        .app_wdf_wren     (fifo_wdf_valid),         //DDR2  <= FIFO: "valid"
+        .app_wdf_mask_data(fifo_wdf_dout[143:128]), //DDR2  <= FIFO: mask     BECOMES: .app_wdf_mask
+        .app_wdf_data     (fifo_wdf_dout[127:  0]), //DDR2  <= FIFO: data
+                                                    //DDR2  <= FIFO: always-ready
+        .rd_data_valid    (fifo_rdf_wr_en),         //DDR2 =>  FIFO: "valid"  BECOMES: .app_rd_data_valid
+        .rd_data_fifo_out (fifo_rdf_din)            //DDR2 =>  FIFO: data     BECOMES: .app_rd_data
+    ); */
+
 endmodule
