@@ -228,7 +228,7 @@ module MemoryDDR #(
 
     MIGAdapter MIGAdapt ( // Performs extra manipulations to match FIFO with MIG specs
         // Entire adapter lives in clk_mig_ui clock domain
-        .ui_clk(clk_mig_ui),  .ui_rst(rst_mig_ui),
+        .ui_clk(clk_mig_ui),  .ui_clk_sync_rst(rst_mig_ui), // Reset is ACTIVE-HIGH
 
         // Command/Address FIFO input (from mig_caf, 31 bits: {cmd[2:0], addr[27:0]})
         .fifo_caf_dout  (fifo_caf_dout),
