@@ -1,0 +1,28 @@
+PHY CLK: 3084 ps == 324.25 MHz (inside MIG)
+RATIO  : 4:1
+UI  CLK: 81.064 MHz (from MIG)
+Potential input clock to MIG: 99.7705 MHz
+
+Is input of 166.667 available?
+
+
+PHY CLK: 3300 ps == 303.03 MHz
+RATIO  : 2:1            4:1
+UI  CLK: 151.515 MHz    75.7575
+Potential input clocks:
+  9900 ps (101.01 MHz)
+
+
+166.667MHz as potential MIG input???
+
+
+
+Note that MIG data bus widths are 64-bits however the FIFOs to send/receive commands and data are 128-bits wide. Create some intermediary Verilog code to translate one read request into two (with address offset for the second fetch), and two resulting reads of 64-bits into one write to the "mig_wdf" FIFO of width 128. Likewise, if the command is "write" (CMD-bits == 000), two writes are created for both 64-bit halves headed into the MIG.
+
+> dump 10000000
+
+10000000:66669999 aaaa5555 5555aaaa 0000ffff
+10000010:8888dddd eeee4444 4444eeee 1111bbbb
+10000020:5555aaaa 0000ffff 66669999 aaaa5555
+10000030:4444eeee 1111bbbb 8888dddd eeee4444
+
