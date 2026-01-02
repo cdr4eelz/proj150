@@ -19,27 +19,28 @@ create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} -verbose [
 ## Loose TIMING constraints on I/O pins
 create_clock -period 10.000 -name virtual_clock -waveform {0.000 5.000}
 
+
 set_input_delay  -clock virtual_clock -max  0.000 [get_ports { CK_RST_N }]
 set_input_delay  -clock virtual_clock -min -0.500 [get_ports { CK_RST_N }]
 set_input_delay  -clock virtual_clock -max  0.000 [get_ports { BUTTON[*] }]
 set_input_delay  -clock virtual_clock -min -0.500 [get_ports { BUTTON[*] }]
 set_input_delay  -clock virtual_clock -max  0.000 [get_ports { SWITCH[*] }]
 set_input_delay  -clock virtual_clock -min -0.500 [get_ports { SWITCH[*] }]
-#set_input_delay  -clock virtual_clock -max  0.000 [get_ports { FPGA_SERIAL_RX }]
-#set_input_delay  -clock virtual_clock -min -0.500 [get_ports { FPGA_SERIAL_RX }]
-#set_output_delay -clock virtual_clock      -5.000 [get_ports { FPGA_SERIAL_TX }]
-#set_output_delay -clock virtual_clock -min -1.000 [get_ports { FPGA_SERIAL_TX }]
-#set_output_delay -clock virtual_clock      -5.000 [get_ports { LED[*] }]
+set_input_delay  -clock virtual_clock -max  0.000 [get_ports { FPGA_SERIAL_RX }]
+set_input_delay  -clock virtual_clock -min -0.500 [get_ports { FPGA_SERIAL_RX }]
+set_output_delay -clock virtual_clock -max -5.000 [get_ports { FPGA_SERIAL_TX }]
+set_output_delay -clock virtual_clock -min -1.000 [get_ports { FPGA_SERIAL_TX }]
+#set_output_delay -clock virtual_clock -max -5.000 [get_ports { LED[*] }]
 #set_output_delay -clock virtual_clock -min -1.000 [get_ports { LED[*] }]
-#set_output_delay -clock virtual_clock      -5.000 [get_ports { led* }]
+#set_output_delay -clock virtual_clock -max -5.000 [get_ports { led* }]
 #set_output_delay -clock virtual_clock -min -1.000 [get_ports { led* }]
 
 # ### TIMING adjustments (mostly false paths)
 # set_false_path -from [get_ports CK_RST_N]
 # set_false_path -from [get_ports {BUTTON[*]}]
 # set_false_path -from [get_ports {SWITCH[*]}]
-set_false_path -from [get_ports { FPGA_SERIAL_RX }]
-set_false_path -to   [get_ports { FPGA_SERIAL_TX }]
+#set_false_path -from [get_ports { FPGA_SERIAL_RX }]
+#set_false_path -to   [get_ports { FPGA_SERIAL_TX }]
 set_false_path -to   [get_ports { LED[*] }]
 set_false_path -to   [get_ports { led* }]
 

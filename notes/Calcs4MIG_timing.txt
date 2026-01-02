@@ -19,10 +19,17 @@ Potential input clocks:
 
 Note that MIG data bus widths are 64-bits however the FIFOs to send/receive commands and data are 128-bits wide. Create some intermediary Verilog code to translate one read request into two (with address offset for the second fetch), and two resulting reads of 64-bits into one write to the "mig_wdf" FIFO of width 128. Likewise, if the command is "write" (CMD-bits == 000), two writes are created for both 64-bit halves headed into the MIG.
 
-> dump 10000000
 
+> dump 10000000
 10000000:66669999 aaaa5555 5555aaaa 0000ffff
 10000010:8888dddd eeee4444 4444eeee 1111bbbb
 10000020:5555aaaa 0000ffff 66669999 aaaa5555
 10000030:4444eeee 1111bbbb 8888dddd eeee4444
+
+> dump 1000e400
+1000e400:6f16f7e5 b8ff4726 ac664f5e 9e8acf18
+1000e410:98d9a9f0 552febf5 bb72f30b b1e1eb0f
+1000e420:ac664f5e 9e8acf18 6f16f7e5 b8ff4726
+1000e430:bb72f30b b1e1eb0f 98d9a9f0 552febf5
+
 
