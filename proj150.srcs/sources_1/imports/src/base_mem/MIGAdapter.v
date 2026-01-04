@@ -65,42 +65,65 @@ module MIGAdapter (
     // ignore app_rd_data_end
 );
 
+    // ────────────────────────────────────────────────
+    // State encoding
+    // ────────────────────────────────────────────────
+    localparam S_IDLE      = 2'd0;  // waiting for new command, latch addr & cmd
+    localparam S_READ1       = 2'd1;  // issuing first read (using FIFO addr)
+    localparam S_READ2       = 2'd2;  // issuing second read (base + 8)
+    localparam S_WRITE1      = 2'd3;  // issuing first write (using FIFO addr)
+    localparam S_WRITE2      = 2'd4;  // issuing second write (base + 8)
 
+    reg [2:0] state; // Handle up to 8 states
+    reg [27:0] base_addr;           // captured starting address
 
-/* SEPARATE app_rd_data & app_wdf_data processing here... DO NOT CHANGE ANYTHING BELOW THIS LINE */
+    // ────────────────────────────────────────────────
+    // Combinatorial outputs / control signals
+    // ────────────────────────────────────────────────
+    assign fifo_caf_rd_en  = (state == S_IDLE); // Only accept new command in IDLE
+    assign app_cmd         = ((state == S_READ1) || (state == S_READ2))
+                                ? 3'b001 : 3'b000;
+    assign app_addr        = ((state == S_READ2 || state == S_WRITE2))
+                                ? (base_addr + 28'd8) : base_addr;
+    assign app_en          = (state == S_READ1) || (state == S_READ2);
 
-//=============================================================================
+    // ────────────────────────────────────────────────
+    // FSM + address register
+    // ────────────────────────────────────────────────
+    always @(posedge ui_clk) begin
+        if (ui_clk_sync_rst) begin
+            state     <= S_IDLE;
+            base_addr <= 28'd0;
+        end
+        else begin
+            state <= state;  // default hold
+            base_addr <= base_addr; // default hold
+            case (state)
+                S_IDLE: begin // Capture new command from FIFO
+                    if (fifo_caf_valid && fifo_caf_rd_en) begin
+                        base_addr <= fifo_caf_dout[27:0];
+                        state <= (fifo_caf_dout[30:28] == 3'b001) ? S_READ1 : S_WRITE1;
+                    end
+                end
 
-reg [ 27:0] cmd_addr_reg;        // captured base address
-reg         isFirst;            // indicates first command in output pair
-wire        adv_on_First, adv_on_Second, is_read;
-// Capture address when we accept the command
-always @(posedge ui_clk) begin
-    if (ui_clk_sync_rst) begin
-        cmd_addr_reg <= 28'd0;
-        isFirst      <= 1'b1;
-    end else if (adv_on_First) begin
-        cmd_addr_reg <= fifo_caf_dout[27:0];
-        isFirst      <= 1'b0;
-    end else if (adv_on_Second) begin
-        cmd_addr_reg <= 28'd0;
-        isFirst      <= 1'b1;
-    end else begin
-        cmd_addr_reg <= cmd_addr_reg;
-        isFirst      <= isFirst;
+                S_READ1: begin
+                    if (app_rdy && app_en) begin
+                        state    <= S_READ2;
+                    end
+                end
+
+                S_READ2: begin
+                    if (app_rdy && app_en) begin
+                        state    <= S_IDLE;
+                    end
+                end
+
+                default: begin
+                    state <= S_IDLE;
+                end
+            endcase
+        end
     end
-end
-
-//    INPUTs  : fifo_caf_valid, app_rdy
-//    OUTPUTs : fifo_caf_rd_en, app_en
-
-assign adv_on_First = fifo_caf_valid && fifo_caf_rd_en && app_rdy && app_en;
-assign adv_on_Second = !isFirst && app_rdy && app_en;
-assign fifo_caf_rd_en = isFirst && app_rdy; // Only read FIFO on first command
-assign app_en = (isFirst) ? fifo_caf_valid : 1'b1;
-assign is_read = fifo_caf_dout[30:28] == 3'b001;
-assign app_cmd  = 3'b001;   // READ
-assign app_addr = (isFirst) ? fifo_caf_dout[27:0] : cmd_addr_reg + 8; // TODO: Accurate Increment!
 
 // Tie write-related signals to safe values (no writes yet)
 assign app_wdf_wren = 1'b0;
@@ -108,9 +131,10 @@ assign app_wdf_data = 64'b0;
 assign app_wdf_mask = 8'hFF;
 assign fifo_wdf_rd_en = 1'b0;   // not used yet
 
+//////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
 
-
-// Read data path – minimal two-state logic
+// Read data path – A tiny FSM, with two states defined by "rd_phase" signal.
 reg         rd_phase;           // 0 = expect first 64-bit word, 1 = expect second
 reg [63:0]  rd_stashed;         // holds the first 64-bit word until second arrives
 
