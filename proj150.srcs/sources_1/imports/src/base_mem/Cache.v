@@ -222,8 +222,8 @@ module Cache #(
                                         : ((read_miss) ? FETCH1  : IDLE );
                 WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
                 WRITE2 : next_state = (!wdf_full && !caf_full) ? IDLE    : WRITE2; // WAS: "!wdf_full" only
-                FETCH1 : next_state = (             !caf_full) ? /*FETCH2*/ READ1  : FETCH1;
-                FETCH2 : next_state = (             !caf_full) ? /*IDLE*/ READ1   : FETCH2; // FETCH2 SKIPPED
+                FETCH1 : next_state = (             !caf_full) ? READ1  : FETCH1;
+                //FETCH2 : next_state = (             !caf_full) ? READ1   : FETCH2; // FETCH2 SKIPPED
                 READ1  : next_state = ( rdf_rden && rdf_wren ) ? READ2   : READ1;
                 READ2  : next_state = ( rdf_rden && rdf_wren ) ? CWRITEB : READ2;
                 CWRITEB: next_state = IDLE;
