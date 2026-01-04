@@ -221,7 +221,7 @@ module Cache #(
                 IDLE   : next_state = (we_hold) ?                     WRITE1
                                         : ((read_miss) ? FETCH1  : IDLE );
                 WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
-                WRITE2 : next_state = (!wdf_full && !caf_full) ? IDLE    : WRITE2; // WAS: "!wdf_full" only
+                WRITE2 : next_state = (!wdf_full             ) ? IDLE    : WRITE2; // "!wdf_full" only
                 FETCH1 : next_state = (             !caf_full) ? READ1  : FETCH1;
                 //FETCH2 : next_state = (             !caf_full) ? READ1   : FETCH2; // FETCH2 SKIPPED
                 READ1  : next_state = ( rdf_rden && rdf_wren ) ? READ2   : READ1;
@@ -252,7 +252,7 @@ module Cache #(
     assign f_mask = (current_state == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
 
     // FIFO output assignments:
-    assign caf_wren = (isWriting) || (isFetching);
+    assign caf_wren = (isWriting && !isSecond) || (isFetching);
     assign caf_cadr = {f_cmd, f_addr};
     assign wdf_wren = (isWriting);
     assign wdf_mdat = {f_mask, f_data};
