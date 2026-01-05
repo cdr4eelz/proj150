@@ -25,7 +25,7 @@ module MemoryDDR #(
     input  wire         clk_mig_ref,
     input  wire         clk_pix,
     input  wire         rst_pix,
-    input  wire         locked,
+    //input  wire         locked, // No longer needed for MIG
     output wire         init_done,  // init_calib_complete (related to ddr3_reset_n below???)
 
 // DDR3 Pads:
@@ -70,14 +70,31 @@ module MemoryDDR #(
     output wire         irq_pf_frame, irq_gp_done
 );
 
-    (* mark_debug = "true" *) wire init_calib_complete;
-    assign init_done = init_calib_complete; //Assign rather than renaming
+    
     (* mark_debug = "true" *) wire [3:0]  DBG_dcache_cs,  DBG_icache_cs;
 
 // MIG feeds clock/rst back to us (use for clock-crossing FIFOs)
     wire            clk_mig_ui;
     (* mark_debug = "true" *) wire            rst_mig_ui;
+
     assign DBG_clk_mig_ui = clk_mig_ui, DBG_rst_mig_ui = rst_mig_ui;
+
+    (* mark_debug = "true" *) wire init_calib_complete; // Direct from MIG
+    //assign init_done = init_calib_complete; //Assign directly
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
+       OPTIMIZE="OFF" *) reg delay_reg [2:0]; // Not clock-crossing, just a delay
+    always @(posedge clk_mig_ui) begin
+        if (rst_mig_ui) begin
+            delay_reg[0] <= 1'b0;
+            delay_reg[1] <= 1'b0;
+            delay_reg[2] <= 1'b0;
+        end else begin
+            delay_reg[0] <= init_calib_complete;
+            delay_reg[1] <= delay_reg[0];
+            delay_reg[2] <= delay_reg[1];
+        end
+    end
+    assign init_done = delay_reg[2]; //Hopefully a few extra flops helps satisfy timing downstream
 
 // FIFOs <=> DDR3/MIG:                      [clk_mig_ui domain]
     (* mark_debug = "true" *) wire            fifo_caf_empty; //FIFO: <Unused>  // FOR Debugging waveform
@@ -190,7 +207,7 @@ module MemoryDDR #(
         .ddr3_dm                (ddr3_dm),              // output [1:0]
         .ddr3_odt               (ddr3_odt),             // output [0:0]
         .ddr3_reset_n           (ddr3_reset_n),         // output
-        .init_calib_complete    (init_calib_complete),  // output
+        .init_calib_complete    (init_calib_complete),  // output (Apparently in clk_mig_ui domain)
 
         // Application interface ports (NOTE: ADDR_WIDTH=28 CMD_WIDTH=3)
         .app_addr           (app_addr),         // input  [ 27:0]  WAS .app_af_addr [30:0]

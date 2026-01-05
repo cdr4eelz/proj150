@@ -68,11 +68,11 @@ module MIGAdapter (
     // ────────────────────────────────────────────────
     // State encoding
     // ────────────────────────────────────────────────
-    localparam S_IDLE      = 2'd0;  // waiting for new command, latch addr & cmd
-    localparam S_READ1       = 2'd1;  // issuing first read (using FIFO addr)
-    localparam S_READ2       = 2'd2;  // issuing second read (base + 8)
-    localparam S_WRITE1      = 2'd3;  // issuing first write (using FIFO addr)
-    localparam S_WRITE2      = 2'd4;  // issuing second write (base + 8)
+    localparam  S_IDLE      = 3'd0,  // waiting for new command, latch addr & cmd
+                S_READ1     = 3'd1,  // issuing first read (using FIFO addr)
+                S_READ2     = 3'd2,  // issuing second read (base + 8)
+                S_WRITE1    = 3'd3,  // issuing first write (using FIFO addr)
+                S_WRITE2    = 3'd4;  // issuing second write (base + 8)
 
     reg [2:0] state; // Handle up to 8 states
     reg [27:0] base_addr;           // captured starting address
