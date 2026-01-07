@@ -67,6 +67,7 @@ module Cache #(
                 READ1       = 3'd5, // 101
                 READ2       = 3'd6, // 110
                 CWRITEB     = 3'd7; // 111
+                // Make sure state reg is wide enough!
 
     //registers:
     // state for DDR3 FSM
@@ -161,7 +162,7 @@ module Cache #(
 
     assign write_hit_hold = we_hold && tag_hit;
 
-    assign read_miss = re_hold; //:TEMP: && !tag_hit;
+    assign read_miss = re_hold && !tag_hit; // Can bypass cache here if needed
 
     localparam STUCK_MAX_CYCLES = 8'd48;
     localparam READ_HACK_ENABLED = 1'b0; //Disable the effect of the hack
@@ -221,7 +222,7 @@ module Cache #(
                 IDLE   : next_state = (we_hold) ?                     WRITE1
                                         : ((read_miss) ? FETCH1  : IDLE );
                 WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
-                WRITE2 : next_state = (!wdf_full && !caf_full) ? IDLE    : WRITE2; // WAS: "!wdf_full" only
+                WRITE2 : next_state = (!wdf_full             ) ? IDLE    : WRITE2; // NOTE: "!wdf_full" only
                 FETCH1 : next_state = (             !caf_full) ? READ1  : FETCH1;
                 //FETCH2 : next_state = (             !caf_full) ? READ1   : FETCH2; // FETCH2 SKIPPED
                 READ1  : next_state = ( rdf_rden && rdf_wren ) ? READ2   : READ1;
@@ -252,7 +253,7 @@ module Cache #(
     assign f_mask = (current_state == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
 
     // FIFO output assignments:
-    assign caf_wren = (isWriting) || (isFetching);
+    assign caf_wren = (current_state == WRITE1) || (isFetching);
     assign caf_cadr = {f_cmd, f_addr};
     assign wdf_wren = (isWriting);
     assign wdf_mdat = {f_mask, f_data};
