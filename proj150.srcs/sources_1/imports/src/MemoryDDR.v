@@ -184,6 +184,7 @@ module MemoryDDR #(
     wire            app_rdy;
     wire [ 63:0]    app_wdf_data;
     wire [  7:0]    app_wdf_mask;
+    wire            app_wdf_end;
     wire            app_wdf_wren;
     wire            app_wdf_rdy;
     wire [ 63:0]    app_rd_data;
@@ -217,9 +218,9 @@ module MemoryDDR #(
 
         .app_wdf_data       (app_wdf_data),     // input  [ 63:0]  STAYS: .app_wdf_data
         .app_wdf_mask       (app_wdf_mask),     // input  [ 15:0]  WAS: .app_wdf_mask_data
+        .app_wdf_end        (app_wdf_end),      // input  Obsolete or depricated
         .app_wdf_wren       (app_wdf_wren),     // input  : DDR3  <= FIFO: "valid"  STAYS: .app_wdf_wren
         .app_wdf_rdy        (app_wdf_rdy),      // output         WAS: !.app_wdf_afull(fifo_wdf_full)
-        .app_wdf_end        (app_wdf_wren),     // input  Obsolete, drive with "app_wdf_wren"
 
         .app_rd_data        (app_rd_data),      // output [ 63:0] WAS: .rd_data_fifo_out
         .app_rd_data_valid  (app_rd_data_valid),// output         WAS: .rd_data_valid
@@ -268,6 +269,7 @@ module MemoryDDR #(
         // Write Data interface
         .app_wdf_data   (app_wdf_data),
         .app_wdf_mask   (app_wdf_mask),
+        .app_wdf_end    (app_wdf_end), // depricated
         .app_wdf_wren   (app_wdf_wren),
         .app_wdf_rdy    (app_wdf_rdy),
         // Read Data interface

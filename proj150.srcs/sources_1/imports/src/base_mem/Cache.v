@@ -219,11 +219,11 @@ module Cache #(
         end else begin
             next_state = IDLE;
             case(current_state)
-                IDLE   : next_state = (we_hold) ?                     WRITE1
+                IDLE   : next_state = (we_hold) ? WRITE1
                                         : ((read_miss) ? FETCH1  : IDLE );
                 WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
                 WRITE2 : next_state = (!wdf_full             ) ? IDLE    : WRITE2; // NOTE: "!wdf_full" only
-                FETCH1 : next_state = (             !caf_full) ? READ1  : FETCH1;
+                FETCH1 : next_state = (             !caf_full) ? READ1   : FETCH1;
                 //FETCH2 : next_state = (             !caf_full) ? READ1   : FETCH2; // FETCH2 SKIPPED
                 READ1  : next_state = ( rdf_rden && rdf_wren ) ? READ2   : READ1;
                 READ2  : next_state = ( rdf_rden && rdf_wren ) ? CWRITEB : READ2;
@@ -236,9 +236,9 @@ module Cache #(
     assign  isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
     assign  isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
     assign  isReading   = (current_state == READ1 ) || (current_state == READ2 );
-    assign  isSecond    = ((current_state == WRITE2)
+    assign  isSecond    = (current_state == WRITE2)
                             || (current_state == FETCH2)
-                            || (current_state == READ2));
+                            || (current_state == READ2);
 
     // FIFO output partial values:
     (* mark_debug = "true" *) wire [  2:0]  f_cmd;
@@ -267,7 +267,6 @@ module Cache #(
 
     // If we're writing back data from DDR3, use the registered 128-bits
     // (first_read) and the current 128-bits from the read data FIFO
-    //assign data_line_in = (next_state == CWRITEB) ? {first_read, 128'h87654321123456780123456789ABCDEF} : {8{din_hold}}; //WAS rdf_data in lower half
     assign data_line_in = (next_state == CWRITEB) ? {first_read, rdf_data} : {8{din_hold}};
     assign tag_line_in = {1'b0, 1'b1, tag_hold};
 

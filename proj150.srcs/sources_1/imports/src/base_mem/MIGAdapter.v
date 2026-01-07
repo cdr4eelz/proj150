@@ -158,7 +158,7 @@ module MIGAdapter (
 wire is_right_state = (state == S_WRITE1a) || (state == S_WRITE1b) ||
                       (state == S_WRITE2a) || (state == S_WRITE2b);
 wire write_ready = fifo_wdf_valid && app_wdf_rdy;
-wire is_second = (state == S_READ2) && (state == S_WRITE2a) || (state == S_WRITE2b);
+wire is_second = (state == S_READ2) || (state == S_WRITE1b) || (state == S_WRITE2b);
 assign fifo_wdf_rd_en = write_ready && is_right_state;
 assign app_wdf_wren = write_ready && is_right_state;
 assign app_wdf_data = (is_second) ? fifo_wdf_dout[127:64] : fifo_wdf_dout[63:0];
