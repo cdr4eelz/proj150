@@ -92,10 +92,10 @@ module MIGAdapter (
     assign fifo_caf_rd_en  = ((state == S_IDLE) && !fifo_caf_empty); //fifo_caf_valid); // Only accept new command in IDLE
     assign app_cmd         = ((state == S_READ1) || (state == S_READ2))
                                 ? 3'b001 : 3'b000;
-    assign app_addr        = (state == S_READ2)
-                                ? (base_addr + 28'd8) : base_addr; // TODO: WRITECMD also uses base_addr ****
-    assign app_en          = (state == S_READ1) || (state == S_READ2)
-                                || (state == S_WRITECMD);
+    assign app_addr        = ((state == S_READ2 || state == S_WRITE2))
+                                ? (base_addr + 28'd8) : base_addr;
+    assign app_en          = (state == S_READ1) || (state == S_READ2) ||
+                                (state == S_WRITE1) || (state == S_WRITE2);
 
     // ────────────────────────────────────────────────
     // FSM + address register
@@ -111,10 +111,10 @@ module MIGAdapter (
                 S_IDLE: begin // Capture new command from FIFO
                     if (fifo_caf_valid && fifo_caf_rd_en) begin
                         base_addr <= fifo_caf_dout[27:0];
-                        if (fifo_caf_dout[30:28] == 3'b001) begin
-                            state <= S_READ1;
+                        if (fifo_caf_dout[30:28] == 3'b000) begin
+                            state <= S_WRITE1;
                         end else begin
-                            state <= S_WRITECMD;
+                            state <= S_READ1;
                         end
                     end
                 end

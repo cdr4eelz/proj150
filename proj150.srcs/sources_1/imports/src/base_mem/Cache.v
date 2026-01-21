@@ -277,7 +277,7 @@ module Cache #(
     assign f_mask = (current_state == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
 
     // FIFO output assignments:
-    assign caf_wren = (current_state == WRITE1) || (isFetching);
+    assign caf_wren = (isWriting && !isSecond) || (isFetching);
     assign caf_cadr = {f_cmd, f_addr};
     assign wdf_wren = (isWriting);
     assign wdf_mdat = {f_mask, f_data};
