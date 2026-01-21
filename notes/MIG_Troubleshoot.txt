@@ -1,0 +1,27 @@
+Example store & read showing mis-aligned or incorrect order (high vs. low)...
+
+
+
+> sw 22222222 10001010
+> sw 33333333 10001014
+> dump 10001000
+
+10001000:22222222 33333333 49aefbe2 3209ba6d
+10001010:7fd7fdee fd223b6f 096ef4ae 25c65794
+10001020:49aefbe2 3209ba6d 22222222 33333333
+10001030:096ef4ae 25c65794 7fd7fdee fd223b6f
+> dump 10001010
+
+10001010:7fd7fdee fd223b6f 096ef4ae 25c65794
+10001020:49aefbe2 3209ba6d 22222222 33333333
+10001030:096ef4ae 25c65794 7fd7fdee fd223b6f
+10001040:7fd7fdee fd223b6f 096ef4ae 25c65794
+
+>
+
+Writing to 10001010 shows up in 10001000!
+  Perhaps the write is applying HI vs. LO improperly?
+Values are fetched with improper/overlapping addresses,
+  causing repeats. Writes only partially implemented.
+
+Writes not fully implemented... second chunk ignored?

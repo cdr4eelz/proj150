@@ -58,6 +58,14 @@ module Cache #(
     output wire[3:0]    DBG_cache_cs
 );
 
+    (* mark_debug = "true" *) wire DBG_caf_full = caf_full;
+    (* mark_debug = "true" *) wire DBG_caf_wren = caf_wren;
+    (* mark_debug = "true" *) wire DBG_wdf_full = wdf_full;
+    (* mark_debug = "true" *) wire DBG_wdf_wren = wdf_wren;
+    (* mark_debug = "true" *) wire DBG_rdf_rden = rdf_rden;
+    (* mark_debug = "true" *) wire DBG_rdf_wren = rdf_wren;
+
+
     // State declarations:
     localparam  IDLE        = 3'd0, // 000
                 WRITE1      = 3'd1, // 001
@@ -67,6 +75,7 @@ module Cache #(
                 READ1       = 3'd5, // 101
                 READ2       = 3'd6, // 110
                 CWRITEB     = 3'd7; // 111
+                // Make sure state reg is wide enough!
 
     //registers:
     // state for DDR3 FSM
@@ -159,9 +168,9 @@ module Cache #(
     assign tag_equal = tag_line_out[`IDX_TAG_TAG] == tag_hold;
     assign tag_hit = tag_valid && tag_equal;
 
-    assign write_hit_hold = we_hold && tag_hit;
+    assign write_hit_hold = |we_hold && tag_hit;
 
-    assign read_miss = re_hold; //:TEMP: && !tag_hit;
+    assign read_miss = re_hold; //TEMP: && !tag_hit; // Can bypass cache here if needed
 
     localparam STUCK_MAX_CYCLES = 8'd48;
     localparam READ_HACK_ENABLED = 1'b0; //Disable the effect of the hack
@@ -191,11 +200,27 @@ module Cache #(
             re_hold   <= 1'b0;
             we_hold   <= 4'b_0000;
             din_hold  <= 32'h_0000_0000;
-        end else if((next_state == IDLE)) begin //&& (|we || (re == 1'b1))) begin
-            addr_hold <= addr;
-            re_hold   <= re;
-            we_hold   <= we;
-            din_hold  <= din;
+        end else if(next_state == IDLE) begin //&& (|we || (re == 1'b1))) begin
+//      end else if((next_state == IDLE) && (|we || (re == 1'b1))) begin
+            // This may cause immediate re-trigger of WRITE. Need to reset these after write done?
+            if (|we || (re == 1'b1)) begin // COuld just use "re" alone?
+                addr_hold <= addr;
+                re_hold   <= re;
+                we_hold   <= we;
+                din_hold  <= din;
+            end else begin
+                // Hold value just for inspection (not used until next IDLE with we/re)
+                addr_hold <= addr_hold;
+                din_hold  <= din_hold;
+                // Would be zero anyway!?!
+                re_hold   <= 1'b0;
+                we_hold   <= 4'b_0000;
+            end
+        end else begin
+            addr_hold <= addr_hold;
+            re_hold   <= re_hold;
+            we_hold   <= we_hold;
+            din_hold  <= din_hold;
         end
 
         if(rst)
@@ -218,11 +243,11 @@ module Cache #(
         end else begin
             next_state = IDLE;
             case(current_state)
-                IDLE   : next_state = (we_hold) ?                     WRITE1
+                IDLE   : next_state = (|we_hold) ? WRITE1
                                         : ((read_miss) ? FETCH1  : IDLE );
                 WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
-                WRITE2 : next_state = (!wdf_full             ) ? IDLE    : WRITE2; // "!wdf_full" only
-                FETCH1 : next_state = (             !caf_full) ? READ1  : FETCH1;
+                WRITE2 : next_state = (!wdf_full             ) ? IDLE    : WRITE2; // NOTE: "!wdf_full" only
+                FETCH1 : next_state = (             !caf_full) ? READ1   : FETCH1;
                 //FETCH2 : next_state = (             !caf_full) ? READ1   : FETCH2; // FETCH2 SKIPPED
                 READ1  : next_state = ( rdf_rden && rdf_wren ) ? READ2   : READ1;
                 READ2  : next_state = ( rdf_rden && rdf_wren ) ? CWRITEB : READ2;
@@ -235,9 +260,9 @@ module Cache #(
     assign  isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
     assign  isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
     assign  isReading   = (current_state == READ1 ) || (current_state == READ2 );
-    assign  isSecond    = ((current_state == WRITE2)
+    assign  isSecond    = (current_state == WRITE2)
                             || (current_state == FETCH2)
-                            || (current_state == READ2));
+                            || (current_state == READ2);
 
     // FIFO output partial values:
     (* mark_debug = "true" *) wire [  2:0]  f_cmd;
@@ -248,7 +273,7 @@ module Cache #(
     assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00}; // WAS 6'b000000
     assign f_addr = (isSecond) ? (f_addr_base + 8) : f_addr_base;
     assign f_data = {4{din_hold}};
-    // active low, so we have to flip the bits
+    // Write Mask is active low, so we have to flip the bits (~)
     assign f_mask = (current_state == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
 
     // FIFO output assignments:
@@ -266,7 +291,6 @@ module Cache #(
 
     // If we're writing back data from DDR3, use the registered 128-bits
     // (first_read) and the current 128-bits from the read data FIFO
-    //assign data_line_in = (next_state == CWRITEB) ? {first_read, 128'h87654321123456780123456789ABCDEF} : {8{din_hold}}; //WAS rdf_data in lower half
     assign data_line_in = (next_state == CWRITEB) ? {first_read, rdf_data} : {8{din_hold}};
     assign tag_line_in = {1'b0, 1'b1, tag_hold};
 

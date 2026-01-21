@@ -55,11 +55,9 @@
 //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
 //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
 //----------------------------------------------------------------------------
-// clk_mig_100MHz___100.000______0.000______50.0______130.958_____98.575
-// clk_migref_200MHz___200.000______0.000______50.0______114.829_____98.575
-// clk_pixel_40MHz____40.000______0.000______50.0______159.371_____98.575
 // clk_cpu_50MHz____50.000______0.000______50.0______151.636_____98.575
-// clk_mig_167MHz___166.667______0.000______50.0______118.758_____98.575
+// clk_pixel_40MHz____40.000______0.000______50.0______159.371_____98.575
+// clk_migref_200MHz___200.000______0.000______50.0______114.829_____98.575
 //
 //----------------------------------------------------------------------------
 // Input Clock   Freq (MHz)    Input Jitter (UI)
@@ -75,11 +73,9 @@
   clk_wiz_0 instance_name
    (
     // Clock out ports
-    .clk_mig_100MHz(clk_mig_100MHz),     // output clk_mig_100MHz
-    .clk_migref_200MHz(clk_migref_200MHz),     // output clk_migref_200MHz
-    .clk_pixel_40MHz(clk_pixel_40MHz),     // output clk_pixel_40MHz
     .clk_cpu_50MHz(clk_cpu_50MHz),     // output clk_cpu_50MHz
-    .clk_mig_167MHz(clk_mig_167MHz),     // output clk_mig_167MHz
+    .clk_pixel_40MHz(clk_pixel_40MHz),     // output clk_pixel_40MHz
+    .clk_migref_200MHz(clk_migref_200MHz),     // output clk_migref_200MHz
     // Status and control signals
     .reset(reset), // input reset
     .locked(locked),       // output locked

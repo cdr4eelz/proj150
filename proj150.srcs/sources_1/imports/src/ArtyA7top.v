@@ -66,7 +66,7 @@ module ArtyA7top #(
         .OUT(reset_top_clocks) // Reset Button (Active HIGH)
     );  //assign reset_top_clocks = !CK_RST_N;  // Top CLocks are first to come out of reset
 
-    wire locked_top_clocks;  // Participate in startup sequence
+    wire locked_clock0, locked_clock1, locked_top_clocks;  // Participate in startup sequence
     wire clk_mig_sys, clk_mig_ref, clk_cpu, clk_pix;
 //TODO: Figure out if we need BUFG on these clocks???
     clk_wiz_0 top_clocks (  // Generate various clocks for components
@@ -74,17 +74,27 @@ module ArtyA7top #(
         .clk_in_100MHz(clk_in_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
         //.clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board)
     // Clock out ports (rebuild clk_wiz if needs change)
-        .clk_mig_100MHz     (/*clk_mig_sys*/),  // output MIG primary clk (See "assign" below)
-        .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG (must be 200MHz)
-        .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
         .clk_cpu_50MHz      (clk_cpu),      // output modest CPU speed
-        .clk_mig_167MHz     (/*clk_mig_sys*/),  // output alternate MIG clk (not used)
+        .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
+        .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG (must be 200MHz)
         // Status and control signals
         .reset(reset_top_clocks),  // input reset (ACTIVE HIGH)
-        .locked(locked_top_clocks)  // output locked (ACTIVE HIGH)
-    );  // NOTE: clk_wiz puts BUFG on its output clocks
+        .locked(locked_clock0)  // output locked (ACTIVE HIGH)
+    );  // NOTE: clk_wiz appears to put BUFG on its output clocks
+
+    assign locked_clock1 = 1'b1; // Disable MIG clock, use approximate 100MHz directly
     assign clk_mig_sys = clk_in_100MHz; // Drive MIG (input) clock directly from board clock (100MHz)
     // ^^^ Using clk_in_100MHz directly is approximate (wants 101.01MHz) but hopefully a cleaner clock!
+    /* clk_wiz_1 MIG_clock (
+        // Clock in ports
+        .clk_in_100MHz(clk_in_100MHz),
+        // Clock out ports
+        .clk_mig_101MHz(clk_mig_sys),     // output 101.010MHz, although 100MHz input is close enough
+        // Status and control signals
+        .reset(reset_top_clocks), // Active HIGH
+        .locked(locked_clock1)
+    ); */
+    assign locked_top_clocks = locked_clock0 && locked_clock1; // Consider this async
 
     // Then some other support components come out of reset (like DRAM)
     (* mark_debug = "true" *) wire rst_cpu, init_done;  // TODO: CPU comes out of reset after everything else
@@ -150,7 +160,8 @@ module ArtyA7top #(
         (* mark_debug = "true" *) wire        stall_dcache,   stall_icache; //stall_cache;
         (* mark_debug = "true" *) wire  [3:0] DBG_dcache,     DBG_icache;
         wire DBG_clk_mig_ui;
-        (* mark_debug = "true" *) wire DBG_rst_mig_ui;
+        (* mark_debug = "true" *) wire        DBG_rst_mig_ui;
+        (* mark_debug = "true" *) wire  [3:0] DBG_adapt;
 
         wire        video_ready,    video_valid;
         wire [31:0] video;//[23:0]
@@ -173,10 +184,11 @@ module ArtyA7top #(
             .clk_mig_ref    (clk_mig_ref),
             .clk_pix        (clk_pix),
             .rst_pix        (rst_pix),
-            .locked         (locked_top_clocks),  //Acts as an active LOW? reset
-            .init_done      (init_done),  // Output HIGH when MIG is ready
+            //.locked         (locked_top_clocks),  //No longer needed for MIG
+            .init_done      (init_done),  // Output HIGH when MIG is ready, likely in clk_mig_ui clock domain
             .DBG_clk_mig_ui (DBG_clk_mig_ui),
             .DBG_rst_mig_ui (DBG_rst_mig_ui),
+            .DBG_adapt      (DBG_adapt),
 
         // DDR3 InOuts
             .ddr3_dq        (ddr3_dq),      // inout  [15:0]
@@ -257,16 +269,16 @@ module ArtyA7top #(
         assign LED[3] = buttons[3] ^ stall_top;
         // TODO: Map RGB LEDs in constraints file and drive them with PWM
         (* mark_debug = "true" *) wire [3:0] led_rgb_set;
-        assign led_rgb_set = (switches[0]) ? DBG_dcache : DBG_COUNT;
+        assign led_rgb_set = (switches[0]) ? DBG_dcache : DBG_adapt; //DBG_COUNT;
         assign { led3_b, led2_r, led1_g, led0_b } = led_rgb_set ^ buttons;
 
-        (* mark_debug = "true" *) wire [3:0] DBG_dcache_MIG;
-        Synchronizer #( .Width(4) ) sync_cache_dbg (
-            .async_signal(DBG_dcache),
-            .Clock(DBG_clk_mig_ui),
-            .sync_signal(DBG_dcache_MIG)
-        );
-        (* mark_debug = "true" *) wire DBG_STUCK_MIG = DBG_dcache_MIG[3];
+//        (* mark_debug = "true" *) wire [3:0] DBG_dcache_MIG;
+//        Synchronizer #( .Width(4) ) sync_cache_dbg (
+//            .async_signal(DBG_dcache),
+//            .Clock(DBG_clk_mig_ui),
+//            .sync_signal(DBG_dcache_MIG)
+//        );
+//        (* mark_debug = "true" *) wire DBG_STUCK_MIG = DBG_dcache_MIG[3];
 
         VGAFramer #(
             .GEN_PATTERN(0)
