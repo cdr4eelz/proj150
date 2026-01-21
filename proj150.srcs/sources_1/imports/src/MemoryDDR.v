@@ -55,7 +55,8 @@ module MemoryDDR #(
     output wire[31:0]   dcache_dout,    icache_dout,
     output wire         d_stall,        i_stall,
     output wire[ 3:0]   DBG_dcache,     DBG_icache,
-    output wire DBG_clk_mig_ui, DBG_rst_mig_ui,
+    output wire         DBG_clk_mig_ui, DBG_rst_mig_ui,
+    output wire[ 3:0]   DBG_adapt,
 
 // PixelFeeder <=> DVI/VGA Controller:
     input  wire         video_ready,
@@ -178,17 +179,18 @@ module MemoryDDR #(
     wire [143:0] bpas_wdf_mdat = {bpas_wdf_mask,bpas_wdf_data};
 
     // MIG Application Interface Signals:
-    wire [ 27:0]    app_addr;
-    wire [  2:0]    app_cmd;
-    wire            app_en;
-    wire            app_rdy;
-    wire [ 63:0]    app_wdf_data;
-    wire [  7:0]    app_wdf_mask;
-    wire            app_wdf_end;
-    wire            app_wdf_wren;
-    wire            app_wdf_rdy;
-    wire [ 63:0]    app_rd_data;
-    wire            app_rd_data_valid;
+    (* mark_debug = "true" *) wire [ 27:0]    app_addr;
+    (* mark_debug = "true" *) wire [  2:0]    app_cmd;
+    (* mark_debug = "true" *) wire            app_en;
+    (* mark_debug = "true" *) wire            app_rdy;
+    (* mark_debug = "true" *) wire [ 63:0]    app_wdf_data;
+    (* mark_debug = "true" *) wire [  7:0]    app_wdf_mask;
+    (* mark_debug = "true" *) wire            app_wdf_end;
+    (* mark_debug = "true" *) wire            app_wdf_wren;
+    (* mark_debug = "true" *) wire            app_wdf_rdy;
+    (* mark_debug = "true" *) wire [ 63:0]    app_rd_data;
+    (* mark_debug = "true" *) wire            app_rd_data_valid;
+    (* mark_debug = "true" *) wire            app_rd_data_end;
 
     mig_arty_a7_100 u_mig_arty_a7_100 ( // There are no parameters available
         // DDR3 InOuts
@@ -224,7 +226,7 @@ module MemoryDDR #(
 
         .app_rd_data        (app_rd_data),      // output [ 63:0] WAS: .rd_data_fifo_out
         .app_rd_data_valid  (app_rd_data_valid),// output         WAS: .rd_data_valid
-        .app_rd_data_end    ( ),     // output  UNUSED / OBSOLETE
+        .app_rd_data_end    (app_rd_data_end),  // output  UNUSED / OBSOLETE
 
         // Unneeded new signals, related to low-level DRAM management
         .app_sr_req (1'b0), .app_sr_active  ( ), // input / output  UNUSED
@@ -250,10 +252,12 @@ module MemoryDDR #(
 
         // Command/Address FIFO input (from mig_caf, 31 bits: {cmd[2:0], addr[27:0]})
         .fifo_caf_dout  (fifo_caf_dout),
+        .fifo_caf_empty (fifo_caf_empty),
         .fifo_caf_valid (fifo_caf_valid),
         .fifo_caf_rd_en (fifo_caf_rd_en),
         // Write Data FIFO input (from mig_wdf dout, 143:0)
         .fifo_wdf_dout  (fifo_wdf_dout),
+        .fifo_wdf_empty (fifo_wdf_empty),
         .fifo_wdf_valid (fifo_wdf_valid),
         .fifo_wdf_rd_en (fifo_wdf_rd_en),
         // Read Data FIFO output (to mig_rdf din, 127:0 → pure 128-bit read data)
@@ -274,8 +278,9 @@ module MemoryDDR #(
         .app_wdf_rdy    (app_wdf_rdy),
         // Read Data interface
         .app_rd_data        (app_rd_data),
-        .app_rd_data_valid  (app_rd_data_valid)
+        .app_rd_data_valid  (app_rd_data_valid),
         // NOTE: No "ready" signal. MIG read data is output when it wants, no holding it back!
+        .DBG_adapt  (DBG_adapt)
 );
 
 

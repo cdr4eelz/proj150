@@ -160,7 +160,8 @@ module ArtyA7top #(
         (* mark_debug = "true" *) wire        stall_dcache,   stall_icache; //stall_cache;
         (* mark_debug = "true" *) wire  [3:0] DBG_dcache,     DBG_icache;
         wire DBG_clk_mig_ui;
-        (* mark_debug = "true" *) wire DBG_rst_mig_ui;
+        (* mark_debug = "true" *) wire        DBG_rst_mig_ui;
+        (* mark_debug = "true" *) wire  [3:0] DBG_adapt;
 
         wire        video_ready,    video_valid;
         wire [31:0] video;//[23:0]
@@ -187,6 +188,7 @@ module ArtyA7top #(
             .init_done      (init_done),  // Output HIGH when MIG is ready, likely in clk_mig_ui clock domain
             .DBG_clk_mig_ui (DBG_clk_mig_ui),
             .DBG_rst_mig_ui (DBG_rst_mig_ui),
+            .DBG_adapt      (DBG_adapt),
 
         // DDR3 InOuts
             .ddr3_dq        (ddr3_dq),      // inout  [15:0]
@@ -267,7 +269,7 @@ module ArtyA7top #(
         assign LED[3] = buttons[3] ^ stall_top;
         // TODO: Map RGB LEDs in constraints file and drive them with PWM
         (* mark_debug = "true" *) wire [3:0] led_rgb_set;
-        assign led_rgb_set = (switches[0]) ? DBG_dcache : DBG_COUNT;
+        assign led_rgb_set = (switches[0]) ? DBG_dcache : DBG_adapt; //DBG_COUNT;
         assign { led3_b, led2_r, led1_g, led0_b } = led_rgb_set ^ buttons;
 
 //        (* mark_debug = "true" *) wire [3:0] DBG_dcache_MIG;

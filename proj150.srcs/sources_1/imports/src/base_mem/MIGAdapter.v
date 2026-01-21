@@ -33,6 +33,7 @@ module MIGAdapter (
 
     // Command FIFO (mig_caf) - 31 bits {cmd[2:0], addr[27:0]}
     input  wire [30:0]  fifo_caf_dout,
+    input  wire         fifo_caf_empty,
     input  wire         fifo_caf_valid,
     output wire         fifo_caf_rd_en,
 
@@ -41,6 +42,7 @@ module MIGAdapter (
     // [127:64]  = data_high[63:0]
     // [63:0]    = data_low[63:0]
     input  wire [143:0] fifo_wdf_dout,
+    input  wire         fifo_wdf_empty,
     input  wire         fifo_wdf_valid,
     output wire         fifo_wdf_rd_en,
 
@@ -62,8 +64,9 @@ module MIGAdapter (
     input  wire         app_wdf_rdy,
 
     input  wire [63:0]  app_rd_data,
-    input  wire         app_rd_data_valid
+    input  wire         app_rd_data_valid,
     // ignore app_rd_data_end
+    output wire[ 3:0]   DBG_adapt
 );
 
     // ────────────────────────────────────────────────
@@ -79,17 +82,18 @@ module MIGAdapter (
                 S_WRITE2b   = 3'd7;  // HIGH (end)
                 // are two more cycles of WRITE needed???? (2 for 64-bit adjust and 2 for full 256-bit write?)
                 // BE SURE THAT BIT WIDTH OF STATE REG IS SUFFICIENT!
-    reg [2:0] state; // Handle up to 8 states
-    reg [27:0] base_addr;           // captured starting address
+    (* mark_debug = "true" *) reg [2:0] state; // Handle up to 8 states
+    (* mark_debug = "true" *) reg [27:0] base_addr;           // captured starting address
+    assign DBG_adapt = {1'b0, state[2:0]}; // MSB 0 to make 4 bits
 
     // ────────────────────────────────────────────────
     // Combinatorial outputs / control signals
     // ────────────────────────────────────────────────
-    assign fifo_caf_rd_en  = (state == S_IDLE); // Only accept new command in IDLE
+    assign fifo_caf_rd_en  = ((state == S_IDLE) && !fifo_caf_empty); //fifo_caf_valid); // Only accept new command in IDLE
     assign app_cmd         = ((state == S_READ1) || (state == S_READ2))
                                 ? 3'b001 : 3'b000;
     assign app_addr        = (state == S_READ2)
-                                ? (base_addr + 28'd8) : base_addr; // WRITECMD also uses base_addr
+                                ? (base_addr + 28'd8) : base_addr; // TODO: WRITECMD also uses base_addr ****
     assign app_en          = (state == S_READ1) || (state == S_READ2)
                                 || (state == S_WRITECMD);
 
@@ -110,7 +114,7 @@ module MIGAdapter (
                         if (fifo_caf_dout[30:28] == 3'b001) begin
                             state <= S_READ1;
                         end else begin
-                            state <= S_WRITE1a;
+                            state <= S_WRITECMD;
                         end
                     end
                 end
@@ -155,15 +159,15 @@ module MIGAdapter (
         end
     end
 
-wire is_right_state = (state == S_WRITE1a) || (state == S_WRITE1b) ||
+wire is_write_state = (state == S_WRITE1a) || (state == S_WRITE1b) ||
                       (state == S_WRITE2a) || (state == S_WRITE2b);
 wire write_ready = fifo_wdf_valid && app_wdf_rdy;
 wire is_second = (state == S_READ2) || (state == S_WRITE1b) || (state == S_WRITE2b);
-assign fifo_wdf_rd_en = write_ready && is_right_state;
-assign app_wdf_wren = write_ready && is_right_state;
+assign fifo_wdf_rd_en = is_write_state && !fifo_wdf_empty; //write_ready;
+assign app_wdf_wren = is_write_state && write_ready;
 assign app_wdf_data = (is_second) ? fifo_wdf_dout[127:64] : fifo_wdf_dout[63:0];
 assign app_wdf_mask = (is_second) ? fifo_wdf_dout[143:136] : fifo_wdf_dout[135:128];
-assign app_wdf_end = (state == S_WRITE2b); // depricated
+assign app_wdf_end = ((state == S_WRITE1b) || (state == S_WRITE2b)); // depricated
 //    output wire [63:0]  app_wdf_data, // Select high or low 64 bits based on state
 //    output wire [7:0]   app_wdf_mask, // Select high or low 8 bits based on state
 //    output wire         app_wdf_wren, // Assert on write states
@@ -173,8 +177,8 @@ assign app_wdf_end = (state == S_WRITE2b); // depricated
 //////////////////////////////////////////////////////////////////////////////////
 
 // Read data path – A tiny FSM, with two states defined by "rd_phase" signal.
-reg         rd_phase;           // 0 = expect first 64-bit word, 1 = expect second
-reg [63:0]  rd_stashed;         // holds the first 64-bit word until second arrives
+(* mark_debug = "true" *) reg         rd_phase;           // 0 = expect first 64-bit word, 1 = expect second
+(* mark_debug = "true" *) reg [63:0]  rd_stashed;         // holds the first 64-bit word until second arrives
 
 // Reset behavior + state / data update
 always @(posedge ui_clk) begin
