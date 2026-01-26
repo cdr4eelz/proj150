@@ -152,13 +152,22 @@ module ArtyA7top #(
         assign stall_dip = switches[1]; //1'b0;  // TODO: Tie-in to a GPIO switch (and invert repeatedly)
 
         // MemoryDDR (WAS: Memory150)
-        (* mark_debug = "true" *) wire [31:0] dcache_addr,    icache_addr;
-        (* mark_debug = "true" *) wire [ 3:0] dcache_we,      icache_we;
-        (* mark_debug = "true" *) wire        dcache_re,      icache_re;
-        (* mark_debug = "true" *) wire [31:0] dcache_din,     icache_din;
-        (* mark_debug = "true" *) wire [31:0] dcache_dout,    icache_dout;
-        (* mark_debug = "true" *) wire        stall_dcache,   stall_icache; //stall_cache;
-        (* mark_debug = "true" *) wire  [3:0] DBG_dcache,     DBG_icache;
+        (* mark_debug = "true" *) wire [31:0] dcache_addr;
+        (* mark_debug = "true" *) wire [ 3:0] dcache_we;
+        (* mark_debug = "true" *) wire        dcache_re;
+        (* mark_debug = "true" *) wire [31:0] dcache_din;
+        (* mark_debug = "true" *) wire [31:0] dcache_dout;
+        (* mark_debug = "true" *) wire        stall_dcache; //stall_cache;
+        (* mark_debug = "true" *) wire  [3:0] DBG_dcache;
+
+        wire [31:0] icache_addr;
+        wire [ 3:0] icache_we;
+        wire        icache_re;
+        wire [31:0] icache_din;
+        wire [31:0] icache_dout;
+        wire        stall_icache; //stall_cache;
+        wire  [3:0] DBG_icache;
+
         wire DBG_clk_mig_ui;
         (* mark_debug = "true" *) wire        DBG_rst_mig_ui;
         (* mark_debug = "true" *) wire  [3:0] DBG_adapt;

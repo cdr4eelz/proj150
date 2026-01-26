@@ -1,0 +1,23 @@
+*** Top level TODO and critical NOTES ***
+
+//DONE: Use actual TODO document rather than cluttering this one!
+//TODO: Insert SPACE after colon in GIOS.dump, in all data listings (dump & lw)
+//TODO: 
+
+//TODO: Writes not fully implemented... second chunk ignored?
+
+//TODO: Remove DEBUG property from all "icache" lines
+//TODO: dcache_addr has unused high bits... resize/feed them?
+//TODO: Adjust caf FIFO to pass single bit for command (rather than 3 bits)
+
+//TODO: Make my standard CDC helpers use a REG on their INPUT, if Combinatorial logic present.
+//TODO: Consider using Xilinx recommended XPM_CDC modules
+//TODO: DRC reports BRAMs should use SYNCHRONOUS reset signals (avoid warning of unknown severity)
+//TODO: Remove combinational logic (or REGister it) going into CDC synchronizers
+//TODO: Avoid general FALSE-PATH constraints (make them specifically between two points REG-REG)
+//TODO: Run through entire CDC report to clean worst stuff and maybe most warnings?
+
+//TODO: Simplify RESET "tree" (make all synchronous resets?) and address CDC propagation of the signal
+
+//TODO: Actually scan warnings for useful entries (perhaps after connecting rest of memory modules)
+

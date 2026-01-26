@@ -9,7 +9,7 @@
 //             on the original Xilinx XUP board, avoiding alteration of many
 //             modules. This means that 256-bits are transferred in total,
 //             for each read or write. **
-//
+//TODO: Update this comment for accuracy!!!
 // Features:
 // - Splits one READ request into four consecutive 64-bit MIG reads,
 // -   assembled into two 128-bit read responses to fifo_rdf. This matches
@@ -28,10 +28,11 @@
 //=============================================================================
 
 module MIGAdapter (
-    input  wire         ui_clk,
+    input  wire         ui_clk, //TODO: Rename ui_clk/rst to something like mig_clk/rst?
     input  wire         ui_clk_sync_rst,    // active-high reset for ui_clk domain
 
     // Command FIFO (mig_caf) - 31 bits {cmd[2:0], addr[27:0]}
+//TODO: Only use 1 bit of caf for READ/WRITE (synth eleminates unused bits anyway)
     input  wire [30:0]  fifo_caf_dout,
     input  wire         fifo_caf_empty,
     input  wire         fifo_caf_valid,
@@ -74,28 +75,25 @@ module MIGAdapter (
     // ────────────────────────────────────────────────
     localparam  S_IDLE      = 3'd0,  // waiting for new command, latch addr & cmd
                 S_READ1     = 3'd1,  // issuing first read (using FIFO addr)
-                S_READ2     = 3'd2,  // issuing second read (base + 8)
-                S_WRITECMD  = 3'd3,  // issuing write command (before write data)
-                S_WRITE1a   = 3'd4,  // LOW 64-bit & 8-bit mask
-                S_WRITE1b   = 3'd5,  // HIGH 64-bit & 8-bit mask
+                S_READ2     = 3'd2,  // issuing second read (base + 4)
+                S_WRITECMD1 = 3'd3,  // issuing write command (before write data)
+                S_WRITE1a   = 3'd4,  // LOW 64-bit data& 8-bit mask
+                S_WRITE1b   = 3'd5,  // HIGH 64-bit data & 8-bit mask
+                //TODO: Implement second write command cycle, S_WRITECMD2
+                //TODO: Use first/second flag to reduce states???
                 S_WRITE2a   = 3'd6,  // LOW (getting total to 256-bits)
                 S_WRITE2b   = 3'd7;  // HIGH (end)
-                // are two more cycles of WRITE needed???? (2 for 64-bit adjust and 2 for full 256-bit write?)
+                // are two more cycles of WRITE needed????
                 // BE SURE THAT BIT WIDTH OF STATE REG IS SUFFICIENT!
     (* mark_debug = "true" *) reg [2:0] state; // Handle up to 8 states
-    (* mark_debug = "true" *) reg [27:0] base_addr;           // captured starting address
-    assign DBG_adapt = {1'b0, state[2:0]}; // MSB 0 to make 4 bits
+    assign DBG_adapt = {1'b0, state[2:0]}; //TODO: Either widen state or use high-bit for stall detection
 
-    // ────────────────────────────────────────────────
-    // Combinatorial outputs / control signals
-    // ────────────────────────────────────────────────
-    assign fifo_caf_rd_en  = ((state == S_IDLE) && !fifo_caf_empty); //fifo_caf_valid); // Only accept new command in IDLE
-    assign app_cmd         = ((state == S_READ1) || (state == S_READ2))
-                                ? 3'b001 : 3'b000;
-    assign app_addr        = ((state == S_READ2 || state == S_WRITE2))
-                                ? (base_addr + 28'd8) : base_addr;
-    assign app_en          = (state == S_READ1) || (state == S_READ2) ||
-                                (state == S_WRITE1) || (state == S_WRITE2);
+    (* mark_debug = "true" *) reg [27:0] base_addr; // captured starting address from fifo_caf
+    // Stash HIGH 8-bit mask & HIGH 64-bit data from fifo_wdf read for 2nd app_wdf write
+    (* mark_debug = "true" *) reg [71:0] wr_stash_hi; // TODO: Split into separate regs?
+
+    //Our DDR3 unit is 16-bits ; FIFO chunk is 128-bits ; 128/16 = 8 ; 28-bit addr (of 16-bit units)
+    localparam OFFSET_FOR_SECOND = 28'd8; // Mem offset for 2nd 128-bit chunk (to mimic old DDR2 behavior)
 
     // ────────────────────────────────────────────────
     // FSM + address register
@@ -105,14 +103,17 @@ module MIGAdapter (
             state     <= S_IDLE;
             base_addr <= 28'd0;
         end else begin
-            state <= state;  // default hold
-            base_addr <= base_addr; // default hold
+            // default holdS (UNNECESSARY but for clarity)
+            state <= state;
+            base_addr <= base_addr;
+            wr_stash_hi <= wr_stash_hi;
+
             case (state)
                 S_IDLE: begin // Capture new command from FIFO
                     if (fifo_caf_valid && fifo_caf_rd_en) begin
                         base_addr <= fifo_caf_dout[27:0];
                         if (fifo_caf_dout[30:28] == 3'b000) begin
-                            state <= S_WRITE1;
+                            state <= S_WRITECMD1;
                         end else begin
                             state <= S_READ1;
                         end
@@ -121,57 +122,72 @@ module MIGAdapter (
 
                 S_READ1: begin
                     if (app_rdy && app_en) begin
-                        state    <= S_READ2;
+                        state <= S_READ2;
                     end
                 end
 
                 S_READ2: begin
                     if (app_rdy && app_en) begin
-                        state    <= S_IDLE;
+                        state <= S_IDLE;
                     end
                 end
 
-                S_WRITECMD: begin
+                S_WRITECMD1: begin
                     if (app_rdy && app_en) begin // ISSUING WRITE COMMAND ONLY
-                        state    <= S_WRITE1a;
+                        state <= S_WRITE1a;
                     end
                 end
 
-// WATCH OUT BECAUSE EACH ELEMENT COULD FIRE INDEPENDENTLY! FIFO, WDF, APP 
                 S_WRITE1a: begin
+//TODO: Must be cautious of advancing FIFO or APP independently!!!
                     if (fifo_wdf_valid && fifo_wdf_rd_en &&
                             app_wdf_rdy && app_wdf_wren) begin
-                        state    <= S_WRITE1b;
+                        state <= S_WRITE1b;
+                        // Stash high mask & data for followup write
+                        wr_stash_hi <= {fifo_wdf_dout[143:136], fifo_wdf_dout[127:64]};
+                        //TODO: Use "defines" for bit ranges???
                     end
                 end
 
+//TODO: 2 separate fifo reads, capture 2nd 64-bits of read, and double app writes!!!
                 S_WRITE1b: begin
                     if (fifo_wdf_valid && fifo_wdf_rd_en &&
                             app_wdf_rdy && app_wdf_wren) begin
-                        state    <= S_IDLE; // OR S_WRITECMD IF MORE WRITES NEEDED??? OR 2 more WRITES???
+                        state <= S_IDLE; //TODO: S_WRITECMD2!
                     end
                 end
 
+//TODO: Need 2nd pass at writes (CMD2, 2a, 2b) to get full 256-bits written
+
                 default: begin
-                    state <= S_IDLE;
+                    state <= S_IDLE; //TODO: Fault state??? Fault recovery?
                 end
             endcase
         end
     end
 
-wire is_write_state = (state == S_WRITE1a) || (state == S_WRITE1b) ||
-                      (state == S_WRITE2a) || (state == S_WRITE2b);
-wire write_ready = fifo_wdf_valid && app_wdf_rdy;
-wire is_second = (state == S_READ2) || (state == S_WRITE1b) || (state == S_WRITE2b);
-assign fifo_wdf_rd_en = is_write_state && !fifo_wdf_empty; //write_ready;
-assign app_wdf_wren = is_write_state && write_ready;
-assign app_wdf_data = (is_second) ? fifo_wdf_dout[127:64] : fifo_wdf_dout[63:0];
-assign app_wdf_mask = (is_second) ? fifo_wdf_dout[143:136] : fifo_wdf_dout[135:128];
-assign app_wdf_end = ((state == S_WRITE1b) || (state == S_WRITE2b)); // depricated
-//    output wire [63:0]  app_wdf_data, // Select high or low 64 bits based on state
-//    output wire [7:0]   app_wdf_mask, // Select high or low 8 bits based on state
-//    output wire         app_wdf_wren, // Assert on write states
-//    input  wire         app_wdf_rdy,  // Advance 
+    wire is_wdf_state = (state == S_WRITE1a) || (state == S_WRITE1b) ||
+                        (state == S_WRITE2a) || (state == S_WRITE2b);
+                        // S_WRITECMD1/2 don't count (waf not wdf)
+    wire write_ready = fifo_wdf_valid && app_wdf_rdy; // Valid does get asserted with FWFT FIFO
+    wire is_second = (state == S_READ2) || (state == S_WRITE1b) || (state == S_WRITE2b);
+    //TODO: the RIGHT1b/2b shouldn't fetch more from fifo_wdf (use wr_stash_hi only)
+    assign fifo_wdf_rd_en   = is_wdf_state && fifo_wdf_valid; // Was "!empty"
+    assign app_wdf_wren     = is_wdf_state && write_ready; //WAS: write_ready;
+    assign app_wdf_data     = (is_second) ? wr_stash_hi[ 63:0  ] : fifo_wdf_dout[ 63:0  ];
+    assign app_wdf_mask     = (is_second) ? wr_stash_hi[ 71:64 ] : fifo_wdf_dout[135:128];
+    assign app_wdf_end      = (is_second && is_wdf_state); // depricated
+
+    // ────────────────────────────────────────────────
+    // Combinatorial outputs / control signals
+    // ────────────────────────────────────────────────
+    assign fifo_caf_rd_en  = ((state == S_IDLE) && fifo_caf_valid); // Was "!empty"
+    assign app_cmd         = ((state == S_READ1) || (state == S_READ2))
+                                ? 3'b001 : 3'b000;
+    assign app_addr        = ((state == S_READ2) || state == S_WRITE2a) // || state == S_WRITECMD2))
+                                ? (base_addr + OFFSET_FOR_SECOND) : base_addr;
+    assign app_en          = (state == S_READ1) || (state == S_READ2) ||
+                                (state == S_WRITECMD1) || (state == S_WRITE2a); // || (state == S_WRITECMD2);
 
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
@@ -190,7 +206,7 @@ always @(posedge ui_clk) begin
             // Waiting for first read response
             if (app_rd_data_valid) begin
                 rd_stashed <= app_rd_data;
-                rd_phase   <= 1'b1;     // now wait for second
+                rd_phase   <= 1'b1;
             end
         end else begin
             // Waiting for second read response
@@ -206,7 +222,7 @@ end
 assign fifo_rdf_wr_en = (rd_phase == 1'b1) && app_rd_data_valid;
 
 // FIFO data – {second received word, first received word}
-assign fifo_rdf_din = {app_rd_data, rd_stashed};
+assign fifo_rdf_din = {app_rd_data, rd_stashed}; //TODO: Confirm HI/LO order is correct!!!
 
 // Note: fifo_rdf_full is deliberately ignored per requirement.
 // If the FIFO is full when we assert wr_en, data will be lost (MIG is not stalled).

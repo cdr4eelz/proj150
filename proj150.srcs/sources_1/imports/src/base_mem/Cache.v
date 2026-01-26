@@ -29,7 +29,9 @@
 //`default_nettype none
 
 module Cache #(
-    parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter LITTLEWORDIAN = 0, //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter STUCK_MAX_CYCLES = 8'd111,
+    parameter READ_HACK_ENABLED = 1'b0 //Disable the effect of the hack
 )(
     input wire          clk,
     input wire          rst,
@@ -70,12 +72,11 @@ module Cache #(
     localparam  IDLE        = 3'd0, // 000
                 WRITE1      = 3'd1, // 001
                 WRITE2      = 3'd2, // 010
-                FETCH1      = 3'd3, // 011
-                FETCH2      = 3'd4, // 100
-                READ1       = 3'd5, // 101
-                READ2       = 3'd6, // 110
-                CWRITEB     = 3'd7; // 111
-                // Make sure state reg is wide enough!
+                FETCH       = 3'd3, // 011
+                READ1       = 3'd4, // 100
+                READ2       = 3'd5, // 101
+                CWRITEB     = 3'd6; // 110
+                //NOTE: Always make sure state reg is wide enough!
 
     //registers:
     // state for DDR3 FSM
@@ -105,11 +106,10 @@ module Cache #(
     (* mark_debug = "true" *) wire [`SZ_CACHELINE-1:0] data;
 
     wire [`SZ_CACHELINE-1:0] data_line_out;
-    wire [`SZ_TAGLINE-1:0] tag_line_out;
     wire [`SZ_CACHELINE-1:0] data_line_in;
+    (* mark_debug = "true" *) reg  [`SZ_CACHELINE-1:0] active_data_line;
+    wire [`SZ_TAGLINE-1:0] tag_line_out;
     wire [`SZ_TAGLINE-1:0] tag_line_in;
-
-    reg [`SZ_CACHELINE-1:0] active_data_line;
 
 //  wire [`SZ_OFFSET-1:0] offset  = (LITTLEWORDIAN) ? ~addr[`IDX_ADDR_OFFSET]
 //                                                  : addr[`IDX_ADDR_OFFSET];
@@ -123,9 +123,9 @@ module Cache #(
 
     wire [31:0] we_mask_hold;
 
-    wire write_hit_hold;
-    wire tag_equal;
-    wire read_miss;
+    (* mark_debug = "true" *) wire write_hit_hold;
+    (* mark_debug = "true" *) wire tag_equal;
+    (* mark_debug = "true" *) wire read_miss;
 
     // block ram for the cache:
     // 8kb
@@ -160,23 +160,21 @@ module Cache #(
                       {32{write_hit_hold}} & we_mask_hold;
     assign tag_we = (next_state == CWRITEB) || (write_hit_hold);
 
-    assign we_mask_hold = {28'b0, we_hold} << {offset_hold, 2'b0};
+    assign we_mask_hold = {28'b0, we_hold} << {offset_hold, 2'b00};
 
 
     // Some signals to make the FSM cleaner:
     assign tag_valid = tag_line_out[`IDX_TAG_VALID];
     assign tag_equal = tag_line_out[`IDX_TAG_TAG] == tag_hold;
-    assign tag_hit = tag_valid && tag_equal;
+    assign tag_hit = 1'b0; //TEMP: tag_valid && tag_equal; //TODO: Reverse this attempt to disable cache!!!
 
     assign write_hit_hold = |we_hold && tag_hit;
 
-    assign read_miss = re_hold; //TEMP: && !tag_hit; // Can bypass cache here if needed
+    assign read_miss = re_hold && !tag_hit; //TODO: Re-enable this & tag-hit overrides!!!
 
-    localparam STUCK_MAX_CYCLES = 8'd48;
-    localparam READ_HACK_ENABLED = 1'b0; //Disable the effect of the hack
-    (* mark_debug = "true" *) reg [7:0] stuckCycles;
+    reg [7:0] stuckCycles;
     (* mark_debug = "true" *) wire stuckTrigger = (stuckCycles == 0);
-    (* mark_debug = "true" *) reg [31:0] stuckResets;
+    reg [31:0] stuckResets = 0;
     assign DBG_cache_cs = {stuckTrigger, current_state[2:0]};
 
     // synchronous logic:
@@ -185,9 +183,10 @@ module Cache #(
             stuckCycles <= STUCK_MAX_CYCLES;
         end else if(!stuckTrigger) begin
             stuckCycles <= stuckCycles - 1;
-        end else begin
+        end else begin // We are stuck!
             // next_state change will hopefully avoid repeated increments!
             stuckResets <= stuckResets + 1;
+            // No guarantees about restarting after being stuck!
         end
 
         if(rst)
@@ -203,10 +202,10 @@ module Cache #(
         end else if(next_state == IDLE) begin //&& (|we || (re == 1'b1))) begin
 //      end else if((next_state == IDLE) && (|we || (re == 1'b1))) begin
             // This may cause immediate re-trigger of WRITE. Need to reset these after write done?
-            if (|we || (re == 1'b1)) begin // COuld just use "re" alone?
+            if (|we || (re == 1'b1)) begin //TODO: Could just use "re" alone as boolean?
                 addr_hold <= addr;
                 re_hold   <= re;
-                we_hold   <= we;
+                we_hold   <= we; // NOTE: This is a 4-bit mask (1-bit per byte in "din/din_hold")
                 din_hold  <= din;
             end else begin
                 // Hold value just for inspection (not used until next IDLE with we/re)
@@ -225,30 +224,31 @@ module Cache #(
 
         if(rst)
             first_read = 128'd0;
-        else if(current_state == READ1)
+        else if((current_state == READ1) && rdf_wren && rdf_rden) //NOTE: Added check rdf_wren & rdf_rden
             first_read <= rdf_data;
+        else if(current_state == IDLE)
+            first_read <= 128'd0;
 
         if(rst)
             active_data_line = 256'd0;
         else if(current_state == IDLE)
             active_data_line <= data_line_out;
         else if(next_state == CWRITEB)
-            active_data_line <= {first_read, rdf_data};
+            active_data_line <= {first_read, rdf_data}; //NOTE: This seems like correct order (hi/lo)
     end
 
     // State transition logic:
     always @(*) begin
         if(stuckTrigger && isReading && READ_HACK_ENABLED) begin // Start again if results didn't reach us (major HACK)
-            next_state = FETCH1;
+            next_state = FETCH;
         end else begin
             next_state = IDLE;
             case(current_state)
                 IDLE   : next_state = (|we_hold) ? WRITE1
-                                        : ((read_miss) ? FETCH1  : IDLE );
+                                        : ((read_miss) ? FETCH : IDLE );
                 WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
                 WRITE2 : next_state = (!wdf_full             ) ? IDLE    : WRITE2; // NOTE: "!wdf_full" only
-                FETCH1 : next_state = (             !caf_full) ? READ1   : FETCH1;
-                //FETCH2 : next_state = (             !caf_full) ? READ1   : FETCH2; // FETCH2 SKIPPED
+                FETCH  : next_state = (             !caf_full) ? READ1   : FETCH;
                 READ1  : next_state = ( rdf_rden && rdf_wren ) ? READ2   : READ1;
                 READ2  : next_state = ( rdf_rden && rdf_wren ) ? CWRITEB : READ2;
                 CWRITEB: next_state = IDLE;
@@ -258,11 +258,9 @@ module Cache #(
     end
 
     assign  isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
-    assign  isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
-    assign  isReading   = (current_state == READ1 ) || (current_state == READ2 );
-    assign  isSecond    = (current_state == WRITE2)
-                            || (current_state == FETCH2)
-                            || (current_state == READ2);
+    assign  isFetching  = (current_state == FETCH);
+    assign  isReading   = (current_state == READ1 ) || (current_state == READ2);
+    assign  isSecond    = (current_state == WRITE2) || (current_state == READ2);
 
     // FIFO output partial values:
     (* mark_debug = "true" *) wire [  2:0]  f_cmd;
@@ -270,18 +268,22 @@ module Cache #(
     (* mark_debug = "true" *) wire [127:0]  f_data;
     (* mark_debug = "true" *) wire [ 15:0]  f_mask;
     assign f_cmd  = (isWriting) ? 3'b000 : 3'b001; // Write = 0 : Read = 1
-    assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00}; // WAS 6'b000000
-    assign f_addr = (isSecond) ? (f_addr_base + 8) : f_addr_base;
+     // Shift left by 2 (like * 4) to translate byte addr to 32-bit word addr (then "offset" within 256-bit block is done elsewhere)
+    assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00};
+    //TODO: ^^^ This computation of f_addr_base could be more clear, maybe use "<< 2" shift?
+    //TODO: Confirm whether cache is dealing with 256-bit (32-byte) blocks correctly!!!
+    assign f_addr = (isSecond) ? (f_addr_base + 28'd8) : f_addr_base;
     assign f_data = {4{din_hold}};
     // Write Mask is active low, so we have to flip the bits (~)
     assign f_mask = (current_state == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
+    //TODO: ^^^ Use "second" signal? Perform inversion ~ only once?
 
     // FIFO output assignments:
-    assign caf_wren = (isWriting && !isSecond) || (isFetching);
+    assign caf_wren = (isWriting && !isSecond) || isFetching;
     assign caf_cadr = {f_cmd, f_addr};
     assign wdf_wren = (isWriting);
     assign wdf_mdat = {f_mask, f_data};
-    assign rdf_rden = isReading;
+    assign rdf_rden = isReading && rdf_wren; //NOTE: Added rdf_wren check
 
     // CPU output assignments:
     //   data out is either from cache line out or active cache line if there is a read

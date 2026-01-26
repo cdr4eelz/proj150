@@ -72,7 +72,8 @@ module MemoryDDR #(
 );
 
     
-    (* mark_debug = "true" *) wire [3:0]  DBG_dcache_cs,  DBG_icache_cs;
+    (* mark_debug = "true" *) wire [3:0]  DBG_dcache_cs;
+    wire [3:0]  DBG_icache_cs;
 
 // MIG feeds clock/rst back to us (use for clock-crossing FIFOs)
     wire            clk_mig_ui;
