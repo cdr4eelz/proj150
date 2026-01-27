@@ -127,3 +127,19 @@ D C B A
 10001020: cbaefbf3 f629bead b7d592b9 bfdd976a
 10001030: 096efcbe 25e77795 ffd7fdef fd32fb6f
 > 
+
+=============================
+> dump 10001000
+
+10001000: 00000001 aeecee6a ffffffff ccccc84c
+10001010: 3fd7fdef fd22fb6f 096ef4be 25e65795
+10001020: ffffffff ccccc84c 00000001 aeecee6a
+10001030: 096ef4be 25e65795 3fd7fdef fd22fb6f
+> sw 0 10001020
+> dump 10001000
+
+10001000: 00000000 aeecee6a ffffffff ccccc84c
+10001010: 3fd7fdef fd22fb6f 096ef4be 25e65795
+10001020: ffffffff ccccc84c 00000000 aeecee6a
+10001030: 096ef4be 25e65795 3fd7fdef fd22fb6f
+

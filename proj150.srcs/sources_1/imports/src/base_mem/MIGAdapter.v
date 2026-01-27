@@ -79,18 +79,16 @@ module MIGAdapter (
                 S_WRITECMD1 = 3'd3,  // issuing write command (before write data)
                 S_WRITE1a   = 3'd4,  // LOW 64-bit data& 8-bit mask
                 S_WRITE1b   = 3'd5,  // HIGH 64-bit data & 8-bit mask
-                //TODO: Implement second write command cycle, S_WRITECMD2
-                //TODO: Use first/second flag to reduce states???
-                S_WRITE2a   = 3'd6,  // LOW (getting total to 256-bits)
-                S_WRITE2b   = 3'd7;  // HIGH (end)
-                // are two more cycles of WRITE needed????
-                // BE SURE THAT BIT WIDTH OF STATE REG IS SUFFICIENT!
-    (* mark_debug = "true" *) reg [2:0] state; // Handle up to 8 states
-    assign DBG_adapt = {1'b0, state[2:0]}; //TODO: Either widen state or use high-bit for stall detection
+                S_WRITECMD2 = 3'd6,  // Another go-around for 2nd 128-bits
+                S_WRITE2a   = 3'd7,  // LOW (almost getting total to 256-bits)
+                S_WRITE2b   = 3'd8;  // HIGH (end)
+                // *** BE SURE THAT BIT WIDTH OF STATE REG IS SUFFICIENT! ***
+    (* mark_debug = "true" *) reg [3:0] state; // Handle up to 8 states
+    assign DBG_adapt = {state[3:0]};
 
     (* mark_debug = "true" *) reg [27:0] base_addr; // captured starting address from fifo_caf
     // Stash HIGH 8-bit mask & HIGH 64-bit data from fifo_wdf read for 2nd app_wdf write
-    (* mark_debug = "true" *) reg [71:0] wr_stash_hi; // TODO: Split into separate regs?
+    (* mark_debug = "true" *) reg [71:0] wr_stash_hi; //TODO: Split into separate regs (mask vs data)?
 
     //Our DDR3 unit is 16-bits ; FIFO chunk is 128-bits ; 128/16 = 8 ; 28-bit addr (of 16-bit units)
     localparam OFFSET_FOR_SECOND = 28'd8; // Mem offset for 2nd 128-bit chunk (to mimic old DDR2 behavior)
@@ -132,10 +130,9 @@ module MIGAdapter (
                     end
                 end
 
+//TODO: Should we pass the write *DATA* *before* the write command???
                 S_WRITECMD1: begin
-                    if (app_rdy && app_en) begin // ISSUING WRITE COMMAND ONLY
-                        state <= S_WRITE1a;
-                    end
+                    if (app_rdy && app_en) state <= S_WRITE1a;
                 end
 
                 S_WRITE1a: begin
@@ -153,7 +150,30 @@ module MIGAdapter (
                 S_WRITE1b: begin
                     if (fifo_wdf_valid && fifo_wdf_rd_en &&
                             app_wdf_rdy && app_wdf_wren) begin
-                        state <= S_IDLE; //TODO: S_WRITECMD2!
+                        state <= S_WRITECMD2;
+                    end
+                end
+
+                S_WRITECMD2: begin
+                    if (app_rdy && app_en) state <= S_WRITE2a;
+                end
+
+                S_WRITE2a: begin
+//TODO: Must be cautious of advancing FIFO or APP independently!!!
+                    if (fifo_wdf_valid && fifo_wdf_rd_en &&
+                            app_wdf_rdy && app_wdf_wren) begin
+                        state <= S_WRITE2b;
+                        // Stash high mask & data for followup write
+                        wr_stash_hi <= {fifo_wdf_dout[143:136], fifo_wdf_dout[127:64]};
+                        //TODO: Use "defines" for bit ranges???
+                    end
+                end
+
+//TODO: 2 separate fifo reads, capture 2nd 64-bits of read, and double app writes!!!
+                S_WRITE2b: begin
+                    if (fifo_wdf_valid && fifo_wdf_rd_en &&
+                            app_wdf_rdy && app_wdf_wren) begin
+                        state <= S_IDLE;
                     end
                 end
 
@@ -184,10 +204,10 @@ module MIGAdapter (
     assign fifo_caf_rd_en  = ((state == S_IDLE) && fifo_caf_valid); // Was "!empty"
     assign app_cmd         = ((state == S_READ1) || (state == S_READ2))
                                 ? 3'b001 : 3'b000;
-    assign app_addr        = ((state == S_READ2) || state == S_WRITE2a) // || state == S_WRITECMD2))
+    assign app_addr        = ((state == S_READ2) || (state == S_WRITECMD2))
                                 ? (base_addr + OFFSET_FOR_SECOND) : base_addr;
     assign app_en          = (state == S_READ1) || (state == S_READ2) ||
-                                (state == S_WRITECMD1) || (state == S_WRITE2a); // || (state == S_WRITECMD2);
+                                (state == S_WRITECMD1) || (state == S_WRITECMD2);
 
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////

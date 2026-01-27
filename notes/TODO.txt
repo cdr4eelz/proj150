@@ -1,5 +1,7 @@
 *** Top level TODO and critical NOTES ***
 
+//TODO: Note that ILA identifies mixed-clocks for app_cmd, f_cmd, f_addr, f_addr_base...
+
 //DONE: Use actual TODO document rather than cluttering this one!
 //TODO: Insert SPACE after colon in GIOS.dump, in all data listings (dump & lw)
 //TODO: 

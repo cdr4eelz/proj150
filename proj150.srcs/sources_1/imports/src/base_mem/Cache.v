@@ -69,13 +69,13 @@ module Cache #(
 
 
     // State declarations:
-    localparam  IDLE        = 3'd0, // 000
-                WRITE1      = 3'd1, // 001
-                WRITE2      = 3'd2, // 010
-                FETCH       = 3'd3, // 011
-                READ1       = 3'd4, // 100
-                READ2       = 3'd5, // 101
-                CWRITEB     = 3'd6; // 110
+    localparam  IDLE        = 3'd0,
+                WRITE1      = 3'd1,
+                WRITE2      = 3'd2,
+                FETCH       = 3'd3,
+                READ1       = 3'd4,
+                READ2       = 3'd5,
+                CWRITEB     = 3'd6;
                 //NOTE: Always make sure state reg is wide enough!
 
     //registers:
@@ -246,13 +246,16 @@ module Cache #(
             case(current_state)
                 IDLE   : next_state = (|we_hold) ? WRITE1
                                         : ((read_miss) ? FETCH : IDLE );
+                // Writes override reads and the read will get ignored if write underway
+                //TODO: vvv Are there better signals to rely upon, besides "_full" flags??? vvv
+                //TODO: Ensure that both FIFOs advance ONLY when both are ready!!!
                 WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
                 WRITE2 : next_state = (!wdf_full             ) ? IDLE    : WRITE2; // NOTE: "!wdf_full" only
                 FETCH  : next_state = (             !caf_full) ? READ1   : FETCH;
                 READ1  : next_state = ( rdf_rden && rdf_wren ) ? READ2   : READ1;
                 READ2  : next_state = ( rdf_rden && rdf_wren ) ? CWRITEB : READ2;
                 CWRITEB: next_state = IDLE;
-                default: next_state = IDLE;
+                default: next_state = IDLE; //NOTE: Could also flag an error here???
             endcase
         end
     end
