@@ -77,14 +77,29 @@ module MIGAdapter (
                 S_READ1     = 3'd1,  // issuing first read (using FIFO addr)
                 S_READ2     = 3'd2,  // issuing second read (base + 4)
                 S_WRITECMD1 = 3'd3,  // issuing write command (before write data)
-                S_WRITE1a   = 3'd4,  // LOW 64-bit data& 8-bit mask
+                S_WRITE1a   = 3'd4,  // LOW 64-bit data & 8-bit mask
                 S_WRITE1b   = 3'd5,  // HIGH 64-bit data & 8-bit mask
                 S_WRITECMD2 = 3'd6,  // Another go-around for 2nd 128-bits
                 S_WRITE2a   = 3'd7,  // LOW (almost getting total to 256-bits)
                 S_WRITE2b   = 3'd8;  // HIGH (end)
                 // *** BE SURE THAT BIT WIDTH OF STATE REG IS SUFFICIENT! ***
-    (* mark_debug = "true" *) reg [3:0] state; // Handle up to 8 states
+    (* mark_debug = "true" *) reg [3:0] state; // Handle up to 16 states
     assign DBG_adapt = {state[3:0]};
+    
+    (* mark_debug = "true" *) wire DBG_fifo_wdf_rd_en = fifo_wdf_rd_en;
+    (* mark_debug = "true" *) wire DBG_fifo_wdf_valid = fifo_wdf_valid;
+    (* mark_debug = "true" *) wire [143:0] DBG_fifo_wdf_dout  = fifo_wdf_dout;
+
+    (* mark_debug = "true" *) wire DBG_app_rdy        = app_rdy;
+    (* mark_debug = "true" *) wire DBG_app_en         = app_en;
+    (* mark_debug = "true" *) wire [2:0]   DBG_app_cmd       = app_cmd;
+    (* mark_debug = "true" *) wire [27:0]  DBG_app_addr      = app_addr;
+
+    (* mark_debug = "true" *) wire DBG_app_wdf_wren   = app_wdf_wren;
+    (* mark_debug = "true" *) wire DBG_app_wdf_rdy    = app_wdf_rdy;
+    (* mark_debug = "true" *) wire DBG_app_wdf_end    = app_wdf_end;
+    (* mark_debug = "true" *) wire [63:0]  DBG_app_wdf_data  = app_wdf_data;
+    (* mark_debug = "true" *) wire [ 7:0]  DBG_app_wdf_mask  = app_wdf_mask;
 
     (* mark_debug = "true" *) reg [27:0] base_addr; // captured starting address from fifo_caf
     // Stash HIGH 8-bit mask & HIGH 64-bit data from fifo_wdf read for 2nd app_wdf write
@@ -146,7 +161,6 @@ module MIGAdapter (
                     end
                 end
 
-//TODO: 2 separate fifo reads, capture 2nd 64-bits of read, and double app writes!!!
                 S_WRITE1b: begin
                     if (fifo_wdf_valid && fifo_wdf_rd_en &&
                             app_wdf_rdy && app_wdf_wren) begin
@@ -169,7 +183,6 @@ module MIGAdapter (
                     end
                 end
 
-//TODO: 2 separate fifo reads, capture 2nd 64-bits of read, and double app writes!!!
                 S_WRITE2b: begin
                     if (fifo_wdf_valid && fifo_wdf_rd_en &&
                             app_wdf_rdy && app_wdf_wren) begin
@@ -186,13 +199,13 @@ module MIGAdapter (
         end
     end
 
-    wire is_wdf_state = (state == S_WRITE1a) || (state == S_WRITE1b) ||
-                        (state == S_WRITE2a) || (state == S_WRITE2b);
+    (* mark_debug = "true" *) wire is_wdf_state = (state == S_WRITE1a) || (state == S_WRITE1b) ||
+                                                  (state == S_WRITE2a) || (state == S_WRITE2b);
                         // S_WRITECMD1/2 don't count (waf not wdf)
-    wire write_ready = fifo_wdf_valid && app_wdf_rdy; // Valid does get asserted with FWFT FIFO
-    wire is_second = (state == S_READ2) || (state == S_WRITE1b) || (state == S_WRITE2b);
-    //TODO: the RIGHT1b/2b shouldn't fetch more from fifo_wdf (use wr_stash_hi only)
-    assign fifo_wdf_rd_en   = is_wdf_state && fifo_wdf_valid; // Was "!empty"
+    (* mark_debug = "true" *) wire write_ready = fifo_wdf_valid && app_wdf_rdy; // Valid gets asserted with FWFT FIFO
+    (* mark_debug = "true" *) wire is_second = (state == S_READ2) || (state == S_WRITE1b) || (state == S_WRITE2b);
+    //TODO: WRITE1b/2b (2nd) should not fetch more from fifo_wdf (use wr_stash_hi only)
+    assign fifo_wdf_rd_en   = is_wdf_state && write_ready; // Was "!empty"
     assign app_wdf_wren     = is_wdf_state && write_ready; //WAS: write_ready;
     assign app_wdf_data     = (is_second) ? wr_stash_hi[ 63:0  ] : fifo_wdf_dout[ 63:0  ];
     assign app_wdf_mask     = (is_second) ? wr_stash_hi[ 71:64 ] : fifo_wdf_dout[135:128];
