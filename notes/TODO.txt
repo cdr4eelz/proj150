@@ -22,4 +22,7 @@
 //TODO: Simplify RESET "tree" (make all synchronous resets?) and address CDC propagation of the signal
 
 //TODO: Actually scan warnings for useful entries (perhaps after connecting rest of memory modules)
-
+//TODO: Try upgrading project to newer version (latest???) and regen IP.
+//TODO: Use isolated CAF vs WDF FIFO=>MIG channels (two independent mini state-machines)
+                        //TODO: Use "defines" for bit ranges???
+//TODO: Only use 1 bit of caf for READ/WRITE (synth eleminates unused bits anyway)

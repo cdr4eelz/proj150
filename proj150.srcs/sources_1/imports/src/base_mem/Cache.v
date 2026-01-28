@@ -60,12 +60,12 @@ module Cache #(
     output wire[3:0]    DBG_cache_cs
 );
 
-    (* mark_debug = "true" *) wire DBG_caf_full = caf_full;
-    (* mark_debug = "true" *) wire DBG_caf_wren = caf_wren;
-    (* mark_debug = "true" *) wire DBG_wdf_full = wdf_full;
-    (* mark_debug = "true" *) wire DBG_wdf_wren = wdf_wren;
-    (* mark_debug = "true" *) wire DBG_rdf_rden = rdf_rden;
-    (* mark_debug = "true" *) wire DBG_rdf_wren = rdf_wren;
+    wire DBG_caf_full = caf_full;
+    wire DBG_caf_wren = caf_wren;
+    wire DBG_wdf_full = wdf_full;
+    wire DBG_wdf_wren = wdf_wren;
+    wire DBG_rdf_rden = rdf_rden;
+    wire DBG_rdf_wren = rdf_wren;
 
 
     // State declarations:
@@ -80,34 +80,34 @@ module Cache #(
 
     //registers:
     // state for DDR3 FSM
-    (* mark_debug = "true" *) reg [2:0] current_state, next_state;
-    (* mark_debug = "true" *) wire isWriting, isFetching, isReading, isSecond;
+    reg [2:0] current_state, next_state;
+    wire isWriting, isFetching, isReading, isSecond;
 
     // register to hold first 128-bits read back
     // from DDR3
-    (* mark_debug = "true" *) reg [127:0]   first_read;
+    reg [127:0]   first_read;
 
     // register data in to write into the cache
     // either:
     // a) 1 cycle later - after a tag check
     // b) many cycles later - after doing a fetch from DDR3
-    (* mark_debug = "true" *) reg [31:0]    din_hold;
+    reg [31:0]    din_hold;
 
     // register address
-    (* mark_debug = "true" *) reg [31:0]    addr_hold;
+    reg [31:0]    addr_hold;
 
     // register read and write enables
-    (* mark_debug = "true" *) reg           re_hold;
-    (* mark_debug = "true" *) reg [3:0]     we_hold;
+    reg           re_hold;
+    reg [3:0]     we_hold;
 
-    (* mark_debug = "true" *) wire mem_en;
-    (* mark_debug = "true" *) wire [31:0] data_we;
-    (* mark_debug = "true" *) wire tag_we;
-    (* mark_debug = "true" *) wire [`SZ_CACHELINE-1:0] data;
+    wire mem_en;
+    wire [31:0] data_we;
+    wire tag_we;
+    wire [`SZ_CACHELINE-1:0] data;
 
     wire [`SZ_CACHELINE-1:0] data_line_out;
     wire [`SZ_CACHELINE-1:0] data_line_in;
-    (* mark_debug = "true" *) reg  [`SZ_CACHELINE-1:0] active_data_line;
+    reg  [`SZ_CACHELINE-1:0] active_data_line;
     wire [`SZ_TAGLINE-1:0] tag_line_out;
     wire [`SZ_TAGLINE-1:0] tag_line_in;
 
@@ -123,9 +123,9 @@ module Cache #(
 
     wire [31:0] we_mask_hold;
 
-    (* mark_debug = "true" *) wire write_hit_hold;
-    (* mark_debug = "true" *) wire tag_equal;
-    (* mark_debug = "true" *) wire read_miss;
+    wire write_hit_hold;
+    wire tag_equal;
+    wire read_miss;
 
     // block ram for the cache:
     // 8kb
@@ -173,7 +173,7 @@ module Cache #(
     assign read_miss = re_hold && !tag_hit; //TODO: Re-enable this & tag-hit overrides!!!
 
     reg [7:0] stuckCycles;
-    (* mark_debug = "true" *) wire stuckTrigger = (stuckCycles == 0);
+    wire stuckTrigger = (stuckCycles == 0);
     reg [31:0] stuckResets = 0;
     assign DBG_cache_cs = {stuckTrigger, current_state[2:0]};
 
@@ -266,10 +266,10 @@ module Cache #(
     assign  isSecond    = (current_state == WRITE2) || (current_state == READ2);
 
     // FIFO output partial values:
-    (* mark_debug = "true" *) wire [  2:0]  f_cmd;
-    (* mark_debug = "true" *) wire [ 27:0]  f_addr_base, f_addr; //WAS: [30:0]
-    (* mark_debug = "true" *) wire [127:0]  f_data;
-    (* mark_debug = "true" *) wire [ 15:0]  f_mask;
+    wire [  2:0]  f_cmd;
+    wire [ 27:0]  f_addr_base, f_addr; //WAS: [30:0]
+    wire [127:0]  f_data;
+    wire [ 15:0]  f_mask;
     assign f_cmd  = (isWriting) ? 3'b000 : 3'b001; // Write = 0 : Read = 1
      // Shift left by 2 (like * 4) to translate byte addr to 32-bit word addr (then "offset" within 256-bit block is done elsewhere)
     assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00};
