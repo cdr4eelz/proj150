@@ -1,7 +1,11 @@
 *** Top level TODO and critical NOTES ***
 
+//TODO: Utilize "XPM_CDC" built-in macros for clock-crossing (synchronizers)
+//TODO: Verify bit width of OLD DDR3 accessors (Cache.v, GPU, etc.) Was 128-bit x 2 = 256-bit?
 //TODO: Note that ILA identifies mixed-clocks for app_cmd, f_cmd, f_addr, f_addr_base...
 
+//TODO: Per "UG896" you must upgrade all IP prior to adding a COE file.
+//TODO: Per "UG896" locate the COE file in the same directory as the XCI file.
 //DONE: Use actual TODO document rather than cluttering this one!
 //TODO: Insert SPACE after colon in GIOS.dump, in all data listings (dump & lw)
 //TODO: 

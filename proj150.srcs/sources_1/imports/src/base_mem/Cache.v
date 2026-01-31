@@ -296,9 +296,13 @@ module Cache #(
     wire [ 15:0]  f_mask;
     assign f_cmd  = (isWriting) ? 3'b000 : 3'b001; // Write = 0 : Read = 1
      // Shift left by 2 (like * 4) to translate byte addr to 32-bit word addr (then "offset" within 256-bit block is done elsewhere)
-    assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 3'b000}; //TODO: What is this really doing???
-    //TODO: ^^^ This computation of f_addr_base could be more clear, maybe use "<< 2" shift?
-    //TODO: Confirm whether cache is dealing with 256-bit (32-byte) blocks correctly!!!
+    //assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 4'b0000}; //TODO: Delete this line once confirmed below!!!
+    assign f_addr_base = {1'b0, addr_hold[`IDX_ADDR_DRAM], 4'b0000}; //TODO: Should we "<< 4" instead???
+    //NOTE:               ^^^^ 1-bit   +   ^^^23-bits^^^   +  ^^^^ 4-bits = 28-bits???
+    //NOTE: The 0 as MSB is to fill the 28-bit address width of DDR3 app interface...
+    //NOTE:     ...but this leaves some DDR3 RAM inaccessible (upper half?)
+    //NOTE: ^^^ Translate  low 4 bits (offset within 256-bit block)
+    //NOTE: addr_hold[27:5], 43210... [4:0] low bits truncated to 4'b0000!
     assign f_addr = f_addr_base; //WAS: (isSecond) ? (f_addr_base + 28'd16) : f_addr_base; //TODO: Figure out offset!
     assign f_data = {4{din_hold}};
     // Write Mask is active low, so we have to flip the bits (~)

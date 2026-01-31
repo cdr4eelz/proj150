@@ -69,6 +69,8 @@ module MIGAdapter (
 
     //Our DDR3 unit is 16-bits ; FIFO chunk is 128-bits ; 128/16 = 8 ; 28-bit addr (of 16-bit units)
     localparam OFFSET_ADDR_128bit = 28'd8; // Mem offset for 2nd 128-bit chunk (to mimic old DDR2 behavior)
+    // Offset 8 seems appropriate. Each 16-bit unit is 2 bytes, so 8 units = 16 bytes = 128 bits.
+    // This is the offset of DDR3 addresses to get to the next 128-bit block, within the 256-bit total.
 
     // ────────────────────────────────────────────────
     // State encoding
