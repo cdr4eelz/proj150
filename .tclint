@@ -1,0 +1,17 @@
+### .tclint
+###  + TCLint is responsible for making xdc files look ugly (from long lines)...
+###    hence special settings needed.
+###  + These settings not getting used by VS Code extension, but maybe useful elsewhere.
+###      - The xyz VS Code extension already recognizes .xdc files!
+###      - Currently, the file comment settings method is used to ignore line-length.
+###      - Example >>> # tclint-disable line-length
+###
+
+# tclint-disable line-length
+ignore = ["line-length"]
+
+indent = 4
+line-length = 256
+max-blank-lines = 2
+spaces-in-braces = false
+#indent-namespace-eval = false
