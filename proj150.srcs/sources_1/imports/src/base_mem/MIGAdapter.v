@@ -25,34 +25,34 @@
 //=============================================================================
 
 module MIGAdapter (
-    input  wire         ui_clk, //TODO: Rename ui_clk/rst to something like mig_clk/rst?
-    input  wire         ui_clk_sync_rst,    // active-high reset for ui_clk domain
+    input  wire         clk_mig_ui,    // clock for MIG user interface
+    input  wire         rst_mig_ui,    // active-high reset for clk_mig_ui domain
 
     // Command FIFO (mig_caf) - 31 bits {cmd[2:0], addr[27:0]}
+    output wire         fifo_caf_rd_en,
+    input  wire         fifo_caf_valid,
     input  wire [30:0]  fifo_caf_dout,
     input  wire         fifo_caf_empty,
-    input  wire         fifo_caf_valid,
-    output wire         fifo_caf_rd_en,
 
     // Write Data FIFO (mig_wdf) - 144 bits
     // [143:128] = {mask_high[7:0], mask_low[7:0]}
     // [127:64]  = data_high[63:0]
     // [63:0]    = data_low[63:0]
+    output wire         fifo_wdf_rd_en,
+    input  wire         fifo_wdf_valid,
     input  wire [143:0] fifo_wdf_dout,
     input  wire         fifo_wdf_empty,
-    input  wire         fifo_wdf_valid,
-    output wire         fifo_wdf_rd_en,
 
     // Read Data FIFO (mig_rdf) - 128-bit pure read data
-    output wire [127:0] fifo_rdf_din,
     output wire         fifo_rdf_wr_en,
+    output wire [127:0] fifo_rdf_din,
     input  wire         fifo_rdf_full,
 
     // MIG standard interface (UG586)
-    output wire [27:0]  app_addr,
-    output wire [2:0]   app_cmd,            // 000=WRITE, 001=READ
-    output wire         app_en,
     input  wire         app_rdy,
+    output wire         app_en,
+    output wire [2:0]   app_cmd,            // 000=WRITE, 001=READ
+    output wire [27:0]  app_addr,
 
     output wire [63:0]  app_wdf_data,
     output wire [7:0]   app_wdf_mask,
@@ -60,28 +60,30 @@ module MIGAdapter (
     output wire         app_wdf_wren,
     input  wire         app_wdf_rdy,
 
+    input  wire         app_rd_data_valid, //NOTE: No app_rd_data_rdy signal!
     input  wire [63:0]  app_rd_data,
-    input  wire         app_rd_data_valid,
-    // ignore app_rd_data_end
+    input  wire         app_rd_data_end,
+
     output wire[ 3:0]   DBG_adapt
 );
 
     //Our DDR3 unit is 16-bits ; FIFO chunk is 128-bits ; 128/16 = 8 ; 28-bit addr (of 16-bit units)
-    localparam OFFSET_FOR_SECOND = 28'd8; // Mem offset for 2nd 128-bit chunk (to mimic old DDR2 behavior)
+    localparam OFFSET_ADDR_128bit = 28'd8; // Mem offset for 2nd 128-bit chunk (to mimic old DDR2 behavior)
 
     // ────────────────────────────────────────────────
     // State encoding
     // ────────────────────────────────────────────────
-    localparam  S_IDLE      = 4'd0,  // waiting for new command, snag addr & cmd
-                S_READ1     = 4'd1,  // issuing first read (using FIFO addr)
-                S_READ2     = 4'd2,  // issuing second read (base + offset)
-                S_WRITECMD1 = 4'd3,  // issuing write command (before write data)
-                S_WRITE1a   = 4'd4,  // LOW 64-bit data & 8-bit mask
-                S_WRITE1b   = 4'd5,  // HIGH 64-bit data & 8-bit mask
-                S_WRITECMD2 = 4'd6,  // Another go-around for 2nd 128-bits
-                S_WRITE2a   = 4'd7,  // LOW (almost getting total to 256-bits)
-                S_WRITE2b   = 4'd8;  // HIGH (end)
+    localparam  S_IDLE      = 4'b0000,  // waiting for new command, snag addr & cmd
+                S_READ1     = 4'b0001,  // issuing first read (using FIFO addr)
+                S_READ2     = 4'b0010,  // issuing second read (base + offset)
+                S_WRITECMD1 = 4'b0011,  // issuing write command (before write data)
+                S_WRITE1a   = 4'b0100,  // LOW 64-bit data & 8-bit mask
+                S_WRITE1b   = 4'b0101,  // HIGH 64-bit data & 8-bit mask
+                S_WRITECMD2 = 4'b0110,  // Another go-around for 2nd 128-bits
+                S_WRITE2a   = 4'b0111,  // LOW (almost getting total to 256-bits)
+                S_WRITE2b   = 4'b1000;  // HIGH (end)
                 // *** BE SURE THAT BIT WIDTH OF STATE REG IS SUFFICIENT! ***
+    (* mark_debug = "true" *) // Need to debug state machine's states as enumerated values
     reg [3:0] state; // Handle up to 16 states
     assign DBG_adapt = {state[3:0]};
     
@@ -95,8 +97,8 @@ module MIGAdapter (
     //TODO: CAF and WDF FIFOs should be advanced independently, based on their own ready/valid signals.
     //TODO: Read vs Write can be identical handling... just double the transaction with matching cmds.
 
-    always @(posedge ui_clk) begin
-        if (ui_clk_sync_rst) begin
+    always @(posedge clk_mig_ui) begin
+        if (rst_mig_ui) begin
             state <= S_IDLE;
             //base_addr <= 0; *** Minimize logic on reset ***
             //{wr_stash_mask, wr_stash_data} <= 0; *** Likewise ***
@@ -187,7 +189,7 @@ module MIGAdapter (
     // Utilize categorizations above to drive key output signals:
     assign fifo_wdf_rd_en   = fifo_wdf_valid && app_wdf_rdy && is_wdf_first;
     assign app_wdf_wren     = app_wdf_rdy && (is_wdf_second || (is_wdf_first && fifo_wdf_valid));
-    // MUX between stashed data/mask and direct FIFO data/mask
+    // MUX between stashed data/mask and direct FIFO data/mask (could do one at a time for safety)
     assign app_wdf_mask     = (is_wdf_second) ? wr_stash_mask : fifo_wdf_dout[135:128];
     assign app_wdf_data     = (is_wdf_second) ? wr_stash_data : fifo_wdf_dout[ 63:0  ];
     assign app_wdf_end      = (is_wdf_second); // Depricated signal, but we still set it
@@ -196,7 +198,7 @@ module MIGAdapter (
     assign app_cmd          = ((state == S_READ1) || (state == S_READ2))
                                 ? 3'b001 : 3'b000;
     assign app_addr         = ((state == S_READ2) || (state == S_WRITECMD2))
-                                ? (base_addr + OFFSET_FOR_SECOND) : base_addr;
+                                ? (base_addr + OFFSET_ADDR_128bit) : base_addr;
     assign app_en           = (state == S_READ1) || (state == S_READ2) ||
                                 (state == S_WRITECMD1) || (state == S_WRITECMD2);
 
@@ -208,10 +210,10 @@ reg         rd_phase;           // 0 = expect first 64-bit word, 1 = expect seco
 reg [63:0]  rd_stashed;         // holds the first 64-bit word until second arrives
 
 // Reset behavior + state / data update
-always @(posedge ui_clk) begin
-    if (ui_clk_sync_rst) begin
+always @(posedge clk_mig_ui) begin
+    if (rst_mig_ui) begin
         rd_phase    <= 1'b0;            // start expecting first word
-        rd_stashed  <= 64'b0;           // clear staged data
+        rd_stashed  <= 64'h0;           // clear staged data
     end else begin
         if (rd_phase == 1'b0) begin
             // Waiting for first read response
@@ -261,7 +263,8 @@ assign fifo_rdf_din = {app_rd_data, rd_stashed}; //TODO: Confirm HI/LO order is 
     (* mark_debug = "true" *) wire [ 63:0] TAP_ADP_app_wdf_data   = app_wdf_data;
     (* mark_debug = "true" *) wire [  7:0] TAP_ADP_app_wdf_mask   = app_wdf_mask;
     (* mark_debug = "true" *) wire [ 63:0] TAP_ADP_app_rd_data    = app_rd_data;
-    (* mark_debug = "true" *) wire         TAP_ADP_app_rd_data_valid = app_rd_data_valid;
+    (* mark_debug = "true" *) wire         TAP_ADP_app_rd_data_valid  = app_rd_data_valid;
+    (* mark_debug = "true" *) wire         TAP_ADP_app_rd_data_end    = app_rd_data_end;
 
     (* mark_debug = "true" *) wire         TAP_ADP_rd_phase       = rd_phase;
     (* mark_debug = "true" *) wire [ 63:0] TAP_ADP_rd_stashed     = rd_stashed;

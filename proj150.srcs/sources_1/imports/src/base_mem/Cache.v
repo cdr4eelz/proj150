@@ -8,7 +8,7 @@
 //    address : 32-bit memory address
 //    din     : 32-bit block of data
 //    we      : 4-bit write mask
-//    re      : read enable (should be high only when we = 4'b0)
+//    re      : read enable (should be high only when we = 4'b0000)
 //    caf_full: control signal for the address/cmd fifo
 //    wdf_full: control signal for write data fifo
 //    rdf_wren: control signal from DDR3 read data fifo
@@ -24,7 +24,30 @@
 //    rdf_rden: ReaD-ENable  scalar for ddr2  Read-Data-Fifo
 //
 //----------------------------------------------------------------------------
-`include "cache.vh"
+// `include "cache.vh"
+`ifndef CACHE
+`define CACHE
+// Cache constants
+`define IDX_ADDR_OFFSET       4:2
+`define IDX_ADDR_INDEX       12:5
+`define IDX_ADDR_TAG         27:13
+`define IDX_ADDR_DRAM        27:5
+
+`define IDX_TAG_TAG          18:0
+`define IDX_TAG_VALID        19
+`define IDX_TAG_DIRTY        20
+
+`define SZ_OFFSET             3
+`define SZ_INDEX              8
+`define SZ_TAG (32-`SZ_OFFSET-`SZ_INDEX-2) // 19
+`define SZ_METADATA           2
+`define SZ_TAGLINE `SZ_TAG+`SZ_METADATA    // 21
+`define SZ_CACHELINE        256
+
+`define CAP_CACHE           256     // UNUSED?
+`define SZ_CACHE $clog2(`CAP_CACHE) // UNUSED?
+
+`endif //CACHE
 
 //`default_nettype none
 
@@ -69,13 +92,13 @@ module Cache #(
 
 
     // State declarations:
-    localparam  IDLE        = 3'd0,
-                WRITE1      = 3'd1,
-                WRITE2      = 3'd2,
-                FETCH       = 3'd3,
-                READ1       = 3'd4,
-                READ2       = 3'd5,
-                CWRITEB     = 3'd6;
+    localparam  IDLE        = 3'b000,
+                WRITE1      = 3'b001,
+                WRITE2      = 3'b010,
+                FETCH       = 3'b011,
+                READ1       = 3'b100,
+                READ2       = 3'b101,
+                CWRITEB     = 3'b110;
                 //NOTE: Always make sure state reg is wide enough!
 
     //registers:
@@ -160,7 +183,8 @@ module Cache #(
                       {32{write_hit_hold}} & we_mask_hold;
     assign tag_we = (next_state == CWRITEB) || (write_hit_hold);
 
-    assign we_mask_hold = {28'b0, we_hold} << {offset_hold, 2'b00};
+    // Create the write-enable mask for the 256-bit data line:
+    assign we_mask_hold = {28'h0, we_hold} << {offset_hold, 2'b00};
 
 
     // Some signals to make the FSM cleaner:
@@ -209,7 +233,7 @@ module Cache #(
                 din_hold  <= din;
             end else begin
                 // Hold value just for inspection (not used until next IDLE with we/re)
-                addr_hold <= addr_hold;
+                addr_hold <= addr_hold; //TODO: Should we zero these out instead???
                 din_hold  <= din_hold;
                 // Would be zero anyway!?!
                 re_hold   <= 1'b0;
@@ -272,10 +296,10 @@ module Cache #(
     wire [ 15:0]  f_mask;
     assign f_cmd  = (isWriting) ? 3'b000 : 3'b001; // Write = 0 : Read = 1
      // Shift left by 2 (like * 4) to translate byte addr to 32-bit word addr (then "offset" within 256-bit block is done elsewhere)
-    assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00};
+    assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 3'b000}; //TODO: What is this really doing???
     //TODO: ^^^ This computation of f_addr_base could be more clear, maybe use "<< 2" shift?
     //TODO: Confirm whether cache is dealing with 256-bit (32-byte) blocks correctly!!!
-    assign f_addr = (isSecond) ? (f_addr_base + 28'd8) : f_addr_base;
+    assign f_addr = f_addr_base; //WAS: (isSecond) ? (f_addr_base + 28'd16) : f_addr_base; //TODO: Figure out offset!
     assign f_data = {4{din_hold}};
     // Write Mask is active low, so we have to flip the bits (~)
     assign f_mask = (current_state == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
@@ -291,7 +315,7 @@ module Cache #(
     // CPU output assignments:
     //   data out is either from cache line out or active cache line if there is a read
     assign data   = (current_state == IDLE) ? data_line_out[255:0] : active_data_line[255:0];
-    assign dout   = (data >> {offset_hold, 5'b0});
+    assign dout   = (data >> {offset_hold, 5'b00000}); //TODO: Confirm correctness of this shift!!!
     assign stall  = (next_state != IDLE);
 
     // If we're writing back data from DDR3, use the registered 128-bits

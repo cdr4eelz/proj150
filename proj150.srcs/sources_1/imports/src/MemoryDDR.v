@@ -25,8 +25,10 @@ module MemoryDDR #(
     input  wire         clk_mig_ref,
     input  wire         clk_pix,
     input  wire         rst_pix,
-    //input  wire         locked, // No longer needed for MIG
-    output wire         init_done,  // init_calib_complete (related to ddr3_reset_n below???)
+    //input  wire         locked,         // No longer needed for MIG
+    output wire         init_done,      // init_calib_complete
+    output wire         DBG_clk_mig_ui, // Enclosing modules don't officially need MIG clk/rst
+    output wire         DBG_rst_mig_ui,
 
 // DDR3 Pads:
     // DDR3 InOuts
@@ -55,7 +57,6 @@ module MemoryDDR #(
     output wire[31:0]   dcache_dout,    icache_dout,
     output wire         d_stall,        i_stall,
     output wire[ 3:0]   DBG_dcache,     DBG_icache,
-    output wire         DBG_clk_mig_ui, DBG_rst_mig_ui,
     output wire[ 3:0]   DBG_adapt,
 
 // PixelFeeder <=> DVI/VGA Controller:
@@ -82,9 +83,11 @@ module MemoryDDR #(
     assign DBG_clk_mig_ui = clk_mig_ui, DBG_rst_mig_ui = rst_mig_ui;
 
     (* mark_debug = "true" *) wire init_calib_complete; // Direct from MIG
-    //assign init_done = init_calib_complete; //Assign directly
+    //assign init_done = init_calib_complete; //Assign directly without delay
+    // Add a few cycles of delay to init_calib_complete to help timing downstream
+    //TODO: Replace with a proper synchronizer in case signal is crossing clock domains!
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
-       OPTIMIZE="OFF" *) reg delay_reg [2:0]; // Not clock-crossing, just a delay
+       OPTIMIZE="OFF" *) reg delay_reg [2:0]; // NOT CLOCK-CROSSING, just a delay!
     always @(posedge clk_mig_ui) begin
         if (rst_mig_ui) begin
             delay_reg[0] <= 1'b0;
@@ -180,15 +183,15 @@ module MemoryDDR #(
     wire [143:0] bpas_wdf_mdat = {bpas_wdf_mask,bpas_wdf_data};
 
     // MIG Application Interface Signals:
-    (* mark_debug = "true" *) wire [ 27:0]    app_addr;
-    (* mark_debug = "true" *) wire [  2:0]    app_cmd;
     (* mark_debug = "true" *) wire            app_en;
     (* mark_debug = "true" *) wire            app_rdy;
+    (* mark_debug = "true" *) wire [  2:0]    app_cmd;
+    (* mark_debug = "true" *) wire [ 27:0]    app_addr;
+    (* mark_debug = "true" *) wire            app_wdf_wren;
+    (* mark_debug = "true" *) wire            app_wdf_rdy;
     (* mark_debug = "true" *) wire [ 63:0]    app_wdf_data;
     (* mark_debug = "true" *) wire [  7:0]    app_wdf_mask;
     (* mark_debug = "true" *) wire            app_wdf_end;
-    (* mark_debug = "true" *) wire            app_wdf_wren;
-    (* mark_debug = "true" *) wire            app_wdf_rdy;
     (* mark_debug = "true" *) wire [ 63:0]    app_rd_data;
     (* mark_debug = "true" *) wire            app_rd_data_valid;
     (* mark_debug = "true" *) wire            app_rd_data_end;
@@ -211,22 +214,22 @@ module MemoryDDR #(
         .ddr3_dm                (ddr3_dm),              // output [1:0]
         .ddr3_odt               (ddr3_odt),             // output [0:0]
         .ddr3_reset_n           (ddr3_reset_n),         // output
-        .init_calib_complete    (init_calib_complete),  // output (Apparently in clk_mig_ui domain)
+        .init_calib_complete    (init_calib_complete),  // output (In clk_mig_ui domain???)
 
         // Application interface ports (NOTE: ADDR_WIDTH=28 CMD_WIDTH=3)
-        .app_addr           (app_addr),         // input  [ 27:0]  WAS .app_af_addr [30:0]
-        .app_cmd            (app_cmd),          // input  [  2:0]   WAS .app_af_cmd [33:31]
-        .app_en             (app_en),           // input          WAS: .app_af_wren
         .app_rdy            (app_rdy),          // output         WAS: !.app_af_afull(fifo_caf_full)
+        .app_en             (app_en),           // input          WAS: .app_af_wren
+        .app_cmd            (app_cmd),          // input  [  2:0]   WAS .app_af_cmd [33:31]
+        .app_addr           (app_addr),         // input  [ 27:0]  WAS .app_af_addr [30:0]
 
+        .app_wdf_rdy        (app_wdf_rdy),      // output         WAS: !.app_wdf_afull(fifo_wdf_full)
+        .app_wdf_wren       (app_wdf_wren),     // input  : DDR3  <= FIFO: "valid"  STAYS: .app_wdf_wren
         .app_wdf_data       (app_wdf_data),     // input  [ 63:0]  STAYS: .app_wdf_data
         .app_wdf_mask       (app_wdf_mask),     // input  [ 15:0]  WAS: .app_wdf_mask_data
         .app_wdf_end        (app_wdf_end),      // input  Obsolete or depricated
-        .app_wdf_wren       (app_wdf_wren),     // input  : DDR3  <= FIFO: "valid"  STAYS: .app_wdf_wren
-        .app_wdf_rdy        (app_wdf_rdy),      // output         WAS: !.app_wdf_afull(fifo_wdf_full)
 
-        .app_rd_data        (app_rd_data),      // output [ 63:0] WAS: .rd_data_fifo_out
         .app_rd_data_valid  (app_rd_data_valid),// output         WAS: .rd_data_valid
+        .app_rd_data        (app_rd_data),      // output [ 63:0] WAS: .rd_data_fifo_out
         .app_rd_data_end    (app_rd_data_end),  // output  UNUSED / OBSOLETE
 
         // Unneeded new signals, related to low-level DRAM management
@@ -236,10 +239,10 @@ module MemoryDDR #(
 
         // System Clock Port (MIG generates various other clocks from this)
         .sys_clk_i          (clk_mig_sys),      // input (Much match choice in MIG GUI)
-        // Reference Clock Port (Always 200MHz, drives "iodelay" lines)app_zq_ack
-        .clk_ref_i          (clk_mig_ref),      // input  ALWAYS 200MHz
         // Reset MIG, presumably in ".sys_clk_i" clock domain???
         .sys_rst            (rst_mig_sys_n),      // input  ACTIVE-LOW
+        // Reference Clock Port (Always 200MHz, drives "iodelay" lines)
+        .clk_ref_i          (clk_mig_ref),      // input  ALWAYS 200MHz
         // A clock OUTPUT from MIG to match "UI" or "app" that drives one side of our FIFOs
         .ui_clk             (clk_mig_ui),       // output WAS: .clk0_tb(ddr2_clock_tb)
         .ui_clk_sync_rst    (rst_mig_ui),       // output WAS: .rst0_tb(ddr2_rst_tb)
@@ -249,28 +252,29 @@ module MemoryDDR #(
 
     MIGAdapter MIGAdapt ( // Performs extra manipulations to match FIFO with MIG specs
         // Entire adapter lives in clk_mig_ui clock domain
-        .ui_clk(clk_mig_ui),  .ui_clk_sync_rst(rst_mig_ui), // Reset is ACTIVE-HIGH
+        .clk_mig_ui     (clk_mig_ui),
+        .rst_mig_ui     (rst_mig_ui), // Reset is ACTIVE-HIGH
 
         // Command/Address FIFO input (from mig_caf, 31 bits: {cmd[2:0], addr[27:0]})
+        .fifo_caf_rd_en (fifo_caf_rd_en),
+        .fifo_caf_valid (fifo_caf_valid),
         .fifo_caf_dout  (fifo_caf_dout),
         .fifo_caf_empty (fifo_caf_empty),
-        .fifo_caf_valid (fifo_caf_valid),
-        .fifo_caf_rd_en (fifo_caf_rd_en),
         // Write Data FIFO input (from mig_wdf dout, 143:0)
+        .fifo_wdf_rd_en (fifo_wdf_rd_en),
+        .fifo_wdf_valid (fifo_wdf_valid),
         .fifo_wdf_dout  (fifo_wdf_dout),
         .fifo_wdf_empty (fifo_wdf_empty),
-        .fifo_wdf_valid (fifo_wdf_valid),
-        .fifo_wdf_rd_en (fifo_wdf_rd_en),
         // Read Data FIFO output (to mig_rdf din, 127:0 → pure 128-bit read data)
-        .fifo_rdf_din   (fifo_rdf_din),
-        .fifo_rdf_wr_en (fifo_rdf_wr_en),
         .fifo_rdf_full  (fifo_rdf_full),
+        .fifo_rdf_wr_en (fifo_rdf_wr_en),
+        .fifo_rdf_din   (fifo_rdf_din),
 
         // MIG standard interface ports (UG586)
-        .app_addr   (app_addr),
-        .app_cmd    (app_cmd),         // 000 = WRITE, 001 = READ
-        .app_en     (app_en),
         .app_rdy    (app_rdy),
+        .app_en     (app_en),
+        .app_cmd    (app_cmd),         // 000 = WRITE, 001 = READ
+        .app_addr   (app_addr),
         // Write Data interface
         .app_wdf_data   (app_wdf_data),
         .app_wdf_mask   (app_wdf_mask),
@@ -278,8 +282,9 @@ module MemoryDDR #(
         .app_wdf_wren   (app_wdf_wren),
         .app_wdf_rdy    (app_wdf_rdy),
         // Read Data interface
-        .app_rd_data        (app_rd_data),
         .app_rd_data_valid  (app_rd_data_valid),
+        .app_rd_data        (app_rd_data),
+        .app_rd_data_end    (app_rd_data_end),
         // NOTE: No "ready" signal. MIG read data is output when it wants, no holding it back!
         .DBG_adapt  (DBG_adapt)
 );
@@ -325,7 +330,7 @@ module MemoryDDR #(
 
     //Read Data Fifo (DDR3 => FIFO => RCON):
     mig_rdf  ddr3_read_fifo (
-        .rst(rst_mig_ui),           // input    : rst_cpu_bus vs rst_mig_ui
+        .rst   (rst_mig_ui),        // input    : rst_cpu_bus vs rst_mig_ui
         // FIFO-WR: DDR3 clock-domain
         .wr_clk(clk_mig_ui),        // input    : MIG controller clock (2:1 or 4:1 of PHY clock)
         .full  (fifo_rdf_full),     // output   : FIFO =>  DDR3: N/A (always ready) MIG doesn't check this 
@@ -603,10 +608,12 @@ module MemoryDDR #(
         .ddr2_cas_n(DDR2_CAS_B),  .ddr2_we_n(DDR2_WE_B),  .ddr2_cs_n(DDR2_CS_B),
         .ddr2_odt(DDR2_ODT),  .ddr2_cke(DDR2_CKE),  .ddr2_dm(DDR2_DM),  .ddr2_dqs(DDR2_DQS_P),
         .ddr2_dqs_n(DDR2_DQS_N),  .ddr2_ck(DDR2_CLK_P),  .ddr2_ck_n(DDR2_CLK_N),
+
         .app_af_afull     (fifo_caf_full),          //DDR2 =>  FIFO: "!ready" BECOMES: .app_rdy(fifo_caf_rd_en)
         .app_af_wren      (fifo_caf_valid),         //DDR2  <= FIFO: "valid"
         .app_af_cmd       (fifo_caf_dout[33:31]),   //DDR2  <= FIFO: command  BECOMES: .app_cmd [30:28]
         .app_af_addr      (fifo_caf_dout[30:0]),    //DDR2  <= FIFO: address  BECOMES: .app_addr [27:0]
+
         .app_wdf_afull    (fifo_wdf_full),          //DDR2 =>  FIFO: "!ready" BECOMES: .app_wdf_rdy(!fifo_wdf_rdy)
         .app_wdf_wren     (fifo_wdf_valid),         //DDR2  <= FIFO: "valid"
         .app_wdf_mask_data(fifo_wdf_dout[143:128]), //DDR2  <= FIFO: mask     BECOMES: .app_wdf_mask
