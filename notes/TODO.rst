@@ -14,7 +14,6 @@
          - Re-modify with ONLY critical changes from XUP board.
 * [TODO] Use isolated CAF vs WDF FIFO=>MIG channels in MIGAdapter (separate state-machines but WDF first)
 * [TODO] Use "defines" for bit ranges??? (which ones???)
-* [TODO] MIGAdapter should ensure write data arrives BEFORE the write instruction (to follow spec properly)
 * [TODO] Optimize MIGAdapter timing of writes, allowing simultaneous write-data and command.
 * [TODO] DREAM FEATURE: DDR3 commands "issued" *when available*:
          - Currently waits for each transaction (read/write) to complete (including reads, due to Cache module)
@@ -23,6 +22,8 @@
 * [TODO] FIFOs between CPU <--> MIGAdapter could handle 128-bit <--> 64-bit (or even 256 vs. 64) transfers.
          - If 256-bit, then would require Cache module and ALL other DDR3 accessors to handle 256-bit data.
          - Would improve throughput by reducing number of transactions.
+* [TODO] Verify that Cache is working properly with MIGAdapter and DDR3.
+         - Add debug probes and ILA to monitor key signals.
 
 // SOFTWARE / TOOLS / SCRIPTS //
 ================================
@@ -33,6 +34,7 @@
 * [TODO] GIOS: Add option to dump memory contents to a file (binary or hex/ascii)???
 * [TODO] Quick "PUNCH" of binary data into various BRAMs (bios, dmem, etc.). Avoid IP rebuild.
 * [TODO] Make coe_to_serial and hex_to_serial.py compute XOR or other checksum and display it.
+* [TODO] Upload command ("file") doesn't seem to calculate XOR into "result".
 
 // CLOCKING and RESETS //
 =========================
@@ -71,3 +73,5 @@
 * -done- Insert SPACE after colon in GIOS.dump, in all data listings (dump & lw)
 * -done- Remove DEBUG property from all "icache" lines
 * -done- Writes not fully implemented... second chunk ignored?
+* -done- MIGAdapter should ensure write data arrives BEFORE the write instruction (to follow spec properly)
+* -done- Cache module: Re-enable Cache module and quick tests. (Follow with debug probes and ILA)

@@ -190,11 +190,11 @@ module Cache #(
     // Some signals to make the FSM cleaner:
     assign tag_valid = tag_line_out[`IDX_TAG_VALID];
     assign tag_equal = tag_line_out[`IDX_TAG_TAG] == tag_hold;
-    assign tag_hit = 1'b0; //TEMP: tag_valid && tag_equal; //TODO: Reverse this attempt to disable cache!!!
+    assign tag_hit = tag_valid && tag_equal;
 
     assign write_hit_hold = |we_hold && tag_hit;
 
-    assign read_miss = re_hold && !tag_hit; //TODO: Re-enable this & tag-hit overrides!!!
+    assign read_miss = re_hold && !tag_hit;
 
     reg [7:0] stuckCycles;
     wire stuckTrigger = (stuckCycles == 0);
