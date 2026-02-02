@@ -78,12 +78,12 @@ module MIGAdapter (
     localparam  S_IDLE      = 4'b0000,  // waiting for new command, snag addr & cmd
                 S_READ1     = 4'b0001,  // issuing first read (using FIFO addr)
                 S_READ2     = 4'b0010,  // issuing second read (base + offset)
-                S_WRITECMD1 = 4'b0011,  // issuing write command (before write data)
-                S_WRITE1a   = 4'b0100,  // LOW 64-bit data & 8-bit mask
-                S_WRITE1b   = 4'b0101,  // HIGH 64-bit data & 8-bit mask
-                S_WRITECMD2 = 4'b0110,  // Another go-around for 2nd 128-bits
-                S_WRITE2a   = 4'b0111,  // LOW (almost getting total to 256-bits)
-                S_WRITE2b   = 4'b1000;  // HIGH (end)
+                S_WRITE1a   = 4'b0011,  // LOW 64-bit data & 8-bit mask
+                S_WRITE1b   = 4'b0100,  // HIGH 64-bit data & 8-bit mask
+                S_WRITECMD1 = 4'b0101,  // issuing write command (AFTER write data)
+                S_WRITE2a   = 4'b0110,  // LOW (almost getting total to 256-bits)
+                S_WRITE2b   = 4'b0111,  // HIGH (end)
+                S_WRITECMD2 = 4'b1000;  // Another go-around for 2nd 128-bits
                 // *** BE SURE THAT BIT WIDTH OF STATE REG IS SUFFICIENT! ***
     (* mark_debug = "true" *) // Need to debug state machine's states as enumerated values
     reg [3:0] state; // Handle up to 16 states
@@ -116,7 +116,7 @@ module MIGAdapter (
                     if (fifo_caf_valid && fifo_caf_rd_en) begin
                         base_addr <= fifo_caf_dout[27:0];
                         if (fifo_caf_dout[30:28] == 3'b000) begin
-                            state <= S_WRITECMD1;
+                            state <= S_WRITE1a;
                         end else begin
                             state <= S_READ1;
                         end
@@ -135,10 +135,6 @@ module MIGAdapter (
                     end
                 end
 
-                S_WRITECMD1: begin
-                    if (app_rdy && app_en) state <= S_WRITE1a;
-                end
-
                 S_WRITE1a: begin
 //NOTE: Must be cautious of advancing FIFO or APP independently!!!
                     if (fifo_wdf_valid && fifo_wdf_rd_en &&
@@ -149,14 +145,14 @@ module MIGAdapter (
                         wr_stash_data <= fifo_wdf_dout[127:64 ];
                     end
                 end
-
+//TODO: Perform simultaneous write-data and command??? (Merge S_WRITExb with S_WRITECMDx)
                 S_WRITE1b: begin
                     if (app_wdf_rdy && app_wdf_wren) begin
-                        state <= S_WRITECMD2;
+                        state <= S_WRITECMD1;
                     end
                 end
 
-                S_WRITECMD2: begin
+                S_WRITECMD1: begin
                     if (app_rdy && app_en) state <= S_WRITE2a;
                 end
 
@@ -173,8 +169,12 @@ module MIGAdapter (
 
                 S_WRITE2b: begin
                     if (app_wdf_rdy && app_wdf_wren) begin
-                        state <= S_IDLE;
+                        state <= S_WRITECMD2;
                     end
+                end
+
+                S_WRITECMD2: begin
+                    if (app_rdy && app_en) state <= S_IDLE;
                 end
 
                 default: begin
