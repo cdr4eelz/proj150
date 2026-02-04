@@ -4,7 +4,6 @@
 
 // DDR3, CACHE, MIGADAPTER, MIG REPAIRS //
 ==========================================
-
 * [TODO] Figure out the TRUE tunings of Cache bit shifts, truncations, address ranges, etc.
          - Should allow access to FULL DDR3 range by avoiding hi-bit always off.
          - Perhaps ranges from cache.vh need to change (instead of bit shift changes)
@@ -14,7 +13,10 @@
          - Re-modify with ONLY critical changes from XUP board.
 * [TODO] Use isolated CAF vs WDF FIFO=>MIG channels in MIGAdapter (separate state-machines but WDF first)
 * [TODO] Use "defines" for bit ranges??? (which ones???)
-* [TODO] Optimize MIGAdapter timing of writes, allowing simultaneous write-data and command.
+* [TODO] Optimize MIGAdapter timing of writes, allowing early and simultaneous write-data2 and command.
+            - Currently, command is sent only AFTER write data is accepted.
+            - Per MIG spec, write data can be sent simultaneously or earlier than command.
+            - Could separate state-machines for WDF and CAF FIFOs, with WDF state holding back CAF state.
 * [TODO] DREAM FEATURE: DDR3 commands "issued" *when available*:
          - Currently waits for each transaction (read/write) to complete (including reads, due to Cache module)
          - The RequestController would need to track multiple outstanding requests, and match completions.
@@ -24,6 +26,7 @@
          - Would improve throughput by reducing number of transactions.
 * [TODO] Verify that Cache is working properly with MIGAdapter and DDR3.
          - Add debug probes and ILA to monitor key signals.
+         - *** Once other modules are fetching their 256-bit data, mis-alignments might emerge in Cache.
 
 // SOFTWARE / TOOLS / SCRIPTS //
 ================================
@@ -34,7 +37,12 @@
 * [TODO] GIOS: Add option to dump memory contents to a file (binary or hex/ascii)???
 * [TODO] Quick "PUNCH" of binary data into various BRAMs (bios, dmem, etc.). Avoid IP rebuild.
 * [TODO] Make coe_to_serial and hex_to_serial.py compute XOR or other checksum and display it.
+* [TODO] GIOS: Add option to specify chunk size of "dump". (Like a "setting" one can adjust)
 * [TODO] Upload command ("file") doesn't seem to calculate XOR into "result".
+* [TODO] GIOS: Add option to verify uploaded data against local file (XOR, chksum, or full compare).
+* [TODO] GIOS: Add option to specify endianness when dumping memory???
+* [TODO] GIOS: Add option to specify ASCII vs. HEX output when dumping memory (or combo).
+* [TODO] GIOS: Utility command to do automated thorough memory test (write/read/verify).
 
 // CLOCKING and RESETS //
 =========================
@@ -63,6 +71,7 @@
 * [TODO] Actually scan warnings for useful entries (perhaps after connecting rest of memory modules)
 * [TODO] Try upgrading project to newer version (latest???) and regen IP.
 * [TODO] Only use 1 bit of caf for READ/WRITE (synth eleminates unused bits anyway)
+
 
 ===============================================
 // COMPLETED TASKS or HISTORIC NOTES //

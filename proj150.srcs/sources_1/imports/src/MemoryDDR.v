@@ -495,7 +495,8 @@ module MemoryDDR #(
     PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
-.COLT45_TESTPAT(0)  //WAS: TEMP "1" TO ENABLE COLOR-TILT TEST PATTERN
+.COLT45_TESTPAT(1)  //TEMP "1" TO ENABLE COLOR-TILT TEST PATTERN
+// Enabling normal (not test-pattern) mode has detrimental effect (lockup on simple code).
     ) pf (
         .cpu_clk_g(clk_cpu),
         .cpu_rst_g(rst_cpu_bus),

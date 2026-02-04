@@ -149,6 +149,7 @@ module ArtyA7top #(
     end else begin:MIPS150
 
         (* mark_debug = "true" *) wire stall_top, stall_dip;
+        // Debounce??? Once stall is asserted, perhaps momentary pushbutton could "step" the CPU???
         assign stall_dip = switches[1]; //1'b0;  // TODO: Tie-in to a GPIO switch (and invert repeatedly)
 
         // MemoryDDR (WAS: Memory150)

@@ -9,3 +9,4 @@
 *.log
 vivado_*.zip
 vivado_*.str
+.DS_Store

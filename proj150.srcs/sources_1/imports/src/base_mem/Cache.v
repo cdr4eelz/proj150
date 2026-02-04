@@ -49,12 +49,12 @@
 
 `endif //CACHE
 
-//`default_nettype none
+`default_nettype none
 
 module Cache #(
     parameter LITTLEWORDIAN = 0, //Order of 32-bit words in each 256-bit DDR block (not byte order)
     parameter STUCK_MAX_CYCLES = 8'd111,
-    parameter READ_HACK_ENABLED = 1'b0 //Disable the effect of the hack
+    parameter READ_HACK_ENABLED = 1'b0 //Disable the effect of the hack (some signals optimized out)
 )(
     input wire          clk,
     input wire          rst,
