@@ -349,28 +349,29 @@ module MemoryDDR #(
 
     // The RequestController gives each cache the illusion of having
     //   exclusive DDR3 Access:
-/*    RequestController rcon (
+    RequestController rcon (
         .clk(clk_cpu),
         .rst(rst_cpu_bus),  //MAYBE: rst_cpu_mem???
     // Master/RequestController interface:
 
-//        .caf_full(rcon_caf_full),   //input  RCON  <= FIFO  : "!ready"
-//        .caf_wren(rcon_caf_wr_en),  //RCON =>  FIFO         : "valid"
-//        .caf_cadr(rcon_caf_din),    //RCON =>  FIFO         : {cmd,addr}
-//        .wdf_full(rcon_wdf_full),   //input  RCON  <= FIFO  : "!ready"
-//        .wdf_wren(rcon_wdf_wr_en),  //RCON =>  FIFO         : "valid"
-//        .wdf_mdat(rcon_wdf_din),    //RCON =>  FIFO         : {mask,data}
-//        .rdf_rden(rcon_rdf_rd_en),  //RCON =>  FIFO         : "ready" (ignored?)
-//        .rdf_wren(rcon_rdf_valid),  //input  RCON  <= FIFO  : "valid"
+        .caf_full(rcon_caf_full),   //input  RCON  <= FIFO  : "!ready"
+        .caf_wren(rcon_caf_wr_en),  //RCON =>  FIFO         : "valid"
+        .caf_cadr(rcon_caf_din),    //RCON =>  FIFO         : {cmd,addr}
+        .wdf_full(rcon_wdf_full),   //input  RCON  <= FIFO  : "!ready"
+        .wdf_wren(rcon_wdf_wr_en),  //RCON =>  FIFO         : "valid"
+        .wdf_mdat(rcon_wdf_din),    //RCON =>  FIFO         : {mask,data}
+        .rdf_rden(rcon_rdf_rd_en),  //RCON =>  FIFO         : "ready" (ignored?)
+        .rdf_wren(rcon_rdf_valid),  //input  RCON  <= FIFO  : "valid"
 
-        .caf_full(1'b1),   //input  RCON  <= FIFO  : "!ready"
-        .caf_wren( ),   //RCON =>  FIFO         : "valid"
-        .caf_cadr( ),   //RCON =>  FIFO         : {cmd,addr}
-        .wdf_full(1'b1),   //input  RCON  <= FIFO  : "!ready"
-        .wdf_wren( ),   //RCON =>  FIFO         : "valid"
-        .wdf_mdat( ),   //RCON =>  FIFO         : {mask,data}
-        .rdf_rden( ),   //RCON =>  FIFO         : "ready" (ignored?)
-        .rdf_wren(1'b0),   //input  RCON  <= FIFO  : "valid"
+// Temporary hard-wiring to test FIFOs and MIG independently:
+//        .caf_full(1'b1),   //input  RCON  <= FIFO  : "!ready"
+//        .caf_wren( ),   //RCON =>  FIFO         : "valid"
+//        .caf_cadr( ),   //RCON =>  FIFO         : {cmd,addr}
+//        .wdf_full(1'b1),   //input  RCON  <= FIFO  : "!ready"
+//        .wdf_wren( ),   //RCON =>  FIFO         : "valid"
+//        .wdf_mdat( ),   //RCON =>  FIFO         : {mask,data}
+//        .rdf_rden( ),   //RCON =>  FIFO         : "ready" (ignored?)
+//        .rdf_wren(1'b0),   //input  RCON  <= FIFO  : "valid"
 
     // Read/Write/Stall interfaces:
         //Data-Cache interface:         //Inst-Cache interface:
@@ -420,9 +421,9 @@ module MemoryDDR #(
         .bpas_wdf_wren(bpas_wdf_wren),
         .bpas_wdf_mdat(bpas_wdf_mdat)
     );
-*/
+
     // The instruction cache:
-/*  Cache #(
+    Cache #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) icache (
         .clk(clk_cpu),
@@ -450,8 +451,8 @@ module MemoryDDR #(
         .tag_hit(), .tag_valid(),
         .DBG_cache_cs(DBG_icache_cs)
     );
-*/  assign i_stall = 1'b0;
-    assign DBG_icache_cs = 4'b0000;
+//    assign i_stall = 1'b0;
+//    assign DBG_icache_cs = 4'b0000;
 
 //ENABLE-DATA...
     // Data cache:
@@ -494,7 +495,7 @@ module MemoryDDR #(
     PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
-.COLT45_TESTPAT(1)  //TEMP
+.COLT45_TESTPAT(0)  //WAS: TEMP "1" TO ENABLE COLOR-TILT TEST PATTERN
     ) pf (
         .cpu_clk_g(clk_cpu),
         .cpu_rst_g(rst_cpu_bus),
@@ -522,7 +523,7 @@ module MemoryDDR #(
     //assign pf_status = 16'd0;
     //assign irq_pf_frame = 1'b0;
 
-/*  GPU #(
+    GPU #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) gpu (
@@ -550,9 +551,9 @@ module MemoryDDR #(
         .slr_wdf_mask(bpas_wdf_mask), //OUT[15:0]
         .slr_wdf_data(bpas_wdf_data)  //OUT[127:0]
     );
-*/  assign gp_rcode = 32'd0;
-    assign gp_status = 16'd0;
-    assign irq_gp_done = 1'b0;
+//  assign gp_rcode = 32'd0;
+//  assign gp_status = 16'd0;
+//  assign irq_gp_done = 1'b0;
 
 
   // This memory intercepts dcache & icache before RCON & MIG
@@ -572,7 +573,7 @@ module MemoryDDR #(
     ); */
 
     // Patch DataCache directly with FIFOs (like RCON)
-    assign  data_caf_full   = rcon_caf_full,
+/*  assign  data_caf_full   = rcon_caf_full,
             data_wdf_full   = rcon_wdf_full,
             data_rdf_wren   = rcon_rdf_valid;
     assign  rcon_rdf_rd_en  = data_rdf_rden,
@@ -580,7 +581,7 @@ module MemoryDDR #(
             rcon_caf_din    = data_caf_cadr,
             rcon_wdf_wr_en  = data_wdf_wren,
             rcon_wdf_din    = data_wdf_mdat;
-
+*/
 /*  assign  pixf_raf_full   = rcon_caf_full,
             //xxxx_wdf_full   = rcon_wdf_full, //No writing
             pixf_rdf_wren   = rcon_rdf_valid;
