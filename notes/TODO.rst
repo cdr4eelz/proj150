@@ -46,6 +46,7 @@
 
 // CLOCKING and RESETS //
 =========================
+* [TODO] Pass some reset signals through BUFGs.
 * [TODO] Utilize "XPM_CDC" built-in macros for clock-crossing (synchronizers)
 * [TODO] Remove combinational logic (or REGister it) going into CDC synchronizers
 * [TODO] Note that ILA identifies mixed-clocks for app_cmd, f_cmd, f_addr, f_addr_base...why?

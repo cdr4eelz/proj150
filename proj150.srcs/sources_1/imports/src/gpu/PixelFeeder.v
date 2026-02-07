@@ -119,7 +119,7 @@ module PixelFeeder #(
     // until the FIFO is full.
     wire [ 31:0] feeder_raw, feeder_dout;
     wire [127:0] feeder_data;
-    wire         feeder_wren, feeder_full, feeder_empty;
+    wire         feeder_wren, feeder_full, feeder_empty, prog_full;
     wire [ 31:0] ignore_pixel = 32'h004488FF; // {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
     wire fakeALL = (curCOL == curROW);
@@ -131,6 +131,9 @@ module PixelFeeder #(
     assign feeder_dout = (isRunning) ? {8'd0, feeder_raw[23:16], feeder_raw[15:8], feeder_raw[7:0]} : ignore_pixel;
     assign rdf_rden    = 1'b1; //Always ready to read (want to fill up)!
 
+    //Additional signals for debugging
+wire wr_ack, overflow, underflow, wr_rst_busy, rd_rst_busy;
+
 //TODO:Insert DDRStage before pixel_fifo to allow LITTLEWORDIAN flip
 generate if (COLT45_TESTPAT != 3) begin:WITH_FIFO
     pixel_fifo pf_fifo (
@@ -138,17 +141,25 @@ generate if (COLT45_TESTPAT != 3) begin:WITH_FIFO
         //WRITE: CPU clock domain
         .wr_clk(cpu_clk_g),     // input
         .full(feeder_full),     // output
+        .prog_full(prog_full),  // output  HYSTERESIS full at 500, unfull at 400
         .wr_en(feeder_wren),    // input               rdf_wren
         .din(feeder_data),      // input wire [127:0]  rdf_data
+
         //READ: DVI clock domain
         .rd_clk(dvi_clk_g),     // input
         .empty(feeder_empty),   // output
         .rd_en(video_ready && isRunning), // input
-        .dout(feeder_raw),      // output  NOTE: First-word-fallthrough but no "valid" signal avail!
-        .valid( )               // output  NOTE: Why is this unused???? Forced to read regardless!
-//  .wr_rst_busy(wr_rst_busy),  // output wire wr_rst_busy
-//  .rd_rst_busy(rd_rst_busy),  // output wire rd_rst_busy
+        .dout(feeder_raw),      // output  NOTE: Ignoring "valid" signal (allow underflow???)
+        .valid( ),              // output  NOTE: Why is this unused???? Forced to read regardless!
+
+        //EXTRA: Mostly for debug
+        .wr_ack(wr_ack),            // output
+        .overflow(overflow),        // output
+        .underflow(underflow),      // output
+        .wr_rst_busy(wr_rst_busy),  // output
+        .rd_rst_busy(rd_rst_busy)   // output
     );
+
 end endgenerate
 
 //FAULT and ACTVE detection
@@ -299,7 +310,7 @@ end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
         end
     end
 
-    assign feeder_wren = !feeder_full;
+    assign feeder_wren = !prog_full; //WAS: !feeder_full;
     assign feeder_data = {
         8'd0, 24'h808080, // Grey stripe
         8'd0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0],

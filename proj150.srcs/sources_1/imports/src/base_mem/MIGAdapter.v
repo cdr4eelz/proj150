@@ -135,6 +135,7 @@ module MIGAdapter (
                     end
                 end
 
+//TODO: Consider extra conservative test, separating fifo_wdf & app_wdf steps
                 S_WRITE1a: begin
 //NOTE: Must be cautious of advancing FIFO or APP independently!!!
                     if (fifo_wdf_valid && fifo_wdf_rd_en &&
@@ -201,8 +202,9 @@ module MIGAdapter (
                                 ? 3'b001 : 3'b000;
     assign app_addr         = ((state == S_READ2) || (state == S_WRITECMD2))
                                 ? (base_addr + OFFSET_ADDR_128bit) : base_addr;
-    assign app_en           = (state == S_READ1) || (state == S_READ2) ||
-                                (state == S_WRITECMD1) || (state == S_WRITECMD2);
+    assign app_en           = app_rdy &&    //NOTE: Apparently enable should respect ready signal
+                              ((state == S_READ1) || (state == S_READ2) ||
+                               (state == S_WRITECMD1) || (state == S_WRITECMD2));
 
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
