@@ -3,10 +3,18 @@
 =======================================
 
 On deck
-    Compute checksum in coe_to_serial (and maybe hex_to_serial.py)
-    Round "file upload" size to nearest 32-bit size (pad with zeros?)
-    Compute actual checksum for anything (rather than just XOR)
-
+    coe_to_serial compute xor of uploaded data.
+    Round coe_to_serial size to 32-bit size (pad with zeros?)
+    Compute actual checksum for anything (rather than just XOR).
+    Adjust PixelFeeder read-ready when FIFO is "full".
+    VGAFramer wait at first pixel until FIRST valid video arrives...
+        PixelFeeder holds video_valid low until FIFO reaches target fullness.
+        Currently, VGAFramer never examines video_valid!
+        Would it be acceptable to hold reset until first video_valid?
+    Disable VGA from DDR to see if GIOS reads & writes become solid again.
+    Clean out PixelFeeder/VGAFramer conditional synth (alternate video).
+    PixelFeeder uses backogus "synchronizers" (maybe elsewhere too).
+    Pixel FIFO has reset OUTPUTS that should pause their use until resets done.
 
 
 // DDR3, CACHE, MIGADAPTER, MIG REPAIRS //
