@@ -55,8 +55,8 @@ module VGAFramer (
     reg [3:0] vga_green_reg = 0;
     reg [3:0] vga_blue_reg  = 0;
 
-    assign video_ready = !rst_pix;
-    wire liveActive = video_ready && active;
+    assign video_ready = active && !rst_pix;
+    wire liveActive = video_ready; // && active;
     wire [3:0] vga_red, vga_green, vga_blue;
     generate if (GEN_PATTERN == 1) begin:PAT_GEN1
         wire TT_R = (h_cntr_reg <= (v_cntr_reg +  89)),

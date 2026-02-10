@@ -2,6 +2,13 @@
 *** Modern TODOs and critical NOTES ***
 =======================================
 
+On deck
+    Compute checksum in coe_to_serial (and maybe hex_to_serial.py)
+    Round "file upload" size to nearest 32-bit size (pad with zeros?)
+    Compute actual checksum for anything (rather than just XOR)
+
+
+
 // DDR3, CACHE, MIGADAPTER, MIG REPAIRS //
 ==========================================
 * [TODO] Figure out the TRUE tunings of Cache bit shifts, truncations, address ranges, etc.
@@ -31,7 +38,7 @@
 // SOFTWARE / TOOLS / SCRIPTS //
 ================================
 * [TODO] New GIOS commands:
-             - Add "xor" without "copy" or "file".
+             - Add "xor" without "copy" or "file" (can just copy to 0x0000_0000 as workaround)
              - Add "compare" command between two memory ranges.
              - Add "fill" command, repeat word x number of times.
 * [TODO] GIOS: Add option to dump memory contents to a file (binary or hex/ascii)???
@@ -43,6 +50,8 @@
 * [TODO] GIOS: Add option to specify endianness when dumping memory???
 * [TODO] GIOS: Add option to specify ASCII vs. HEX output when dumping memory (or combo).
 * [TODO] GIOS: Utility command to do automated thorough memory test (write/read/verify).
+* [TODO] GIOS: Add some "status" values (like current Stack-Pointer, etc.).
+* [TODO] GIOS: Simple line editing in GIOS (like "backspace" or "clear line") would be nice.
 
 // CLOCKING and RESETS //
 =========================
