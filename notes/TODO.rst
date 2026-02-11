@@ -3,18 +3,27 @@
 =======================================
 
 On deck
+    On all FIFOs, adhear to wr_rst_busy/rd_rst_busy signals.
+    Pixel FIFO has reset OUTPUTS that should pause their use until resets done.
+    Enforce a minimum reset duration (and de-assert CPU last???).
+    Put key reset signal on global "clock" buffer.
     coe_to_serial compute xor of uploaded data.
     Round coe_to_serial size to 32-bit size (pad with zeros?)
     Compute actual checksum for anything (rather than just XOR).
     Adjust PixelFeeder read-ready when FIFO is "full".
     VGAFramer wait at first pixel until FIRST valid video arrives...
-        PixelFeeder holds video_valid low until FIFO reaches target fullness.
+        PixelFeeder must hold video_valid low until FIFO reaches target fullness.
+        Use "almost_full/empty" or estimated fullness or custom threshold to trigger ready signal.
         Currently, VGAFramer never examines video_valid!
+        It is true, however, that once started (at first video_valid) it must fetch every PIX cycle.
+        Would it be overkill to have a short shift-register?
+        Any underflow by VGAFramer is a fault (could it recover somehow?)
+        Perhaps upper byte of pixel data could help synchronize (especially after a fault)?
         Would it be acceptable to hold reset until first video_valid?
     Disable VGA from DDR to see if GIOS reads & writes become solid again.
     Clean out PixelFeeder/VGAFramer conditional synth (alternate video).
     PixelFeeder uses backogus "synchronizers" (maybe elsewhere too).
-    Pixel FIFO has reset OUTPUTS that should pause their use until resets done.
+    
 
 
 // DDR3, CACHE, MIGADAPTER, MIG REPAIRS //
