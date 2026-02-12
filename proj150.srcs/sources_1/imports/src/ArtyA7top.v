@@ -82,10 +82,10 @@ module ArtyA7top #(
         .locked(locked_clock0)  // output locked (ACTIVE HIGH)
     );  // NOTE: clk_wiz appears to put BUFG on its output clocks
 
-    assign locked_clock1 = 1'b1; // Disable MIG clock, use approximate 100MHz directly
-    assign clk_mig_sys = clk_in_100MHz; // Drive MIG (input) clock directly from board clock (100MHz)
+    //assign locked_clock1 = 1'b1; // Disable MIG clock, use approximate 100MHz directly
+    //assign clk_mig_sys = clk_in_100MHz; // Drive MIG (input) clock directly from board clock (100MHz)
     // ^^^ Using clk_in_100MHz directly is approximate (wants 101.01MHz) but hopefully a cleaner clock!
-    /* clk_wiz_1 MIG_clock (
+    clk_wiz_1 MIG_clock (
         // Clock in ports
         .clk_in_100MHz(clk_in_100MHz),
         // Clock out ports
@@ -93,7 +93,7 @@ module ArtyA7top #(
         // Status and control signals
         .reset(reset_top_clocks), // Active HIGH
         .locked(locked_clock1)
-    ); */
+    );
     assign locked_top_clocks = locked_clock0 && locked_clock1; // Consider this async
 
     // Then some other support components come out of reset (like DRAM)
