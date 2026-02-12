@@ -83,14 +83,6 @@ module Cache #(
     output wire[3:0]    DBG_cache_cs
 );
 
-    wire DBG_caf_full = caf_full;
-    wire DBG_caf_wren = caf_wren;
-    wire DBG_wdf_full = wdf_full;
-    wire DBG_wdf_wren = wdf_wren;
-    wire DBG_rdf_rden = rdf_rden;
-    wire DBG_rdf_wren = rdf_wren;
-
-
     // State declarations:
     localparam  IDLE        = 3'b000,
                 WRITE1      = 3'b001,
@@ -103,6 +95,7 @@ module Cache #(
 
     //registers:
     // state for DDR3 FSM
+    (* mark_debug = "true" *)
     reg [2:0] current_state, next_state;
     wire isWriting, isFetching, isReading, isSecond;
 
@@ -326,5 +319,13 @@ module Cache #(
     // (first_read) and the current 128-bits from the read data FIFO
     assign data_line_in = (next_state == CWRITEB) ? {first_read, rdf_data} : {8{din_hold}};
     assign tag_line_in = {1'b0, 1'b1, tag_hold};
+
+//TODO: Add all other relevant debug signals and label with CSH for "Cache":
+    (* mark_debug = "true" *) wire DBG_CSH_caf_full = caf_full;
+    (* mark_debug = "true" *) wire DBG_CSH_caf_wren = caf_wren;
+    (* mark_debug = "true" *) wire DBG_CSH_wdf_full = wdf_full;
+    (* mark_debug = "true" *) wire DBG_CSH_wdf_wren = wdf_wren;
+    (* mark_debug = "true" *) wire DBG_CSH_rdf_rden = rdf_rden;
+    (* mark_debug = "true" *) wire DBG_CSH_rdf_wren = rdf_wren;
 
 endmodule

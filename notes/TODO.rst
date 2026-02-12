@@ -7,8 +7,8 @@ On deck
     Pixel FIFO has reset OUTPUTS that should pause their use until resets done.
     Enforce a minimum reset duration (and de-assert CPU last???).
     Put key reset signal on global "clock" buffer.
-    coe_to_serial compute xor of uploaded data.
-    Round coe_to_serial size to 32-bit size (pad with zeros?)
+    Compute xor and checksum in coe_to_serial (and maybe hex_to_serial.py)
+    Round coe_to_serial "file upload" size to nearest 32-bit size (pad with zeros?)
     Compute actual checksum for anything (rather than just XOR).
     Adjust PixelFeeder read-ready when FIFO is "full".
     VGAFramer wait at first pixel until FIRST valid video arrives...
@@ -23,7 +23,7 @@ On deck
     Disable VGA from DDR to see if GIOS reads & writes become solid again.
     Clean out PixelFeeder/VGAFramer conditional synth (alternate video).
     PixelFeeder uses backogus "synchronizers" (maybe elsewhere too).
-    
+    Remove "hysteresis" from Pixel FIFO to avoid stammering fetches from memory.
 
 
 // DDR3, CACHE, MIGADAPTER, MIG REPAIRS //

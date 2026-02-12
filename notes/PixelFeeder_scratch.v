@@ -1,0 +1,292 @@
+/* This module keeps a FIFO filled that then outputs to the DVI module. */
+
+`include "gpcommands.vh"
+
+module PixelFeeder #(
+    parameter DVI_CLOCK_HZ  =40_000_000,
+    parameter SCREEN_WIDTH  =800, SCREEN_HEIGHT=600,
+    parameter LITTLEWORDIAN =1  //TODO:Unimplemented!
+//D    parameter PIXFO_CAPACITY=(2048/2), //max pixel_fifo "chunk" capacity (adjust to 256-bit units)
+//D    parameter PIXFO_STARTUP =PIXFO_CAPACITY - 100, //fake source until pixel_fifo is this full
+//D    parameter PIXFO_TARGET  =PIXFO_CAPACITY - 5 //1 "af" req => 2 "rdf" 128b resp => 8 pixfo 32b "rd"
+)(
+//System:
+    input  wire         cpu_clk_g,
+    input  wire         cpu_rst_g,
+    input  wire         dvi_clk_g,
+    input  wire         dvi_rst_g,
+//DDR FIFOs (read-only) @cpu_clk_g:
+    input  wire         raf_full,
+    output wire         raf_wren,
+    output wire[ 27:0]  raf_addr,
+    output wire         rdf_rden,
+    input  wire         rdf_wren,
+    input  wire[127:0]  rdf_data,
+// DVI driver @dvi_clk_g:
+    input  wire         video_ready,
+    output wire         video_valid,
+    output wire[ 31:0]  video, //[23:0]
+// FRAME control <=> CPU @cpu_clk_g:
+    input  wire         pf_vframe,  //Signal new pf_wframe is to be captured this clock cycle
+    input  wire[ 31:0]  pf_wframe,  //Address or Frame# for base of NEXT frame once this one is done
+    output wire[ 15:0]  pf_status, //Composite status ("ready" signal not present/used)
+    output wire         irq_frame     //1-cycle pulse after frame transition (except startup frame)
+);
+
+    // Hint: States
+    localparam IDLE = 1'b0, FETCH = 1'b1;
+
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
+    reg  cpu_rst_r, dvi_rst_r; //Release synchronously to our clock
+    always @(posedge cpu_clk_g) begin
+        cpu_rst_r <= cpu_rst_g; //Internal reset, <rst>_r, unless really must sync-up release!
+    end
+    always @(posedge dvi_clk_g) begin
+        dvi_rst_r <= dvi_rst_g; //Internal reset, <rst>_r, unless really must sync-up release!
+    end
+
+
+//***CLOCK CROSSING STRATEGY***
+    // 1-request to wf => 2-responses on rdf => 8-pixels out of fifo (all 256-bits).
+    //    Don't care about individual pixels in PixelFeeder!
+    // pixel_fifo is 128-bit write (2K depth) and 32-bit read (8K depth).
+    //    Forced to grab rdf output or lose it, no back-pressure opportunity there.
+    // pixel_fifo available space tracked on CPU-clocked side in large chunks.  The chunks
+    //    serve to reduce inter-clock signal rate, framebitskeep counters small (but separate),
+    //    and create a hysteresis.  Synchronizing with 4-cycle signal/acknowledge loop.
+    //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE and/or TIG (false_path).
+
+// Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13 for chunks)
+    reg chunk_inc, chunk_ack, fifo_start;
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
+    reg chunk_inc_clkCPU, chunk_ack_clkDVI, fifo_start_clkDVI;
+
+    always @(posedge dvi_clk_g) begin //Synchronize to DVI-clock
+        chunk_ack_clkDVI    <= chunk_ack;
+        fifo_start_clkDVI   <= fifo_start;
+    end
+
+    always @(posedge cpu_clk_g) begin //Synchronize to CPU-clock
+        chunk_inc_clkCPU <= chunk_inc;
+    end
+
+
+// DVI-Clocked region (dvi_clk_g)
+
+    reg  isRunning, wasRunning, feeder_valid;
+    reg  [31:0] curCOL, curROW, curFRAME;
+    reg  [ 3:0] count_dviread; //Rolls over on every 16 pixel "read-chunk"
+
+    wire video_adv = (video_valid && video_ready); //reset will trump this
+    wire rollCOL = (curCOL >= SCREEN_WIDTH  - 1);//***TEMP*** //Could use fast-counter/pixelrange
+    wire rollROW = (curROW >= SCREEN_HEIGHT - 1);
+
+    always @(posedge dvi_clk_g) begin
+        if (dvi_rst_r) begin //Use synchronized reset
+            {curCOL, curROW, curFRAME} <= 0;
+            {feeder_valid, isRunning, wasRunning, count_dviread, chunk_inc} <= 0;
+        end else begin
+            feeder_valid <= 1'b1;
+            wasRunning <= isRunning;
+            if (video_adv) begin //They got a pixel, move on!
+                if (isRunning) begin //If running, inform other clock-realm of chunks
+                    if (&count_dviread) chunk_inc <= 1'b1; //Set on rollover
+                    else if (chunk_ack_clkDVI) chunk_inc <= 1'b0;
+                    count_dviread <= count_dviread + 1;
+                end
+                case ({rollROW, rollCOL}) //Manage our col/row/frame/scene business
+                    (2'b11): begin
+                        curFRAME <= curFRAME + 1;
+                        {curCOL, curROW} <= {32'd0, 32'd0};
+                        //if (fifo_start_clkDVI) isRunning <= 1'b1; //Switch to FIFO on frame boundary
+                        isRunning <= 1'b1; //Switch to FIFO on frame boundary
+                    end
+                    (2'b01): begin
+                        curCOL  <= 32'd0;
+                        curROW  <= curROW + 1;
+                    end
+                    //2'b10 just means we're ON last row but not yet at end
+                    default: curCOL <= curCOL + 1;
+                endcase
+            end
+        end
+    end
+
+
+    // FIFO to buffer the reads with a write width of 128 and read width of 32. We try to fetch blocks
+    // until the FIFO is full.
+    wire [ 31:0] feeder_raw, feeder_dout;
+    wire [127:0] feeder_data;
+    wire         feeder_wren, feeder_full, feeder_empty, almost_full, prog_full, prog_empty;
+    wire [ 31:0] ignore_pixel = 32'h004488FF; // {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
+
+    wire fakeALL = (curCOL == curROW);
+    wire [  7:0] fakeR = (fakeALL || (curCOL % 80 == 0) || (curCOL % 80 == 1) || (curCOL % 80 == 2)) ? 8'hFF : 8'h00;
+    wire [  7:0] fakeG = (fakeALL || (curCOL % 80 == 2) || (curCOL % 80 == 3) || (curCOL % 80 == 4)) ? 8'hFF : 8'h00;
+    wire [  7:0] fakeB = (fakeALL || (curCOL % 77 == 0) || (curCOL % 77 == 1) || (curCOL % 77 == 2)) ? 8'hFF : 8'h00;
+
+    //assign feeder_dout = (isRunning) ? {8'd0, fakeR, fakeG, fakeB} : ignore_pixel;
+    assign feeder_dout = (isRunning) ? {8'd0, feeder_raw[23:16], feeder_raw[15:8], feeder_raw[7:0]} : ignore_pixel;
+    assign rdf_rden    = 1'b1; //Always ready to read (want to fill up)!
+
+    //Additional signals for clean reset or debugging
+    wire wr_ack, overflow, underflow;
+    wire wr_rst_busy, rd_rst_busy;
+
+//TODO:Insert DDRStage before pixel_fifo to allow LITTLEWORDIAN flip
+    pixel_fifo pf_fifo (
+        .rst(cpu_rst_g), //Gets synchonized to each clock internally
+        .wr_rst_busy(wr_rst_busy),  // output (cpu_clk_g domain)
+        .rd_rst_busy(rd_rst_busy),  // output (dvi_clk_g domain)
+
+        //WRITE: CPU clock domain
+        .wr_clk(cpu_clk_g),         // input
+        .full(feeder_full),         // output
+        .almost_full(almost_full),  // output
+        .prog_full(prog_full),      // output (Has FIFO reached "target" level?)
+        .wr_en(feeder_wren),        // input               rdf_wren
+        .din(feeder_data),          // input wire [127:0]  rdf_data
+        .wr_ack(wr_ack),            // output (for debug)
+
+        //READ: DVI clock domain
+        .rd_clk(dvi_clk_g),         // input
+        .empty(feeder_empty),       // output
+        .prog_empty(prog_empty),    // output (Is FIFO full enough to start? dvi_clk_g domain)
+        .rd_en(video_ready && isRunning), // input
+        .dout(feeder_raw),          // output  NOTE: Ignoring "valid" signal (allow underflow???)
+        .valid( ),                  // output  NOTE: Why is this unused???? Forced to read regardless!
+
+        //EXTRA: For fault detection and debug
+        .overflow(overflow),        // output
+        .underflow(underflow)       // output
+    );
+
+//FAULT and ACTVE detection
+    reg  video_fault_dvi, video_fault_cpu, video_fault, video_active;
+
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
+    reg  video_active_clkCPU, video_fault_clkCPU;
+
+    (* EQUIVALENT_REGISTER_REMOVAL="OFF" *)
+    reg  [7:0] video_active_dvi, video_active_cpu;
+
+    always @(posedge dvi_clk_g) begin
+        if (dvi_rst_g) video_fault_dvi <= 1'b0;
+        else if (video_ready && isRunning && feeder_empty) video_fault_dvi <= 1'b1; // Could use "underflow"?
+
+        video_active_dvi[7:0] <= {video_active_dvi[6:0], (video_ready && video_valid)};
+    end
+
+    always @(posedge cpu_clk_g) begin
+        if (cpu_rst_g) video_fault_cpu <= 1'b0;
+        else if (feeder_wren && feeder_full) video_fault_cpu <= 1'b1; // Could use "overflow"?
+
+        video_active_clkCPU   <= |video_active_dvi;
+        video_active_cpu[7:0] <= {video_active_cpu[6:0], video_active_clkCPU};
+        video_active          <= |video_active_cpu || video_active_clkCPU;
+        video_fault_clkCPU    <= video_fault_dvi;
+        video_fault           <= video_fault_cpu || video_fault_clkCPU;
+    end
+
+    assign feeder_wren = rdf_wren, feeder_data = rdf_data; //DDR-read to PIX-write
+    assign video_valid = feeder_valid, video = feeder_dout[31:0]; //[23:0]
+
+// CPU-Clocked region (cpu_clk_g)
+
+    reg [64:0] pixel_count;
+    reg [12:0] pend, pend_next; //pending mig_af requests (represent 256-bits each)
+    reg [ 9:0] head_y, head_x;
+    reg fr, fr_r, interrupt_r, state;
+    reg [ 5:0] framebits, framebits_r, frame_next=0; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
+
+    wire [31:0] head_addr = {4'b0001, framebits[5:0], head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
+    wire last_x = (head_x >= (((800/8)-1) * 8));
+    wire last_y = (head_y >= (600-1));
+    //TODO: Adjust so that 4 mig_af requests bring 4 mig_rdf responses ... or 2 for 2
+    //1 chunk is 16 separate 32-bit fifo reads (4 mig_rdf responses, initiated by 2 mig_af requests)
+//D    wire chunk_edge = chunk_inc_clkCPU && !chunk_ack; //Both are regs under our control
+    wire raf_advance = raf_wren && !raf_full; //NOTE: Always raf_full until we assert raf_wren first!
+
+    assign raf_addr  = head_addr[27:0]; //WAS: {3'b, [27:3]} ...Turn into 31-bit "DoubleWord" or DDR-address
+    assign raf_wren  = (state == FETCH); //Declare when FETCH addr ready (but might not happen)
+    assign irq_frame = interrupt_r;
+    assign pf_status = {
+        video_fault, !video_active,
+            framebits_r[5:0], //1-cycle latency avoids overly tight interconnect
+        8'b0000_0000 //Maybe for overlay stuff later
+    };
+
+    always @(posedge cpu_clk_g) begin
+        if (cpu_rst_r) begin
+            {frame_next, framebits_r, interrupt_r} <= 0;
+        end else begin
+            framebits_r <= framebits;
+            interrupt_r <= (fr != fr_r); //Fires 1-cycle after REQ queued (not RESP or PIX)
+            if (pf_vframe) frame_next <= `FRAME_BITS(pf_wframe); //Either addr style
+        end
+    end
+
+//D    always @(*) begin
+//D        case ( {chunk_edge, raf_advance} ) //chunk reduces by 2, fetch increases by 1
+//D            2'b11: pend_next = pend - 1; //-2 +1
+//D            2'b10: pend_next = pend - 2; //-2
+//D            2'b01: pend_next = pend + 1; //   +1
+//D            default: pend_next = pend;
+//D        endcase
+//D    end
+
+    //Ensures 1+ IDLEs between FETCHs; also note (state==IDLE) ensures !raf_advance
+    wire next_state = ((pend < PIXFO_TARGET) && !raf_advance) ? FETCH : IDLE;
+
+    always @(posedge cpu_clk_g) begin
+        if (cpu_rst_r) begin //Standard reset for other stuff
+            {chunk_ack, pend, fifo_start} <= 0;
+            state <= IDLE;
+            {fr, fr_r, head_y, head_x, pixel_count} <= 0;
+            framebits <= frame_next;
+        end else begin
+            pend <= pend_next;
+            state <= next_state;
+            fr_r <= fr;
+            chunk_ack <= chunk_inc_clkCPU;
+
+            if (pend_next > PIXFO_STARTUP) begin
+                fifo_start <= 1'b1;
+            end
+
+            if (raf_advance) begin //Advance x/y/frame (right AFTER end of this cycle)
+                pixel_count <= pixel_count + 8;
+                if (last_y && last_x) begin
+                    fr <= ~fr; head_y <= 0; head_x <= 0;
+                    framebits <= frame_next;
+                end else if (last_x) begin
+                    head_y <= head_y + 1; head_x <= 0;
+                end else begin
+                    head_x <= head_x + 8;
+                end
+            end
+        end
+    end
+
+// synthesis translate_off
+always @(posedge cpu_clk_g) begin
+    if (raf_advance && ((head_x == 0) || (last_x && last_y))) begin
+        if (last_x && last_y) $display("LAST:");
+        $display("  aB:%08h aD:%08h  F:%b X:%04d Y:%04d  PEND:%04d PIX:%0d",
+                 head_addr, raf_addr,
+                 fr, head_x, head_y,
+                 pend, pixel_count);
+    end
+end
+// synthesis translate_on
+
+endmodule
+
+/* Interesting BUG along the way when driving "af_wren" improperly here!!!
+    The RequestController doesn't give valid "full" signal unless we TRY to write an address...
+    ...so cannot adjust our raf_wren based upon the raf_full signal (like with direct FIFO access).
+
+WARNING:Xst:2170 - Unit ml505top : the following signal(s) form a combinatorial loop: mem_arch/pixel_raf_wren, mem_arch/req_con/fifo_access<5>.
+*/

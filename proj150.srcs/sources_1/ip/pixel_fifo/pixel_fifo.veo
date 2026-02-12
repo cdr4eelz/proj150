@@ -63,12 +63,14 @@ pixel_fifo your_instance_name (
   .rd_en(rd_en),              // input wire rd_en
   .dout(dout),                // output wire [31 : 0] dout
   .full(full),                // output wire full
+  .almost_full(almost_full),  // output wire almost_full
   .wr_ack(wr_ack),            // output wire wr_ack
   .overflow(overflow),        // output wire overflow
   .empty(empty),              // output wire empty
   .valid(valid),              // output wire valid
   .underflow(underflow),      // output wire underflow
   .prog_full(prog_full),      // output wire prog_full
+  .prog_empty(prog_empty),    // output wire prog_empty
   .wr_rst_busy(wr_rst_busy),  // output wire wr_rst_busy
   .rd_rst_busy(rd_rst_busy)  // output wire rd_rst_busy
 );
