@@ -1,4 +1,5 @@
 /* This module keeps a FIFO filled that then outputs to the DVI module. */
+`default_nettype none
 
 `include "gpcommands.vh"
 
@@ -37,13 +38,15 @@ module PixelFeeder #(
     // Hint: States
     localparam IDLE = 1'b0, FETCH = 1'b1;
 
+//TODO: Use a REAL synchronizer here!!!
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
     reg  cpu_rst_r, dvi_rst_r; //Release synchronously to our clock
+    wire wr_rst_busy, rd_rst_busy;
     always @(posedge cpu_clk_g) begin
-        cpu_rst_r <= cpu_rst_g; //Internal reset, <rst>_r, unless really must sync-up release!
+        cpu_rst_r <= cpu_rst_g || wr_rst_busy; //Internal reset, <rst>_r, unless really must sync-up release!
     end
     always @(posedge dvi_clk_g) begin
-        dvi_rst_r <= dvi_rst_g; //Internal reset, <rst>_r, unless really must sync-up release!
+        dvi_rst_r <= dvi_rst_g || rd_rst_busy; //Internal reset, <rst>_r, unless really must sync-up release!
     end
 
 
@@ -119,7 +122,7 @@ module PixelFeeder #(
     // until the FIFO is full.
     wire [ 31:0] feeder_raw, feeder_dout;
     wire [127:0] feeder_data;
-    wire         feeder_wren, feeder_full, feeder_empty, prog_full;
+    wire         feeder_wren, feeder_full, feeder_empty, almost_full, prog_full;
     wire [ 31:0] ignore_pixel = 32'h004488FF; // {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
     wire fakeALL = (curCOL == curROW);
@@ -132,36 +135,51 @@ module PixelFeeder #(
     assign rdf_rden    = 1'b1; //Always ready to read (want to fill up)!
 
     //Additional signals for debugging
-wire wr_ack, overflow, underflow, wr_rst_busy, rd_rst_busy;
+    wire wr_ack, overflow, underflow;
 
 //TODO:Insert DDRStage before pixel_fifo to allow LITTLEWORDIAN flip
 generate if (COLT45_TESTPAT != 3) begin:WITH_FIFO
+    wire prog_empty;
     pixel_fifo pf_fifo (
         .rst(cpu_rst_g), //Internal cross-clock sync
         //WRITE: CPU clock domain
-        .wr_clk(cpu_clk_g),     // input
-        .full(feeder_full),     // output
-        .prog_full(prog_full),  // output  HYSTERESIS full at 500, unfull at 400
-        .wr_en(feeder_wren),    // input               rdf_wren
-        .din(feeder_data),      // input wire [127:0]  rdf_data
+        .wr_clk(cpu_clk_g),         // input
+        .full(feeder_full),         // output
+        .almost_full(almost_full),  // output
+        .prog_full(prog_full),      // output
+        .wr_en(feeder_wren),        // input               rdf_wren
+        .din(feeder_data),          // input wire [127:0]  rdf_data
+        .wr_rst_busy(wr_rst_busy),  // output
 
         //READ: DVI clock domain
-        .rd_clk(dvi_clk_g),     // input
-        .empty(feeder_empty),   // output
+        .rd_clk(dvi_clk_g),         // input
+        .empty(feeder_empty),       // output
+        .prog_empty(prog_empty),    // output
         .rd_en(video_ready && isRunning), // input
-        .dout(feeder_raw),      // output  NOTE: Ignoring "valid" signal (allow underflow???)
-        .valid( ),              // output  NOTE: Why is this unused???? Forced to read regardless!
+        .dout(feeder_raw),          // output  NOTE: Ignoring "valid" signal (allow underflow???)
+        .valid( ),                  // output  NOTE: Why is this unused???? Forced to read regardless!
+        .rd_rst_busy(rd_rst_busy),  // output
 
         //EXTRA: Mostly for debug
         .wr_ack(wr_ack),            // output
         .overflow(overflow),        // output
-        .underflow(underflow),      // output
-        .wr_rst_busy(wr_rst_busy),  // output
-        .rd_rst_busy(rd_rst_busy)   // output
+        .underflow(underflow)       // output
     );
+
+    // Wait for FIFO to be full enough before we start offering video.
+    reg waiting = 1;
+    always @(posedge dvi_clk_g) begin
+        waiting <= waiting; // default is to hold "waiting" value
+        if (dvi_rst_r) begin
+            waiting <= 1; // Only reset can re-enable waiting mode
+        end else if (waiting && !prog_empty) begin //NOTE: prog_entry indicates "full enough"
+            waiting <= 0; // Permit VGAFramer to start scanning and outputting
+        end
+    end
 
 end endgenerate
 
+//TODO: Use REAL synchronizers for cross-clock signals!
 //FAULT and ACTVE detection
     reg  video_fault_dvi, video_fault_cpu, video_fault, video_active;
 
@@ -174,6 +192,7 @@ end endgenerate
 
     always @(posedge dvi_clk_g) begin
         if (dvi_rst_g) video_fault_dvi <= 1'b0;
+        //TODO: Use FIFO underflow as indication of DVI-side problem???
         else if (video_ready && isRunning && feeder_empty) video_fault_dvi <= 1'b1;
 
         video_active_dvi[7:0] <= {video_active_dvi[6:0], (video_ready && video_valid)};
@@ -242,6 +261,7 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
         endcase
     end
 
+//TODO: Eliminate custom "fullness" tracking and just use the FIFO signals (prog_full)
     //Ensures 1+ IDLEs between FETCHs; also note (state==IDLE) ensures !raf_advance
     wire next_state = ((pend < PIXFO_TARGET) && !raf_advance) ? FETCH : IDLE;
 //  wire next_state = ((pend < PIXFO_TARGET) && (state == IDLE)) ? FETCH : IDLE;

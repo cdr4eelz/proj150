@@ -15,10 +15,12 @@ module VGAFramer (
     input  wire clk_pix, // MUST match the other resolution parameters (see end of file)
     input  wire rst_pix,
 
+    // Incoming from a video FIFO at clk_pix rate
     input  wire [31:0] video,  // high byte not used
     input  wire video_valid,
     output wire video_ready,
 
+    // Output VGA through PmodVGA (note colors are only 4 bits each)
     output wire VGA_HS_O,
     output wire VGA_VS_O,
     output wire [3:0] VGA_R,
@@ -41,6 +43,19 @@ module VGAFramer (
     parameter V_MAX        =  628; // V total period (lines)
     parameter H_POL = 1, V_POL = 1; // H & V polarity
 
+    // Align the upper-left pixel with beginning of data frame.
+    // Wait for first "video_valid" to start scanning and outputting.
+    // FIFO logic suppresses "valid" until FIFO is full enough.
+    reg waiting = 1;
+    always @(posedge clk_pix) begin
+        waiting <= waiting; // Default is to hold "waiting" value
+        if (rst_pix) begin
+            waiting <= 1; // Only reset can return to waiting mode
+        end else if (waiting && video_valid) begin
+            waiting <= 0; // First "video_valid" clears "waiting"
+        end
+    end
+
     wire active;
 
     reg [11:0] h_cntr_reg = 0;
@@ -55,7 +70,7 @@ module VGAFramer (
     reg [3:0] vga_green_reg = 0;
     reg [3:0] vga_blue_reg  = 0;
 
-    assign video_ready = active && !rst_pix;
+    assign video_ready = !rst_pix && !waiting && active;
     wire liveActive = video_ready; // && active;
     wire [3:0] vga_red, vga_green, vga_blue;
     generate if (GEN_PATTERN == 1) begin:PAT_GEN1
@@ -85,7 +100,7 @@ module VGAFramer (
     ----------------------------------------------------*/
 
     always @(posedge clk_pix) begin
-        if (rst_pix) begin
+        if (rst_pix || waiting) begin
             h_cntr_reg <= 0;
             v_cntr_reg <= 0;
             h_sync_reg <= 0;
@@ -121,6 +136,7 @@ module VGAFramer (
     assign active = ((h_cntr_reg < FRAME_WIDTH) && (v_cntr_reg < FRAME_HEIGHT));
 
     always @(posedge clk_pix) begin
+        //NOTE: Ignore reset. We don't need it.
         v_sync_dly_reg <= v_sync_reg;
         h_sync_dly_reg <= h_sync_reg;
         vga_red_reg   <= vga_red;
