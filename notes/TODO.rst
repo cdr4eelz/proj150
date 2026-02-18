@@ -72,6 +72,7 @@ On deck
 
 // CLOCKING and RESETS //
 =========================
+* [TODO] Use Debouncer.v & ButtonParser.v rather than custom crap.
 * [TODO] Pass some reset signals through BUFGs.
 * [TODO] Utilize "XPM_CDC" built-in macros for clock-crossing (synchronizers)
 * [TODO] Remove combinational logic (or REGister it) going into CDC synchronizers

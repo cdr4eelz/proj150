@@ -48,7 +48,7 @@ module ArtyA7top #(
     output wire[0:0]    ddr3_odt,       // output WAS: DDR2_ODT0
     output wire         ddr3_reset_n    // output WAS: ???
 );
-
+//TODO: Use Debouncer.v & ButtonParser.v rather than custom crap.
     // BUFFER the board clock (manually switch between Arty-A7 vs PYNQ)
     wire clk_in_100MHz; //, clk_in_100MHz_g;  // Arty-A7 or PYNQ ARM-CPU clk-out
     //IBUF vs BUFG
@@ -61,9 +61,9 @@ module ArtyA7top #(
     //NOTE: Early reset logic using board-clock "clk_in_100MHz"
     wire reset_top_clocks;
     ButtonClean #( .Width(1) ) clean_rst_top (
-        .IN(!CK_RST_N),
+        .IN(!CK_RST_N), // Active LOW pushbutton
         .Clock(clk_in_100MHz), .Reset(1'b0),
-        .OUT(reset_top_clocks) // Reset Button (Active HIGH)
+        .OUT(reset_top_clocks) // Reset signal (Active HIGH)
     );  //assign reset_top_clocks = !CK_RST_N;  // Top CLocks are first to come out of reset
 
     wire locked_clock0, locked_clock1, locked_top_clocks;  // Participate in startup sequence
@@ -86,16 +86,16 @@ module ArtyA7top #(
     //assign clk_mig_sys = clk_in_100MHz; // Drive MIG (input) clock directly from board clock (100MHz)
     // ^^^ Using clk_in_100MHz directly is approximate (wants 101.01MHz) but hopefully a cleaner clock!
     clk_wiz_1 MIG_clock (
-        // Clock in ports
+    // Clock in ports
         .clk_in_100MHz(clk_in_100MHz),
-        // Clock out ports
+    // Clock out ports
         .clk_mig_101MHz(clk_mig_sys),     // output 101.010MHz, although 100MHz input is close enough
-        // Status and control signals
+    // Status and control signals
         .reset(reset_top_clocks), // Active HIGH
         .locked(locked_clock1)
     );
     assign locked_top_clocks = locked_clock0 && locked_clock1; // Consider this async
-
+//TODO: Register/Synchronize "locked_top_clocks" before using it as a reset condition for other components? Or just let it be async and hope for the best?
     // Then some other support components come out of reset (like DRAM)
     (* mark_debug = "true" *) wire rst_cpu, init_done;  // TODO: CPU comes out of reset after everything else
     wire rst_mig_sys_n, rst_pix; // Avoid debug on these since it brings in 2 extra clock domains
@@ -294,6 +294,7 @@ module ArtyA7top #(
             .GEN_PATTERN(0)
         ) VGA (
             .clk_pix(clk_pix), // input
+            .rst_pix(rst_pix), // input
 
             .video(video),  // input [31:0]
             .video_valid(video_valid), // input

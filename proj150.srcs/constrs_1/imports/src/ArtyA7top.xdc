@@ -18,78 +18,12 @@ create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} [get_ports
 set_property CFGBVS VCCO [current_design]
 set_property CONFIG_VOLTAGE 3.3 [current_design]
 
-## Loose TIMING constraints on I/O pins
-create_clock -period 10.000 -name virtual_clock -waveform {0.000 5.000}
-
-
-set_input_delay -clock virtual_clock -max 0.000 [get_ports CK_RST_N]
-set_input_delay -clock virtual_clock -min -0.500 [get_ports CK_RST_N]
-set_input_delay -clock virtual_clock -max 0.000 [get_ports {BUTTON[*]}]
-set_input_delay -clock virtual_clock -min -0.500 [get_ports {BUTTON[*]}]
-set_input_delay -clock virtual_clock -max 0.000 [get_ports {SWITCH[*]}]
-set_input_delay -clock virtual_clock -min -0.500 [get_ports {SWITCH[*]}]
-#set_input_delay -clock virtual_clock -max 0.000 [get_ports FPGA_SERIAL_RX]
-#set_input_delay -clock virtual_clock -min -0.500 [get_ports FPGA_SERIAL_RX]
-# WOULD BE "set_max_delay" ???
-#set_output_delay -clock virtual_clock -max -5.000 [get_ports FPGA_SERIAL_TX]
-#set_output_delay -clock virtual_clock -min -1.000 [get_ports FPGA_SERIAL_TX]
-#set_output_delay -clock virtual_clock -max -5.000 [get_ports { LED[*] }]
-#set_output_delay -clock virtual_clock -min -1.000 [get_ports { LED[*] }]
-#set_output_delay -clock virtual_clock -max -5.000 [get_ports { led* }]
-#set_output_delay -clock virtual_clock -min -1.000 [get_ports { led* }]
-
-# ### TIMING adjustments (mostly false paths)
-# set_false_path -from [get_ports CK_RST_N]
-# set_false_path -from [get_ports {BUTTON[*]}]
-# set_false_path -from [get_ports {SWITCH[*]}]
-set_false_path -from [get_ports FPGA_SERIAL_RX]
-set_false_path -to [get_ports FPGA_SERIAL_TX]
-set_false_path -to [get_ports {LED[*]}]
-set_false_path -to [get_ports led*]
-set_false_path -from [get_ports CK_RST_N]
-
-#??? set_false_path -to   [get_ports { ddr3_reset_n }]
-# #set_false_path -from [get_cells { por_counter_reg[*] }]
-
-##### clk_pll_i not found any more... which clock was it supposed to be???
-# # Below removes path analysis related to init_calib_complete
-# #set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_out_50MHz_clk_wiz_fetcher]
-# set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_mig_101MHz_clk_wiz_1]
-set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_cpu_50MHz_clk_wiz_0]
-set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_pixel_40MHz_clk_wiz_0]
-#set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_mig_101MHz_clk_wiz_1]
-#set_false_path -from [get_clocks clk_mig_101MHz_clk_wiz_1] -to [get_clocks clk_pll_i]
-#USE-IF-CLK1: set_false_path -from [get_clocks sys_clk_pin] -to [get_clocks clk_mig_101MHz_clk_wiz_1]
-#set_false_path -from [get_clocks clk_mig_101MHz_clk_wiz_1] -to [get_clocks sys_clk_pin]
-#set_false_path -from [get_clocks clk_cpu_50MHz_clk_wiz_0 ] -to [get_clocks clk_pll_i]
-#set_false_path -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks clk_pll_i]
-# set_false_path -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks virtual_clock]
-# set_false_path -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks virtual_clock]
-
-#set_multicycle_path -setup -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks virtual_clock] 3
-#set_output_delay -clock virtual_clock -5.000 [get_ports { VGA_R[*] }]
-#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_R[*] }]
-#set_output_delay -clock virtual_clock -5.000 [get_ports { VGA_G[*] }]
-#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_G[*] }]
-#set_output_delay -clock virtual_clock -5.000 [get_ports { VGA_B[*] }]
-#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_B[*] }]
-#set_output_delay -clock virtual_clock -5.000 [get_ports { VGA_HS_O }]
-#set_output_delay -clock virtual_clock -min -1.000 [get_ports VGA_HS_O]
-#set_output_delay -clock virtual_clock -5.000 [get_ports { VGA_VS_O }]
-#set_output_delay -clock virtual_clock -min -1.000 [get_ports VGA_VS_O]
-# NOT SURE WHY EXPLICIT DELAYS ARE BETTER THAN FALSE_PATH DECLARATION...
-set_false_path -to [get_ports {VGA_R[*]}]
-set_false_path -to [get_ports {VGA_G[*]}]
-set_false_path -to [get_ports {VGA_B[*]}]
-set_false_path -to [get_ports VGA_HS_O]
-set_false_path -to [get_ports VGA_VS_O]
-
 
 ##Switches
 
 set_property -dict {PACKAGE_PIN A8 IOSTANDARD LVCMOS33} [get_ports {SWITCH[0]}]
 set_property -dict {PACKAGE_PIN C11 IOSTANDARD LVCMOS33} [get_ports {SWITCH[1]}]
-## IGNORE upper 2 switches since PYNQ boards lack them:
+## IGNORE upper 2 switches since PYNQ boards lack them:set_multicycle_path
 #set_property -dict { PACKAGE_PIN C10   IOSTANDARD LVCMOS33 } [get_ports { SWITCH[2] }]; #IO_L13N_T2_MRCC_16 Sch=sw[2]
 #set_property -dict { PACKAGE_PIN A10   IOSTANDARD LVCMOS33 } [get_ports { SWITCH[3] }]; #IO_L14P_T2_SRCC_16 Sch=sw[3]
 
@@ -305,7 +239,80 @@ set_property -dict {PACKAGE_PIN C2 IOSTANDARD LVCMOS33} [get_ports CK_RST_N]
 
 #######################################################################
 #######################################################################
+# TIMING CONSTRAINTS are recommended to FOLLOW port name/assignments  #
 #######################################################################
 
+## Loose TIMING constraints on I/O pins
+create_clock -period 10.000 -name virtual_clock -waveform {0.000 5.000}
+
+#w# set_input_delay -clock virtual_clock -max 0.000 [get_ports CK_RST_N]
+#w# set_input_delay -clock virtual_clock -min -0.500 [get_ports CK_RST_N]
+#w# set_input_delay -clock virtual_clock -max 0.000 [get_ports {BUTTON[*]}]
+#w# set_input_delay -clock virtual_clock -min -0.500 [get_ports {BUTTON[*]}]
+#w# set_input_delay -clock virtual_clock -max 0.000 [get_ports {SWITCH[*]}]
+#w# set_input_delay -clock virtual_clock -min -0.500 [get_ports {SWITCH[*]}]
+#set_input_delay -clock virtual_clock -max 0.000 [get_ports FPGA_SERIAL_RX]
+#set_input_delay -clock virtual_clock -min -0.500 [get_ports FPGA_SERIAL_RX]
+# WOULD BE "set_max_delay" ???
+#set_output_delay -clock virtual_clock -max -5.000 [get_ports FPGA_SERIAL_TX]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports FPGA_SERIAL_TX]
+#set_output_delay -clock virtual_clock -max -5.000 [get_ports { LED[*] }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { LED[*] }]
+#set_output_delay -clock virtual_clock -max -5.000 [get_ports { led* }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { led* }]
+
+# ### TIMING adjustments (mostly false paths)
+# set_false_path -from [get_ports CK_RST_N]
+# set_false_path -from [get_ports {BUTTON[*]}]
+# set_false_path -from [get_ports {SWITCH[*]}]
+#X# set_false_path -from [get_ports FPGA_SERIAL_RX]
+#X# set_false_path -to [get_ports FPGA_SERIAL_TX]
+#X# set_false_path -to [get_ports {LED[*]}]
+#X# set_false_path -to [get_ports led*]
+#X# set_false_path -from [get_ports CK_RST_N]
+
+#??? set_false_path -to   [get_ports { ddr3_reset_n }]
+# #set_false_path -from [get_cells { por_counter_reg[*] }]
+
+##### clk_pll_i not found any more... which clock was it supposed to be???
+# # Below removes path analysis related to init_calib_complete
+# #set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_out_50MHz_clk_wiz_fetcher]
+# set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_mig_101MHz_clk_wiz_1]
+#X# set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_cpu_50MHz_clk_wiz_0]
+#X# set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_pixel_40MHz_clk_wiz_0]
+#set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_mig_101MHz_clk_wiz_1]
+#set_false_path -from [get_clocks clk_mig_101MHz_clk_wiz_1] -to [get_clocks clk_pll_i]
+#USE-IF-CLK1: set_false_path -from [get_clocks sys_clk_pin] -to [get_clocks clk_mig_101MHz_clk_wiz_1]
+#set_false_path -from [get_clocks clk_mig_101MHz_clk_wiz_1] -to [get_clocks sys_clk_pin]
+#set_false_path -from [get_clocks clk_cpu_50MHz_clk_wiz_0 ] -to [get_clocks clk_pll_i]
+#set_false_path -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks clk_pll_i]
+# set_false_path -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks virtual_clock]
+# set_false_path -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks virtual_clock]
+
+#set_multicycle_path -setup -from [get_clocks clk_pixel_40MHz_clk_wiz_0] -to [get_clocks virtual_clock] 3
+#set_output_delay -clock virtual_clock -5.000 [get_ports { VGA_R[*] }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_R[*] }]
+#set_output_delay -clock virtual_clock -5.000 [get_ports { VGA_G[*] }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_G[*] }]
+#set_output_delay -clock virtual_clock -5.000 [get_ports { VGA_B[*] }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports { VGA_B[*] }]
+#set_output_delay -clock virtual_clock -5.000 [get_ports { VGA_HS_O }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports VGA_HS_O]
+#set_output_delay -clock virtual_clock -5.000 [get_ports { VGA_VS_O }]
+#set_output_delay -clock virtual_clock -min -1.000 [get_ports VGA_VS_O]
+# NOT SURE WHY EXPLICIT DELAYS ARE BETTER THAN FALSE_PATH DECLARATION...
+#X# set_false_path -to [get_ports {VGA_R[*]}]
+#X# set_false_path -to [get_ports {VGA_G[*]}]
+#X# set_false_path -to [get_ports {VGA_B[*]}]
+#X# set_false_path -to [get_ports VGA_HS_O]
+#X# set_false_path -to [get_ports VGA_VS_O]
+
+# This represents, essentially, one synchronizer fed to another with a debouncer in between:
+set_max_delay -from [get_pins {clean_rst_top/genblk1[0].DbounceIt/OutReg/SR.SS.Out_reg[0]/C}] -to [get_pins {sync_rst_mig_sys_n/flops_reg[0][0]/D}] 15.000
+
+#######################################################################
+#######################################################################
+# ChipScope/ILA debug setup gets appended/removed below...            #
+#######################################################################
 
 
