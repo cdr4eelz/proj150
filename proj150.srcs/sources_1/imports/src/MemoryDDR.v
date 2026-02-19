@@ -495,12 +495,12 @@ module MemoryDDR #(
     PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
-  .COLT45_TESTPAT(0) // The real deal, use PixelFeeder from DDR3 "frame" feed.
+  .COLT45_TESTPAT(0)  //Real deal w/FIFO (fetch from DDR3 frames)
 //.COLT45_TESTPAT(1)  //Simple sweep that still w/FIFO
 //.COLT45_TESTPAT(2)  //Simple "sweep" again w/FIFO
 //.COLT45_TESTPAT(3)  //Non-FIFO direct feed
 // Enabling normal (not test-pattern) mode has detrimental effect (lockup on simple code).
-    ) pf (
+    ) pixfeed (
         .cpu_clk_g(clk_cpu),
         .cpu_rst_g(rst_cpu_bus),
         .dvi_clk_g(clk_pix),
