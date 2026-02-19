@@ -291,7 +291,8 @@ module ArtyA7top #(
 //        (* mark_debug = "true" *) wire DBG_STUCK_MIG = DBG_dcache_MIG[3];
 
         VGAFramer #(
-            .GEN_PATTERN(0)
+            .GEN_PATTERN(0) //The contents comes from PixelFeeder within MemoryDDR.
+            //.GEN_PATTERN(1) //Rather beautiful pattern generator, to verify basic VGA PMOD.
         ) VGA (
             .clk_pix(clk_pix), // input
             .rst_pix(rst_pix), // input

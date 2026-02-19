@@ -8,9 +8,6 @@ module PixelFeeder #(
     parameter SCREEN_WIDTH  =800, SCREEN_HEIGHT=600,
 //TODO:Unimplemented LITTLEWORDIAN...
     parameter LITTLEWORDIAN =1,
-//DELETE:    parameter PIXFO_CAPACITY=(2048/2), //max pixel_fifo "chunk" capacity (adjust to 256-bit units)
-//DELETE:    parameter PIXFO_STARTUP =PIXFO_CAPACITY - 100, //fake source until pixel_fifo is this full
-//DELETE:    parameter PIXFO_TARGET  =PIXFO_CAPACITY - 5, //1 "af" req => 2 "rdf" 128b resp => 8 pixfo 32b "rd"
     parameter COLT45_TESTPAT=0 // 1..3 are non-DDR test feeds of various sorts
 )(
 //System:
@@ -63,26 +60,11 @@ module PixelFeeder #(
     //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE and/or TIG (false_path).
 
 // Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13 for chunks)
-//DELETE: reg chunk_inc, chunk_ack, fifo_start;
-//DELETE:    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
-//DELETE:       ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
-//DELETE: reg chunk_inc_clkCPU, chunk_ack_clkDVI, fifo_start_clkDVI;
-
-//DELETE: always @(posedge dvi_clk_g) begin //Synchronize to DVI-clock
-//DELETE: chunk_ack_clkDVI    <= chunk_ack;
-//DELETE: fifo_start_clkDVI   <= fifo_start;
-//DELETE: end
-
-//DELETE:    always @(posedge cpu_clk_g) begin //Synchronize to CPU-clock
-//DELETE:        chunk_inc_clkCPU <= chunk_inc;
-//DELETE:    end
-
 
 // DVI-Clocked region (dvi_clk_g)
 
     reg  feeder_valid;
     reg  [31:0] curCOL, curROW, curFRAME;
-//DELETE: reg  [ 3:0] count_dviread; //Rolls over on every 16 pixel "read-chunk"
 
     wire video_adv = (video_valid && video_ready); //reset will trump this
     wire rollCOL = (curCOL >= SCREEN_WIDTH  - 1);//***TEMP*** //Could use fast-counter/pixelrange
@@ -94,19 +76,11 @@ module PixelFeeder #(
             feeder_valid <= 0;
         end else begin
             feeder_valid <= 1'b1;
-//DELETE:            wasRunning <= isRunning;
             if (video_adv) begin //They got a pixel, move on!
-//DELETE:                if (isRunning) begin //If running, inform other clock-realm of chunks
-//DELETE:                    if (&count_dviread) chunk_inc <= 1'b1; //Set on rollover
-//DELETE:                    else if (chunk_ack_clkDVI) chunk_inc <= 1'b0;
-//DELETE:                    count_dviread <= count_dviread + 1;
-//DELETE:                end
                 case ({rollROW, rollCOL}) //Manage our col/row/frame/scene business
                     (2'b11): begin
                         curFRAME <= curFRAME + 1;
                         {curCOL, curROW} <= {32'd0, 32'd0};
-//DELETE: //if (fifo_start_clkDVI) isRunning <= 1'b1; //Switch to FIFO on frame boundary
-//DELETE:                        isRunning <= 1'b1; //Switch to FIFO on frame boundary
                     end
                     (2'b01): begin
                         curCOL  <= 32'd0;
@@ -125,15 +99,12 @@ module PixelFeeder #(
     wire [ 31:0] feeder_raw, feeder_dout;
     wire [127:0] feeder_data;
     wire         feeder_wren, feeder_full, feeder_empty, almost_full, prog_full;
-//DELETE: wire [ 31:0] ignore_pixel = 32'h004488FF; // {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
     wire fakeALL = (curCOL == curROW);
     wire [  7:0] fakeR = (fakeALL || (curCOL % 80 == 0) || (curCOL % 80 == 1) || (curCOL % 80 == 2)) ? 8'hFF : 8'h00;
     wire [  7:0] fakeG = (fakeALL || (curCOL % 80 == 2) || (curCOL % 80 == 3) || (curCOL % 80 == 4)) ? 8'hFF : 8'h00;
     wire [  7:0] fakeB = (fakeALL || (curCOL % 77 == 0) || (curCOL % 77 == 1) || (curCOL % 77 == 2)) ? 8'hFF : 8'h00;
 
-    //assign feeder_dout = (isRunning) ? {8'd0, fakeR, fakeG, fakeB} : ignore_pixel;
-//DELETE: assign feeder_dout = (isRunning) ? {8'd0, feeder_raw[23:16], feeder_raw[15:8], feeder_raw[7:0]} : ignore_pixel;
     assign feeder_dout = {8'd0, feeder_raw[23:16], feeder_raw[15:8], feeder_raw[7:0]};
     assign rdf_rden    = 1'b1; //Always ready to read (want to fill up)! //TODO: Use FIFO signal to pace this!
 
@@ -158,7 +129,6 @@ generate if (COLT45_TESTPAT != 3) begin:WITH_FIFO
         .rd_clk(dvi_clk_g),         // input
         .empty(feeder_empty),       // output
         .prog_empty(prog_empty),    // output
-//DELETE: .rd_en(video_ready && isRunning ), // input
         .rd_en(video_ready),        // input
         .dout(feeder_raw),          // output  NOTE: Ignoring "valid" signal (allow underflow???)
         .valid( ),                  // output  NOTE: Why is this unused???? Forced to read regardless!
@@ -230,9 +200,7 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     assign video = {8'h0, feeder_dout[23:0]};
 
 // CPU-Clocked region (cpu_clk_g)
-
     reg [63:0] pixel_count;
-//DELETE: reg [12:0] pend, pend_next; //pending mig_af requests (represent 256-bits each)
     reg [ 9:0] head_y, head_x;
     reg fr, fr_r, interrupt_r, state;
     reg [ 5:0] framebits, framebits_r, frame_next=0; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
@@ -242,7 +210,6 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     wire last_y = (head_y >= (600-1));
     //TODO: Adjust so that 4 mig_af requests bring 4 mig_rdf responses ... or 2 for 2
     //1 chunk is 16 separate 32-bit fifo reads (4 mig_rdf responses, initiated by 2 mig_af requests)
-//DELETE:    wire chunk_edge = chunk_inc_clkCPU && !chunk_ack; //Both are regs under our control
 //TODO: Use "almost full" for raf_advance??? Use prog_full instead???
     wire raf_advance = raf_wren && !raf_full; //NOTE: Always raf_full until we assert raf_wren first!
 
@@ -279,25 +246,15 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 //TODO: Eliminate custom "fullness" tracking and just use the FIFO signals (prog_full)
     //Ensures 1+ IDLEs between FETCHs; also note (state==IDLE) ensures !raf_advance
     wire next_state = (!prog_full && !raf_advance) ? FETCH : IDLE;
-//DELETE: wire next_state = ((pend < PIXFO_TARGET) && !raf_advance) ? FETCH : IDLE;
-//DELETE: //  wire next_state = ((pend < PIXFO_TARGET) && (state == IDLE)) ? FETCH : IDLE;
 
     always @(posedge cpu_clk_g) begin
         if (cpu_rst_r) begin //Standard reset for other stuff
-//DELETE:{chunk_ack, pend, fifo_start} <= 0;
             state <= IDLE;
             {fr, fr_r, head_y, head_x, pixel_count} <= 0;
             framebits <= frame_next;
         end else begin
-//DELETE:   pend <= pend_next;
             state <= next_state;
             fr_r <= fr;
-//DELETE:            chunk_ack <= chunk_inc_clkCPU;
-
-//DELETE:            if (pend_next > PIXFO_STARTUP) begin
-//DELETE:                fifo_start <= 1'b1;
-//DELETE:            end
-
             if (raf_advance) begin //Advance x/y/frame (right AFTER end of this cycle)
                 pixel_count <= pixel_count + 8;
                 if (last_y && last_x) begin
