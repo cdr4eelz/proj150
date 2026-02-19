@@ -495,7 +495,10 @@ module MemoryDDR #(
     PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
-.COLT45_TESTPAT(0)  //CAN CHANGE TO "1" TO ENABLE COLOR-TILT TEST PATTERN rather than memory
+  .COLT45_TESTPAT(0) // The real deal, use PixelFeeder from DDR3 "frame" feed.
+//.COLT45_TESTPAT(1)  //Simple sweep that still w/FIFO
+//.COLT45_TESTPAT(2)  //Simple "sweep" again w/FIFO
+//.COLT45_TESTPAT(3)  //Non-FIFO direct feed
 // Enabling normal (not test-pattern) mode has detrimental effect (lockup on simple code).
     ) pf (
         .cpu_clk_g(clk_cpu),
