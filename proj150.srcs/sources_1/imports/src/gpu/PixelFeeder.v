@@ -191,16 +191,23 @@ end endgenerate
     reg  [7:0] video_active_dvi, video_active_cpu;
 
     always @(posedge dvi_clk_g) begin
-        if (dvi_rst_g) video_fault_dvi <= 1'b0;
-        //TODO: Use FIFO underflow as indication of DVI-side problem???
-        else if (video_ready && isRunning && feeder_empty) video_fault_dvi <= 1'b1;
+        if (dvi_rst_g) begin
+            video_fault_dvi <= 1'b0;
+        end else if (video_ready && video_valid && feeder_empty) begin
+            video_fault_dvi <= 1'b1; //DVI-side fault if we run out of pixels
+        end else if (underflow || (video_ready && isRunning && feeder_empty)) begin
+            video_fault_dvi <= 1'b1;
+        end
 
         video_active_dvi[7:0] <= {video_active_dvi[6:0], (video_ready && video_valid)};
     end
 
     always @(posedge cpu_clk_g) begin
-        if (cpu_rst_g) video_fault_cpu <= 1'b0;
-        else if (feeder_wren && feeder_full) video_fault_cpu <= 1'b1;
+        if (cpu_rst_g) begin
+            video_fault_cpu <= 1'b0;
+        end else if (feeder_wren && feeder_full) begin
+            video_fault_cpu <= 1'b1;
+        end
 
         video_active_clkCPU   <= |video_active_dvi;
         video_active_cpu[7:0] <= {video_active_cpu[6:0], video_active_clkCPU};
