@@ -34,3 +34,5 @@ I00000006 : I00000006
 ----------------------------
 more tests
 ----------------------------
+
+report_timing -from [get_clocks sys_clk_pin] -to [get_clocks clk_mig_101MHz_clk_wiz_1]

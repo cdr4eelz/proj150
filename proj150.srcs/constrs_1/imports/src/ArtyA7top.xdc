@@ -307,8 +307,45 @@ create_clock -period 10.000 -name virtual_clock -waveform {0.000 5.000}
 #X# set_false_path -to [get_ports VGA_HS_O]
 #X# set_false_path -to [get_ports VGA_VS_O]
 
+
+# Set max delay (setup) and min delay (hold) on simple OUTPUT ports
+set_output_delay -clock virtual_clock 0.0 [get_ports FPGA_SERIAL_TX]
+set_false_path -to [get_ports FPGA_SERIAL_TX]
+set_output_delay -clock virtual_clock 0.0 [get_ports { LED[*] }]
+set_false_path -to [get_ports { LED[*] }]
+set_output_delay -clock virtual_clock 0.0 [get_ports { led* }]
+set_false_path -to [get_ports { led* }]
+set_output_delay -clock virtual_clock 0.0 [get_ports { VGA_R[*] }]
+set_false_path -to [get_ports { VGA_R[*] }]
+set_output_delay -clock virtual_clock 0.0 [get_ports { VGA_G[*] }]
+set_false_path -to [get_ports { VGA_G[*] }]
+set_output_delay -clock virtual_clock 0.0 [get_ports { VGA_B[*] }]
+set_false_path -to [get_ports { VGA_B[*] }]
+set_output_delay -clock virtual_clock 0.0 [get_ports { VGA_HS_O }]
+set_false_path -to [get_ports VGA_HS_O]
+set_output_delay -clock virtual_clock 0.0 [get_ports { VGA_VS_O }]
+set_false_path -to [get_ports VGA_VS_O]
+set_output_delay -clock virtual_clock 0.0 [get_ports { ddr3_reset_n }]
+set_false_path -to [get_ports { ddr3_reset_n }]
+
+# Set max and min on simple INPUT ports
+set_input_delay -clock virtual_clock 0.0 [get_ports { FPGA_SERIAL_RX }]
+set_false_path -from [get_ports FPGA_SERIAL_RX]
+set_input_delay -clock virtual_clock 0.0 [get_ports { CK_RST_N }]
+set_false_path -from [get_ports { CK_RST_N }]
+set_input_delay -clock virtual_clock 0.0 [get_ports { BUTTON[*] }]
+set_false_path -from [get_ports { BUTTON[*] }]
+set_input_delay -clock virtual_clock 0.0 [get_ports { SWITCH[*] }]
+set_false_path -from [get_ports { SWITCH[*] }]
+
+
 # This represents, essentially, one synchronizer fed to another with a debouncer in between:
-set_max_delay -from [get_pins {clean_rst_top/genblk1[0].DbounceIt/OutReg/SR.SS.Out_reg[0]/C}] -to [get_pins {sync_rst_mig_sys_n/flops_reg[0][0]/D}] 15.000
+set_max_delay -datapath_only -from [get_pins {clean_rst_top/genblk1[0].DbounceIt/OutReg/SR.SS.Out_reg[0]/C}] -to [get_pins {sync_rst_mig_sys_n/flops_reg[0][0]/D}] 15.000
+##TODO: These timing exceptions deserve to be "relative" constraints (relative to the Synchronizer module)
+set_max_delay -datapath_only -from [get_pins {raw_rst_r_reg/C}] -to [get_pins {sync_rst_cpu/flops_reg[0][0]/D}] 15.000
+set_max_delay -datapath_only -from [get_pins {raw_rst_r_reg/C}] -to [get_pins {sync_rst_pix/flops_reg[0][0]/D}] 15.000
+set_max_delay -datapath_only -from [get_pins {raw_locked_r_reg/C}] -to [get_pins {sync_rst_mig_sys_n/flops_reg[0][0]/D}] 15.000
+
 
 #######################################################################
 #######################################################################
