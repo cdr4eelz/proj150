@@ -73,6 +73,8 @@ module VGAFramer (
     assign video_ready = !rst_pix && !waiting && active;
     wire liveActive = video_ready; // && active;
     wire [3:0] vga_red, vga_green, vga_blue;
+
+    //NOTE: VGA PMOD only supports 4 bits per color, so we take upper 4 bits of each
     generate if (GEN_PATTERN == 1) begin:PAT_GEN1
         wire TT_R = (h_cntr_reg <= (v_cntr_reg +  89)),
              TT_G = (h_cntr_reg <= (v_cntr_reg -   0)),
@@ -106,6 +108,7 @@ module VGAFramer (
             h_sync_reg <= 0;
             v_sync_reg <= 0;
         end else begin
+            //NOTE: Ensure the signals are set in EVERY "branch" below... (could default to "hold" values)
             if (h_cntr_reg == (H_MAX - 1)) begin
                 h_cntr_reg <= 0;
             end else begin
@@ -116,6 +119,8 @@ module VGAFramer (
                 v_cntr_reg <= 0;
             end else if (h_cntr_reg == (H_MAX - 1)) begin
                 v_cntr_reg <= v_cntr_reg + 1;
+            end else begin
+                v_cntr_reg <= v_cntr_reg; //Ensure signal gets a value
             end
 
             if ((h_cntr_reg >= (H_FP + FRAME_WIDTH - 1)) &&  (h_cntr_reg < (H_FP + FRAME_WIDTH + H_PW - 1))) begin
@@ -137,11 +142,11 @@ module VGAFramer (
 
     always @(posedge clk_pix) begin
         //NOTE: Ignore reset. We don't need it.
-        v_sync_dly_reg <= v_sync_reg;
-        h_sync_dly_reg <= h_sync_reg;
-        vga_red_reg   <= vga_red;
-        vga_green_reg <= vga_green;
-        vga_blue_reg  <= vga_blue;
+        v_sync_dly_reg  <= v_sync_reg;
+        h_sync_dly_reg  <= h_sync_reg;
+        vga_red_reg     <= vga_red;
+        vga_green_reg   <= vga_green;
+        vga_blue_reg    <= vga_blue;
     end
 
     assign VGA_HS_O = h_sync_dly_reg; // VGA_HS_O <= h_sync_dly_reg;

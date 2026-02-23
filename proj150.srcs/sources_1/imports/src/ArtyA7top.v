@@ -97,17 +97,28 @@ module ArtyA7top #(
     assign locked_top_clocks = locked_clock0 && locked_clock1; // Consider this async
 //TODO: Register/Synchronize "locked_top_clocks" before using it as a reset condition for other components? Or just let it be async and hope for the best?
     // Then some other support components come out of reset (like DRAM)
-    (* mark_debug = "true" *) wire rst_cpu, init_done;  // TODO: CPU comes out of reset after everything else
+    wire rst_cpu, init_done;  // TODO: CPU comes out of reset after everything else
     wire rst_mig_sys_n, rst_pix; // Avoid debug on these since it brings in 2 extra clock domains
+
+    reg raw_locked_r;
+    always @(posedge clk_in_100MHz) begin //Attempt to register combinational logic before sync
+        raw_locked_r <= locked_top_clocks && !reset_top_clocks; //BAD BAD BAD?
+    end
     Synchronizer #( .Width(1) ) sync_rst_mig_sys_n (
-        .async_signal(locked_top_clocks && !reset_top_clocks), //BAD BAD BAD
+        .async_signal(raw_locked_r),
         .Clock(clk_mig_sys),  .sync_signal(rst_mig_sys_n));  // ACTIVE HIGH??? NOTE: This clock is bad when PLL not locked!
+
+    wire clk_mig_ui, rst_mig_ui; // Presuming "init_done" is in clk_mig_ui domain (uncertain)
+    reg raw_rst_r;
+    always @(posedge clk_mig_ui) begin //Attempt to register combinational logic before sync
+        raw_rst_r <= !locked_top_clocks || !init_done;
+    end
     Synchronizer #( .Width(1) ) sync_rst_cpu (
-        .async_signal(!locked_top_clocks || !init_done ),
-        .Clock(clk_cpu),  .sync_signal(rst_cpu)); // (ACTIVE HIGH) NOTE: clk_cpu itself is bad until locked_top_clocks is HIGH
+        .async_signal(raw_rst_r),
+        .Clock(clk_cpu),      .sync_signal(rst_cpu)); // (ACTIVE HIGH) NOTE: clk_cpu itself is bad until locked_top_clocks is HIGH
     Synchronizer #( .Width(1) ) sync_rst_pix (
-        .async_signal(!locked_top_clocks || !init_done),
-        .Clock(clk_pix),  .sync_signal(rst_pix));  // (ACTIVE HIGH) NOTE: clk_pix itself is bad until locked_top_clocks is HIGH
+        .async_signal(raw_rst_r),
+        .Clock(clk_pix),      .sync_signal(rst_pix));  // (ACTIVE HIGH) NOTE: clk_pix itself is bad until locked_top_clocks is HIGH
 
 
     // Debounce all switch & button signals
@@ -169,8 +180,6 @@ module ArtyA7top #(
         wire        stall_icache; //stall_cache;
         wire  [3:0] DBG_icache;
 
-        wire DBG_clk_mig_ui;
-        (* mark_debug = "true" *) wire        DBG_rst_mig_ui;
         (* mark_debug = "true" *) wire  [3:0] DBG_adapt;
 
         wire        video_ready,    video_valid;
@@ -196,8 +205,8 @@ module ArtyA7top #(
             .rst_pix        (rst_pix),
             //.locked         (locked_top_clocks),  //No longer needed for MIG
             .init_done      (init_done),  // Output HIGH when MIG is ready, likely in clk_mig_ui clock domain
-            .DBG_clk_mig_ui (DBG_clk_mig_ui),
-            .DBG_rst_mig_ui (DBG_rst_mig_ui),
+            .clk_mig_ui     (clk_mig_ui),
+            .rst_mig_ui     (rst_mig_ui),
             .DBG_adapt      (DBG_adapt),
 
         // DDR3 InOuts
@@ -285,7 +294,7 @@ module ArtyA7top #(
 //        (* mark_debug = "true" *) wire [3:0] DBG_dcache_MIG;
 //        Synchronizer #( .Width(4) ) sync_cache_dbg (
 //            .async_signal(DBG_dcache),
-//            .Clock(DBG_clk_mig_ui),
+//            .Clock(clk_mig_ui),
 //            .sync_signal(DBG_dcache_MIG)
 //        );
 //        (* mark_debug = "true" *) wire DBG_STUCK_MIG = DBG_dcache_MIG[3];

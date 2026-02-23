@@ -27,8 +27,8 @@ module MemoryDDR #(
     input  wire         rst_pix,
     //input  wire         locked,         // No longer needed for MIG
     output wire         init_done,      // init_calib_complete
-    output wire         DBG_clk_mig_ui, // Enclosing modules don't officially need MIG clk/rst
-    output wire         DBG_rst_mig_ui,
+    output wire         clk_mig_ui, // Enclosing modules don't officially need MIG clk/rst
+    output wire         rst_mig_ui,
 
 // DDR3 Pads:
     // DDR3 InOuts
@@ -77,18 +77,13 @@ module MemoryDDR #(
     wire [3:0]  DBG_icache_cs;
 
 // MIG feeds clock/rst back to us (use for clock-crossing FIFOs)
-    wire            clk_mig_ui;
-    (* mark_debug = "true" *) wire            rst_mig_ui;
-
-    assign DBG_clk_mig_ui = clk_mig_ui, DBG_rst_mig_ui = rst_mig_ui;
-
     (* mark_debug = "true" *) wire init_calib_complete; // Direct from MIG
     //assign init_done = init_calib_complete; //Assign directly without delay
     // Add a few cycles of delay to init_calib_complete to help timing downstream
     //TODO: Replace with a proper synchronizer in case signal is crossing clock domains!
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
-       OPTIMIZE="OFF" *) reg delay_reg [2:0]; // NOT CLOCK-CROSSING, just a delay!
-    always @(posedge clk_mig_ui) begin
+       OPTIMIZE="OFF" *) reg delay_reg [2:0]; // NOT CLOCK-CROSSING???, just a delay!
+    always @(posedge clk_mig_ui) begin // Is clk_mig_ui the domain for init_calib_complete?
         if (rst_mig_ui) begin
             delay_reg[0] <= 1'b0;
             delay_reg[1] <= 1'b0;
@@ -496,10 +491,9 @@ module MemoryDDR #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
   .COLT45_TESTPAT(0)  //Real deal w/FIFO (fetch from DDR3 frames)
-//.COLT45_TESTPAT(1)  //Simple sweep that still w/FIFO
-//.COLT45_TESTPAT(2)  //Simple "sweep" again w/FIFO
-//.COLT45_TESTPAT(3)  //Non-FIFO direct feed
-// Enabling normal (not test-pattern) mode has detrimental effect (lockup on simple code).
+//.COLT45_TESTPAT(1)  //Simple "sweep" still with w/FIFO
+//.COLT45_TESTPAT(2)  //Non-FIFO Simple "sweep" no w/FIFO
+//.COLT45_TESTPAT(3)  //Non-FIFO pattern from FALL-2013
     ) pixfeed (
         .cpu_clk_g(clk_cpu),
         .cpu_rst_g(rst_cpu_bus),
