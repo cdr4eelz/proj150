@@ -4,11 +4,11 @@
 `include "gpcommands.vh"
 
 module PixelFeeder #(
-    parameter DVI_CLOCK_HZ  =40_000_000,
-    parameter SCREEN_WIDTH  =800, SCREEN_HEIGHT=600,
+    parameter DVI_CLOCK_HZ = 40_000_000,
+    parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600,
 //TODO:Unimplemented LITTLEWORDIAN...
-    parameter LITTLEWORDIAN =1,
-    parameter COLT45_TESTPAT=0 // 1..3 are non-DDR test feeds of various sorts
+    parameter LITTLEWORDIAN = 1,
+    parameter COLT45_TESTPAT = 0 // 1..3 are non-DDR test feeds of various sorts
 )(
 //System:
     input  wire         cpu_clk_g,
@@ -33,19 +33,21 @@ module PixelFeeder #(
     output wire         irq_frame     //1-cycle pulse after frame transition (except startup frame)
 );
 
-    // Hint: States
+    // Hint: States of a mini state machine!
     localparam IDLE = 1'b0, FETCH = 1'b1;
 
-//TODO: Use a REAL synchronizer here!!!
+    localparam X_PIX_PER_CHUNK = 8; //Number of pixels (32-bit words) to advance per DDR request
+    //TODO: Compute other localparams based on this, like "framebits" size and "last_x" condition!
+
+// Use FIFO's separate "busy" signals and register the "combinational" reset signal
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
-    reg  cpu_rst_r, dvi_rst_r; //Release synchronously to our clock
-    wire wr_rst_busy, rd_rst_busy;
-    //TODO: Use "busy" signals from FIFO to hold reset until it is actually done, rather than arbitrary cycles!
+    reg  cpu_rst_r, dvi_rst_r; // Release synchronously to each clock
+    wire wr_rst_busy, rd_rst_busy; // Driven by FIFO
     always @(posedge cpu_clk_g) begin
-        cpu_rst_r <= cpu_rst_g || wr_rst_busy; //Internal reset, <rst>_r, unless really must sync-up release!
+        cpu_rst_r <= cpu_rst_g || wr_rst_busy;
     end
     always @(posedge dvi_clk_g) begin
-        dvi_rst_r <= dvi_rst_g || rd_rst_busy; //Internal reset, <rst>_r, unless really must sync-up release!
+        dvi_rst_r <= dvi_rst_g || rd_rst_busy;
     end
 
 
@@ -54,30 +56,32 @@ module PixelFeeder #(
     //    Don't care about individual pixels in PixelFeeder!
     // pixel_fifo is 128-bit write (2K depth) and 32-bit read (8K depth).
     //    Forced to grab rdf output or lose it, no back-pressure opportunity there.
-    // pixel_fifo available space tracked on CPU-clocked side in large chunks.  The chunks
-    //    serve to reduce inter-clock signal rate, framebitskeep counters small (but separate),
-    //    and create a hysteresis.  Synchronizing with 4-cycle signal/acknowledge loop.
-    //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE and/or TIG (false_path).
-
-// Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13 for chunks)
+    // pixel_fifo available space tracked by "prog_full" signal (in write clock domain).
+    // DVI side just reads from FIFO and outputs, with no knowledge of raf/rdf
+    //NOTE: There are some cross-clock signals simply for slow-speed status reporting to CPPU...
+    //      Need to ensure those use proper synchronizers and relaxed timing constraints.
+// Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13 for chunks)???
 
 // DVI-Clocked region (dvi_clk_g)
 
-    reg  feeder_valid;
+/* ABANDONED VIDEO GENERATION CODE (LEFT COMMENTED HERE TEMPORARILY). Only feeder_running was in use elsewhre.
+    reg  feeder_running;
     reg  [31:0] curCOL, curROW, curFRAME;
-
     wire video_adv = (video_valid && video_ready); //reset will trump this
-    wire rollCOL = (curCOL >= SCREEN_WIDTH  - 1);//***TEMP*** //Could use fast-counter/pixelrange
+    wire rollCOL = (curCOL >= SCREEN_WIDTH  - 1);//TODO: Could use fast-counter/pixelrange?
     wire rollROW = (curROW >= SCREEN_HEIGHT - 1);
 
     always @(posedge dvi_clk_g) begin
-        if (dvi_rst_r) begin //Use synchronized reset
+        if (dvi_rst_r) begin // Use synchronized reset
             {curCOL, curROW, curFRAME} <= 0;
-            feeder_valid <= 0;
+            feeder_running <= 1'b0;
         end else begin
-            feeder_valid <= 1'b1;
-            if (video_adv) begin //They got a pixel, move on!
-                case ({rollROW, rollCOL}) //Manage our col/row/frame/scene business
+            feeder_running <= 1'b1;
+            curCOL <= curCOL;
+            curROW <= curROW;
+            curFRAME <= curFRAME;
+            if (video_adv) begin // They got a pixel, move on!
+                case ({rollROW, rollCOL}) // Manage our col/row/frame/scene business
                     (2'b11): begin
                         curFRAME <= curFRAME + 1;
                         {curCOL, curROW} <= {32'd0, 32'd0};
@@ -86,36 +90,38 @@ module PixelFeeder #(
                         curCOL  <= 32'd0;
                         curROW  <= curROW + 1;
                     end
-                    //2'b10 just means we're ON last row but not yet at end
+                    // 2'b10 just means we're ON last row but not yet at end of columns
                     default: curCOL <= curCOL + 1;
                 endcase
             end
         end
     end
-
-
-    // FIFO to buffer the reads with a write width of 128 and read width of 32. We try to fetch blocks
-    // until the FIFO is full.
-    wire [ 31:0] feeder_raw, feeder_dout;
-    wire [127:0] feeder_data;
-    wire         feeder_wren, feeder_full, feeder_empty, almost_full, prog_full;
-
     wire fakeALL = (curCOL == curROW);
     wire [  7:0] fakeR = (fakeALL || (curCOL % 80 == 0) || (curCOL % 80 == 1) || (curCOL % 80 == 2)) ? 8'hFF : 8'h00;
     wire [  7:0] fakeG = (fakeALL || (curCOL % 80 == 2) || (curCOL % 80 == 3) || (curCOL % 80 == 4)) ? 8'hFF : 8'h00;
     wire [  7:0] fakeB = (fakeALL || (curCOL % 77 == 0) || (curCOL % 77 == 1) || (curCOL % 77 == 2)) ? 8'hFF : 8'h00;
+*/
 
-    assign feeder_dout = {8'd0, feeder_raw[23:16], feeder_raw[15:8], feeder_raw[7:0]};
+
+    // FIFO to buffer the reads with a write width of 128 and read width of 32. We try to fetch blocks
+    // until the FIFO is reasonably full (custom "prog_full"). Other "fullness" signals are debug.
+    wire [127:0] feeder_data;
+    wire         feeder_wren, feeder_full, almost_full, prog_full;
+    wire [ 31:0] feeder_raw, feeder_dout;
+    wire         feeder_empty, feeder_valid;
+
+    assign feeder_dout = {8'h00, feeder_raw[23:16], feeder_raw[15:8], feeder_raw[7:0]};
     assign rdf_rden    = 1'b1; //Always ready to read (want to fill up)! //TODO: Use FIFO signal to pace this!
 
     //Additional signals for debugging
     wire wr_ack, overflow, underflow;
 
 //TODO:Insert DDRStage before pixel_fifo to allow LITTLEWORDIAN flip
-generate if (COLT45_TESTPAT != 3) begin:WITH_FIFO
-    wire prog_empty;
+generate if (COLT45_TESTPAT <= 1) begin:WITH_FIFO
+//TODO: Rename "feeder_XYZ" signals to distinguish in/out, rd/wr, & cpu/dvi clock domain
+    wire prog_empty, fifo_rd_en;
     pixel_fifo pf_fifo (
-        .rst(cpu_rst_g), //Internal cross-clock sync
+        .rst(cpu_rst_g), //FIFO does internal clock syncs (see "busy" signals)
         //WRITE: CPU clock domain
         .wr_clk(cpu_clk_g),         // input
         .full(feeder_full),         // output
@@ -128,10 +134,10 @@ generate if (COLT45_TESTPAT != 3) begin:WITH_FIFO
         //READ: DVI clock domain
         .rd_clk(dvi_clk_g),         // input
         .empty(feeder_empty),       // output
-        .prog_empty(prog_empty),    // output
-        .rd_en(video_ready),        // input
+        .prog_empty(prog_empty),    // output  NOTE: Custom "prog_empty" is set to near full!
+        .rd_en(fifo_rd_en),         // input   WAS: video_ready
+        .valid(feeder_valid),       // output  TODO: Use "valid" signal for diagnostics (set a fault)
         .dout(feeder_raw),          // output  NOTE: Ignoring "valid" signal (allow underflow???)
-        .valid( ),                  // output  NOTE: Why is this unused???? Forced to read regardless!
         .rd_rst_busy(rd_rst_busy),  // output
 
         //EXTRA: Mostly for debug
@@ -140,17 +146,23 @@ generate if (COLT45_TESTPAT != 3) begin:WITH_FIFO
         .underflow(underflow)       // output
     );
 
-    // Wait for FIFO to be full enough before we start offering video.
-    reg waiting = 1;
+    // Wait for FIFO to be full enough before we start offering video to be read from it
+    reg fifo_running = 0;
     always @(posedge dvi_clk_g) begin
-        waiting <= waiting; // default is to hold "waiting" value
         if (dvi_rst_r) begin
-            waiting <= 1; // Only reset can re-enable waiting mode
-        end else if (waiting && !prog_empty) begin //NOTE: prog_entry indicates "full enough"
-            waiting <= 0; // Permit VGAFramer to start scanning and outputting
+            fifo_running <= 0; // Only reset can clear FIFO running mode
+        end else begin
+            fifo_running <= fifo_running; // Default is to hold current value
+            if (!prog_empty) begin //NOTE: !prog_empty set to desired full target
+                fifo_running <= 1; // Start offering video if FIFO is "full enough"
+            end
         end
     end
 
+    // Block both ready/valid signals to postpone video xfer until FIFO is full enough
+    assign fifo_rd_en = fifo_running && video_ready;
+    assign video_valid = fifo_running && feeder_valid;
+    
 end endgenerate
 
 //TODO: Use REAL synchronizers for cross-clock signals!
@@ -165,11 +177,12 @@ end endgenerate
     reg  [7:0] video_active_dvi, video_active_cpu;
 
     always @(posedge dvi_clk_g) begin
-        if (dvi_rst_g) begin
+        if (dvi_rst_r) begin //WAS: dvi_rst_g
             video_fault_dvi <= 1'b0;
         end else if (video_ready && video_valid && feeder_empty) begin
             video_fault_dvi <= 1'b1; //DVI-side fault if we run out of pixels
         end else if (underflow || (video_ready && feeder_empty)) begin
+            //TODO: Could this just be "underflow" flag?
             video_fault_dvi <= 1'b1;
         end
 
@@ -179,10 +192,11 @@ end endgenerate
     always @(posedge cpu_clk_g) begin
         if (cpu_rst_g) begin
             video_fault_cpu <= 1'b0;
-        end else if (feeder_wren && feeder_full) begin
+        end else if (feeder_wren && feeder_full) begin //TODO: Could this just be "overflow" flag?
             video_fault_cpu <= 1'b1;
         end
 
+        //TODO: This whole "shift register" business is a hacky sub for sync...
         video_active_clkCPU   <= |video_active_dvi;
         video_active_cpu[7:0] <= {video_active_cpu[6:0], video_active_clkCPU};
         video_active          <= |video_active_cpu || video_active_clkCPU;
@@ -196,25 +210,23 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 
     assign feeder_wren = rdf_wren;
     assign feeder_data = rdf_data; //DDR-read to PIX-write
-    assign video_valid = feeder_valid;
-    assign video = {8'h0, feeder_dout[23:0]};
+    assign video = {8'h00, feeder_dout[23:0]};
 
 // CPU-Clocked region (cpu_clk_g)
     reg [63:0] pixel_count;
     reg [ 9:0] head_y, head_x;
-    reg fr, fr_r, interrupt_r, state;
-    reg [ 5:0] framebits, framebits_r, frame_next=0; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
+    reg fr, fr_r, interrupt_r;
+    reg [ 5:0] framebits, framebits_r, frame_next; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
+    reg state; // This is a tiny "state machine" of two states!
 
-    wire [31:0] head_addr = {4'b0001, framebits[5:0], head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
-    wire last_x = (head_x >= (((800/8)-1) * 8));
-    wire last_y = (head_y >= (600-1));
-    //TODO: Adjust so that 4 mig_af requests bring 4 mig_rdf responses ... or 2 for 2
-    //1 chunk is 16 separate 32-bit fifo reads (4 mig_rdf responses, initiated by 2 mig_af requests)
-//TODO: Use "almost full" for raf_advance??? Use prog_full instead???
+//NOTE: High nibble removed; framebits=6, y=10, x=10, low-align=2 ; total 28-bits ("byte" address)
+    wire [27:0] head_addr = {framebits[5:0], head_y[9:0], head_x[9:0], 2'b00}; // 32-bit word aligned
+    wire last_x = (head_x >= (((SCREEN_WIDTH/X_PIX_PER_CHUNK)-1) * X_PIX_PER_CHUNK));
+    wire last_y = (head_y >= (SCREEN_HEIGHT-1));
     wire raf_advance = raf_wren && !raf_full; //NOTE: Always raf_full until we assert raf_wren first!
 
-    assign raf_addr  = head_addr[27:0]; //WAS: {3'b, [27:3]} ...Turn into 31-bit "DoubleWord" or DDR-address
-    assign raf_wren  = (state == FETCH); //Declare when FETCH addr ready (but might not happen)
+    assign raf_addr  = {1'b1, head_addr[27:1]}; // Turn into DDR-address (16-bit spacing)
+    assign raf_wren  = 1'b1; //WAS: (state == FETCH); //Declare when FETCH addr ready (but might not happen)
     assign irq_frame = interrupt_r;
     assign pf_status = {
         video_fault, !video_active,
@@ -228,42 +240,40 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
         end else begin
             framebits_r <= framebits;
             interrupt_r <= (fr != fr_r); //Fires 1-cycle after REQ queued (not RESP or PIX)
-            if (pf_vframe) frame_next <= `FRAME_BITS(pf_wframe); //Either addr style
+            if (pf_vframe) begin
+                frame_next <= `FRAME_BITS(pf_wframe); //Either addr style
+            end else begin
+                frame_next <= frame_next; // Ensure signal doesn't go unassigned
+            end
         end
     end
 
-/* DELETE
-    always @(*) begin
-        case ( {chunk_edge, raf_advance} ) //chunk reduces by 2, fetch increases by 1
-            2'b11: pend_next = pend - 1; //-2 +1
-            2'b10: pend_next = pend - 2; //-2
-            2'b01: pend_next = pend + 1; //   +1
-            default: pend_next = pend;
-        endcase
-    end
-*/
-
-//TODO: Eliminate custom "fullness" tracking and just use the FIFO signals (prog_full)
     //Ensures 1+ IDLEs between FETCHs; also note (state==IDLE) ensures !raf_advance
     wire next_state = (!prog_full && !raf_advance) ? FETCH : IDLE;
 
     always @(posedge cpu_clk_g) begin
         if (cpu_rst_r) begin //Standard reset for other stuff
             state <= IDLE;
-            {fr, fr_r, head_y, head_x, pixel_count} <= 0;
+            fr_r <= 0;
+            {fr, head_y, head_x, pixel_count} <= 0;
             framebits <= frame_next;
         end else begin
             state <= next_state;
             fr_r <= fr;
+            // Hold these steady unless logic changes them below...
+            fr <= fr; head_y <= head_y; head_x <= head_x;
+            pixel_count <= pixel_count; framebits <= framebits;
             if (raf_advance) begin //Advance x/y/frame (right AFTER end of this cycle)
-                pixel_count <= pixel_count + 8;
+                pixel_count <= pixel_count + X_PIX_PER_CHUNK;
                 if (last_y && last_x) begin
-                    fr <= ~fr; head_y <= 0; head_x <= 0;
-                    framebits <= frame_next;
+                    fr <= ~fr; // fr & fr_r are used to generate interupt pulse
+                    head_y <= 0; head_x <= 0;
+                    framebits <= frame_next; // Changed to new frame only at end of frame
                 end else if (last_x) begin
                     head_y <= head_y + 1; head_x <= 0;
                 end else begin
-                    head_x <= head_x + 8;
+                    head_x <= head_x + X_PIX_PER_CHUNK;
+                    //NOTE: Advance by "X_PIX_PER_CHUNK" wastes low bits of "head_x"
                 end
             end
         end
@@ -281,15 +291,12 @@ always @(posedge cpu_clk_g) begin
 end
 // synthesis translate_on
 
-
 end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
-// *** Simple test pattern output through the FIFO ***
-
-    assign video_valid = feeder_valid;
-    assign video = {8'h0, feeder_dout[23:0]};
+// *** Simple test pattern output THROUGH the FIFO ***
+    assign video = {8'h00, feeder_dout[23:0]};
     assign raf_wren = 1'b0;
 
-    reg [15:0] sweep_RGB; //In cpu_clk_g domain!?!...
+    reg [15:0] sweep_RGB; //In cpu_clk_g domain
     reg [63:0] sweep_cnt;
     always @(posedge cpu_clk_g) begin
         if (cpu_rst_r) begin
@@ -300,7 +307,7 @@ end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
             sweep_cnt <= 0;
         end else if (feeder_wren) begin
             sweep_RGB <= sweep_RGB + 5;
-            sweep_cnt <= sweep_cnt + 1; //Sent another 4 pixels
+            sweep_cnt <= sweep_cnt + 1; //Sent another 4 pixelssweep_RGB
         end
     end
 
@@ -312,27 +319,26 @@ end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
         8'd0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]
     };
 
-
 end else if (COLT45_TESTPAT == 2) begin:DIRECT_SWEEP
-// *** SOMETHING STRANGE HERE... IS "sweep_RGB" in cpu_clk above and dvi_clk below???!!!
-// *** DIRECTLY send a pretty and scrolling pattern ***
-    reg [15:0] sweep_RGB; //In dvi_clk_g domain!?!...
-    assign video = {8'b0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]};
-    assign video_valid = 1'b1;
+// *** DIRECTLY send a pretty and scrolling pattern (NO FIFO) ***
+    reg [15:0] sweep_RGB_dvi; //In dvi_clk_g domain
+    assign video = {8'h00, sweep_RGB_dvi[15:8], sweep_RGB_dvi[11:4], sweep_RGB_dvi[7:0]};
+    assign video_valid = !dvi_rst_r; //WAS: 1'b1
     always @(posedge dvi_clk_g) begin
         if (dvi_rst_r) begin
-            sweep_RGB <= 16'hE2A2;
+            sweep_RGB_dvi <= 16'hE2A2;
         end else if (video_valid && video_ready) begin
-            sweep_RGB <= sweep_RGB + 5;
+            sweep_RGB_dvi <= sweep_RGB_dvi + 5;
+        end else begin
+            sweep_RGB_dvi <= sweep_RGB_dvi; //Hold value steady if not advancing
         end
     end
 
-
 end else if (COLT45_TESTPAT == 3) begin:DIRECT_PAT
-// *** DIRECTLY inject simple pattern gen from FALL-2013-CP1 ***
+// *** DIRECTLY inject simple moving pattern gen from FALL-2013-CP1 ***
     PatternGenerator #(
         .CLOCK_HZ(DVI_CLOCK_HZ), //DVI Clock
-        .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600),
+        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .SCENES_PER_SEC(1)
     ) patgen (
         .clock(dvi_clk_g),
