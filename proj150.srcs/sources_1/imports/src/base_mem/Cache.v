@@ -24,9 +24,8 @@
 //    rdf_rden: ReaD-ENable  scalar for ddr2  Read-Data-Fifo
 //
 //----------------------------------------------------------------------------
-// `include "cache.vh"
-`ifndef CACHE
-`define CACHE
+// DIRECTLY INSERT `include "cache.vh" HERE SINCE NOT USED ELSEWHERE...
+
 // Cache constants
 `define IDX_ADDR_OFFSET       4:2
 `define IDX_ADDR_INDEX       12:5
@@ -46,8 +45,7 @@
 
 `define CAP_CACHE           256     // UNUSED?
 `define SZ_CACHE $clog2(`CAP_CACHE) // UNUSED?
-
-`endif //CACHE
+//`endif //CACHE
 
 `default_nettype none
 
@@ -95,7 +93,7 @@ module Cache #(
 
     //registers:
     // state for DDR3 FSM
-    (* mark_debug = "true" *)
+    (* MARK_DEBUG = "TRUE" *)
     reg [2:0] current_state, next_state;
     wire isWriting, isFetching, isReading, isSecond;
 
@@ -321,12 +319,12 @@ module Cache #(
     assign data_line_in = (next_state == CWRITEB) ? {first_read, rdf_data} : {8{din_hold}};
     assign tag_line_in = {1'b0, 1'b1, tag_hold};
 
-//TODO: Add all other relevant debug signals and label with CSH for "Cache":
-    (* mark_debug = "true" *) wire DBG_CSH_caf_full = caf_full;
-    (* mark_debug = "true" *) wire DBG_CSH_caf_wren = caf_wren;
-    (* mark_debug = "true" *) wire DBG_CSH_wdf_full = wdf_full;
-    (* mark_debug = "true" *) wire DBG_CSH_wdf_wren = wdf_wren;
-    (* mark_debug = "true" *) wire DBG_CSH_rdf_rden = rdf_rden;
-    (* mark_debug = "true" *) wire DBG_CSH_rdf_wren = rdf_wren;
+// Tap into signals for ILA debugging. Prefix names to identify module:
+    (* MARK_DEBUG = "TRUE" *) wire TAP_CSH_caf_full = caf_full;
+    (* MARK_DEBUG = "TRUE" *) wire TAP_CSH_caf_wren = caf_wren;
+    (* MARK_DEBUG = "TRUE" *) wire TAP_CSH_wdf_full = wdf_full;
+    (* MARK_DEBUG = "TRUE" *) wire TAP_CSH_wdf_wren = wdf_wren;
+    (* MARK_DEBUG = "TRUE" *) wire TAP_CSH_rdf_rden = rdf_rden;
+    (* MARK_DEBUG = "TRUE" *) wire TAP_CSH_rdf_wren = rdf_wren;
 
 endmodule

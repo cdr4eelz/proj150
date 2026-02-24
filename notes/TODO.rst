@@ -30,7 +30,6 @@ On deck
 ==========================================
 * [TODO] Figure out the TRUE tunings of Cache bit shifts, truncations, address ranges, etc.
          - Should allow access to FULL DDR3 range by avoiding hi-bit always off.
-         - Perhaps ranges from cache.vh need to change (instead of bit shift changes)
 * [TODO] dcache_addr has unused high bits... resize/feed them?
 * [TODO] Resurrect original Cache.v and re-adapt it for current port renames:
          - Ensure my silly changes are not breaking anything.

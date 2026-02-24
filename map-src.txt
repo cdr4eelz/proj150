@@ -34,7 +34,6 @@ src/gpu/GraphicsProcessor.v
 src/base_mem/DDRStage.v
 src/base_mem/RequestController.v
 src/base_mem/Cache.v
-src/base_mem/cache.vh
 src/cpu/CPUDumpUART.v
 src/cpu/StageMW.v
 src/cpu/CPUDumpMemUART.v

@@ -85,7 +85,7 @@ module MIGAdapter (
                 S_WRITE2b   = 4'b0111,  // HIGH (end)
                 S_WRITECMD2 = 4'b1000;  // Another go-around for 2nd 128-bits
                 // *** BE SURE THAT BIT WIDTH OF STATE REG IS SUFFICIENT! ***
-    (* mark_debug = "true" *) // Need to debug state machine's states as enumerated values
+    (* MARK_DEBUG = "TRUE" *) // Need to debug state machine's states as enumerated values
     reg [3:0] state; // Handle up to 16 states
     assign DBG_adapt = {state[3:0]};
     
@@ -242,42 +242,42 @@ assign fifo_rdf_wr_en = (rd_phase == 1'b1) && app_rd_data_valid;
 assign fifo_rdf_din = {app_rd_data, rd_stashed}; //TODO: Confirm HI/LO order is correct!!!
 
 // Tap into signals for ILA debugging. Prefix names to identify module:
-    (* mark_debug = "true" *) wire         TAP_ADP_fifo_caf_rd_en = fifo_caf_rd_en;
-    (* mark_debug = "true" *) wire         TAP_ADP_fifo_caf_valid = fifo_caf_valid;
-    (* mark_debug = "true" *) wire         TAP_ADP_fifo_caf_empty = fifo_caf_empty;
-    (* mark_debug = "true" *) wire [ 30:0] TAP_ADP_fifo_caf_dout  = fifo_caf_dout;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_fifo_caf_rd_en = fifo_caf_rd_en;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_fifo_caf_valid = fifo_caf_valid;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_fifo_caf_empty = fifo_caf_empty;
+    (* MARK_DEBUG = "TRUE" *) wire [ 30:0] TAP_MIG_fifo_caf_dout  = fifo_caf_dout;
 
-    (* mark_debug = "true" *) wire         TAP_ADP_fifo_wdf_empty = fifo_wdf_empty;
-    (* mark_debug = "true" *) wire         TAP_ADP_fifo_wdf_rd_en = fifo_wdf_rd_en;
-    (* mark_debug = "true" *) wire         TAP_ADP_fifo_wdf_valid = fifo_wdf_valid;
-    (* mark_debug = "true" *) wire [143:0] TAP_ADP_fifo_wdf_dout  = fifo_wdf_dout;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_fifo_wdf_empty = fifo_wdf_empty;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_fifo_wdf_rd_en = fifo_wdf_rd_en;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_fifo_wdf_valid = fifo_wdf_valid;
+    (* MARK_DEBUG = "TRUE" *) wire [143:0] TAP_MIG_fifo_wdf_dout  = fifo_wdf_dout;
 
-    (* mark_debug = "true" *) wire [127:0] TAP_ADP_fifo_rdf_din   = fifo_rdf_din;
-    (* mark_debug = "true" *) wire         TAP_ADP_fifo_rdf_wr_en = fifo_rdf_wr_en;
-    (* mark_debug = "true" *) wire         TAP_ADP_fifo_rdf_full  = fifo_rdf_full;
+    (* MARK_DEBUG = "TRUE" *) wire [127:0] TAP_MIG_fifo_rdf_din   = fifo_rdf_din;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_fifo_rdf_wr_en = fifo_rdf_wr_en;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_fifo_rdf_full  = fifo_rdf_full;
 
-    (* mark_debug = "true" *) wire         TAP_ADP_app_rdy        = app_rdy;
-    (* mark_debug = "true" *) wire         TAP_ADP_app_en         = app_en;
-    (* mark_debug = "true" *) wire [  2:0] TAP_ADP_app_cmd        = app_cmd;
-    (* mark_debug = "true" *) wire [ 27:0] TAP_ADP_app_addr       = app_addr;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_app_rdy        = app_rdy;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_app_en         = app_en;
+    (* MARK_DEBUG = "TRUE" *) wire [  2:0] TAP_MIG_app_cmd        = app_cmd;
+    (* MARK_DEBUG = "TRUE" *) wire [ 27:0] TAP_MIG_app_addr       = app_addr;
 
-    (* mark_debug = "true" *) wire         TAP_ADP_app_wdf_wren   = app_wdf_wren;
-    (* mark_debug = "true" *) wire         TAP_ADP_app_wdf_rdy    = app_wdf_rdy;
-    (* mark_debug = "true" *) wire         TAP_ADP_app_wdf_end    = app_wdf_end;
-    (* mark_debug = "true" *) wire [ 63:0] TAP_ADP_app_wdf_data   = app_wdf_data;
-    (* mark_debug = "true" *) wire [  7:0] TAP_ADP_app_wdf_mask   = app_wdf_mask;
-    (* mark_debug = "true" *) wire [ 63:0] TAP_ADP_app_rd_data    = app_rd_data;
-    (* mark_debug = "true" *) wire         TAP_ADP_app_rd_data_valid  = app_rd_data_valid;
-    (* mark_debug = "true" *) wire         TAP_ADP_app_rd_data_end    = app_rd_data_end;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_app_wdf_wren   = app_wdf_wren;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_app_wdf_rdy    = app_wdf_rdy;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_app_wdf_end    = app_wdf_end;
+    (* MARK_DEBUG = "TRUE" *) wire [ 63:0] TAP_MIG_app_wdf_data   = app_wdf_data;
+    (* MARK_DEBUG = "TRUE" *) wire [  7:0] TAP_MIG_app_wdf_mask   = app_wdf_mask;
+    (* MARK_DEBUG = "TRUE" *) wire [ 63:0] TAP_MIG_app_rd_data    = app_rd_data;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_app_rd_data_valid  = app_rd_data_valid;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_app_rd_data_end    = app_rd_data_end;
 
-    (* mark_debug = "true" *) wire         TAP_ADP_rd_phase       = rd_phase;
-    (* mark_debug = "true" *) wire [ 63:0] TAP_ADP_rd_stashed     = rd_stashed;
-    (* mark_debug = "true" *) wire [ 27:0] TAP_ADP_base_addr      = base_addr;
-    (* mark_debug = "true" *) wire [  7:0] TAP_ADP_wr_stash_mask  = wr_stash_mask;
-    (* mark_debug = "true" *) wire [ 63:0] TAP_ADP_wr_stash_data  = wr_stash_data;
-    (* mark_debug = "true" *) wire [  3:0] TAP_ADP_state          = state;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_rd_phase       = rd_phase;
+    (* MARK_DEBUG = "TRUE" *) wire [ 63:0] TAP_MIG_rd_stashed     = rd_stashed;
+    (* MARK_DEBUG = "TRUE" *) wire [ 27:0] TAP_MIG_base_addr      = base_addr;
+    (* MARK_DEBUG = "TRUE" *) wire [  7:0] TAP_MIG_wr_stash_mask  = wr_stash_mask;
+    (* MARK_DEBUG = "TRUE" *) wire [ 63:0] TAP_MIG_wr_stash_data  = wr_stash_data;
+    (* MARK_DEBUG = "TRUE" *) wire [  3:0] TAP_MIG_state          = state;
 
-    (* mark_debug = "true" *) wire         TAP_ADP_is_wdf_second  = is_wdf_second;
-    (* mark_debug = "true" *) wire         TAP_ADP_is_wdf_first   = is_wdf_first;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_is_wdf_second  = is_wdf_second;
+    (* MARK_DEBUG = "TRUE" *) wire         TAP_MIG_is_wdf_first   = is_wdf_first;
 
 endmodule
