@@ -29,12 +29,9 @@ module PixelFeeder #(
 // FRAME control <=> CPU @cpu_clk_g:
     input  wire         pf_vframe,  //Signal new pf_wframe is to be captured this clock cycle
     input  wire[ 31:0]  pf_wframe,  //Address or Frame# for base of NEXT frame once this one is done
-    output wire[ 15:0]  pf_status, //Composite status ("ready" signal not present/used)
-    output wire         irq_frame     //1-cycle pulse after frame transition (except startup frame)
+    output wire[ 15:0]  pf_status,  //Composite status ("ready" signal not present/used)
+    output wire         irq_frame   //1-cycle pulse after frame transition (except startup frame)
 );
-
-    // Hint: States of a mini state machine!
-    localparam IDLE = 1'b0, FETCH = 1'b1;
 
     localparam X_PIX_PER_CHUNK = 8; //Number of pixels (32-bit words) to advance per DDR request
     //TODO: Compute other localparams based on this, like "framebits" size and "last_x" condition!
@@ -109,14 +106,13 @@ module PixelFeeder #(
     wire [  7:0] fakeB = (fakeALL || (curCOL % 77 == 0) || (curCOL % 77 == 1) || (curCOL % 77 == 2)) ? 8'hFF : 8'h00;
 */
 
+//TODO: *** Move all FIFO-related signals ("ffwr_" and "ffrd_") into the generate block where FIFO is!
     // FIFO to buffer the reads with a write width of 128 and read width of 32. We try to fetch blocks
     // until the FIFO is reasonably full (custom "prog_full"). Other "fullness" signals are debug.
     wire [127:0] ffwr_din;
     wire         ffwr_valid, ffwr_full, ffwr_almost_full, ffwr_prog_full;
-    wire [ 31:0] ffrd_dout, ffrd_dout; //TODO: Register "ffrd_dout" in case it is not immediatly used?
+    wire [ 31:0] ffrd_dout; //TODO: Register "ffrd_dout" in case it is not immediatly used?
     wire         ffrd_empty, ffrd_valid;
-
-    assign rdf_rden = 1'b1; //TODO: Research RequestController behavior (perhaps shouldn't be always asserted)
 
     //Additional signals for debugging
     wire ffwr_ack, ffwr_overflow, ffrd_underflow;
@@ -174,8 +170,8 @@ end:_WITH_FIFO_
 endgenerate
 
 
-//TODO: Use REAL synchronizers for cross-clock signals!
 //FAULT and ACTVE detection
+//TODO: Use REAL synchronizers for cross-clock signals & make faults more useful!
     reg  video_fault_dvi, video_fault_cpu, video_fault, video_active;
 
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
@@ -204,7 +200,7 @@ endgenerate
         if (cpu_rst_g) begin
             video_fault_cpu <= 1'b0;
         end else if (ffwr_valid && ffwr_full) begin //TODO: Could this just be "overflow" flag?
-            video_fault_cpu <= 1'b1;
+            video_fault_cpu <= 1'b1; //TODO: Distinguish different faults
         end
 
         //TODO: This whole "shift register" business is a hacky sub for sync...
@@ -216,78 +212,82 @@ endgenerate
     end
 
 
+    wire [5:0] framebits_w; // Each test-pattern variant should assign this
+    reg  [5:0] framebits_r; // Extra register stage, to ease timing
+    always @(posedge cpu_clk_g) begin
+        if (cpu_rst_r) begin
+            framebits_r <= 0;
+        end else begin
+            framebits_r <= framebits_w;
+        end
+    end
+
+    assign pf_status = { //TODO: Use more bits to identify different faults
+        video_fault, !video_active,
+            framebits_r[5:0], //1-cycle latency avoids overly tight interconnect
+        8'b0000_0000 //Maybe for overlay stuff later?
+    };
+
+
 generate
 if (COLT45_TESTPAT == 0) begin:_PIXFO_DDREAD_
 
 // *** Normal PixelFeeder activity (DDR -> FIFO) ***
-
-    assign ffwr_valid = rdf_wren;
-    assign ffwr_din = rdf_data; //DDR-read to PIX-write
-    assign video = ffrd_dout;
+    localparam IDLE = 1'b0, FETCH = 1'b1;
+    reg state; // This is a tiny "state machine" of two states!
 
 // CPU-Clocked region (cpu_clk_g)
     reg [63:0] pixel_count;
     reg [ 9:0] head_y, head_x;
-    reg fr, fr_r, interrupt_r;
-    reg [ 5:0] framebits, framebits_r, frame_next; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
-    reg state; // This is a tiny "state machine" of two states!
+    reg [ 5:0] framebits_p, frame_next; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
+    reg interrupt_r;
+
+    assign ffwr_valid = rdf_wren;
+    assign ffwr_din = rdf_data; //DDR-read to PIX-write
+    assign video = ffrd_dout;
+    assign framebits_w = framebits_p;
+    assign irq_frame = interrupt_r;
+    assign rdf_rden = 1'b1; //TODO: Research RequestController behavior (perhaps shouldn't be always asserted)
 
 //NOTE: High nibble removed; framebits=6, y=10, x=10, low-align=2 ; total 28-bits ("byte" address)
-    wire [27:0] head_addr = {framebits[5:0], head_y[9:0], head_x[9:0], 2'b00}; // 32-bit word aligned
+    wire [27:0] head_addr = {framebits_p[5:0], head_y[9:0], head_x[9:0], 2'b00}; // 32-bit word/pixel aligned
     wire last_x = (head_x >= (((SCREEN_WIDTH/X_PIX_PER_CHUNK)-1) * X_PIX_PER_CHUNK));
     wire last_y = (head_y >= (SCREEN_HEIGHT-1));
     wire raf_advance = raf_wren && !raf_full; //NOTE: Always raf_full until we assert raf_wren first!
 
-    assign raf_addr  = {1'b0, head_addr[27:1]}; // Turn into DDR-address (16-bit spacing)
+    assign raf_addr  = {1'b0, head_addr[27:1]}; // Turn byte addr into DDR-address (16-bit spacing)
     //TODO: Is it really appropriate to always assert "raf_wren"???
     assign raf_wren  = 1'b1; //WAS: (state == FETCH); //Declare when FETCH addr ready (but might not happen)
-    assign irq_frame = interrupt_r;
-    assign pf_status = {
-        video_fault, !video_active,
-            framebits_r[5:0], //1-cycle latency avoids overly tight interconnect
-        8'b0000_0000 //Maybe for overlay stuff later
-    };
-
-    always @(posedge cpu_clk_g) begin
-        if (cpu_rst_r) begin
-            {frame_next, framebits_r, interrupt_r} <= 0;
-        end else begin
-            framebits_r <= framebits;
-            interrupt_r <= (fr != fr_r); //Fires 1-cycle after REQ queued (not RESP or PIX)
-            if (pf_vframe) begin
-                frame_next <= `FRAME_BITS(pf_wframe); //Either addr style
-            end else begin
-                frame_next <= frame_next; // Ensure signal doesn't go unassigned
-            end
-        end
-    end
 
     //Ensures 1+ IDLEs between FETCHs; also note (state==IDLE) ensures !raf_advance
 //TEMP:RUN FULL BLAST...    wire next_state = (!ffwr_prog_full && !raf_advance) ? FETCH : IDLE;
     wire next_state = (cpu_rst_r) ? IDLE : FETCH;
+    reg fr, fr_r;
 
     always @(posedge cpu_clk_g) begin
         if (cpu_rst_r) begin //Standard reset for other stuff
             state <= IDLE;
-            fr_r <= 0;
-            {fr, head_y, head_x, pixel_count} <= 0;
-            framebits <= frame_next;
+            {head_y, head_x, pixel_count} <= 0;
+            {framebits_p, frame_next} <= 0;
+            {fr, fr_r, interrupt_r} <= 0;
         end else begin
             state <= next_state;
+            frame_next <= (pf_vframe) ? `FRAME_BITS(pf_wframe) : frame_next;
             fr_r <= fr;
+            interrupt_r <= (fr != fr_r); //Fires 1-cycle after REQ queued (not RESP or PIX)
             // Hold these steady unless logic changes them below...
             fr <= fr;
             head_y <= head_y;
             head_x <= head_x;
             pixel_count <= pixel_count;
-            framebits <= framebits;
+            framebits_p <= framebits_p;
             if (raf_advance) begin //Advance x/y/frame (right AFTER end of this cycle)
                 pixel_count <= pixel_count + X_PIX_PER_CHUNK;
                 if (last_y && last_x) begin
                     fr <= ~fr; // fr transition generates interupt pulse
                     head_y <= 0;
                     head_x <= 0;
-                    framebits <= frame_next; // Changed to new frame only at end of frame
+                    framebits_p <= frame_next; // Changed to new frame only at end of frame
                 end else if (last_x) begin
                     head_y <= head_y + 1;
                     head_x <= 0;
@@ -314,22 +314,28 @@ end
 end:_PIXFO_DDREAD_ else if (COLT45_TESTPAT == 1) begin:_PIXFO_SWEEP_
 
 // *** Simple test pattern output THROUGH the FIFO ***
-    assign video = ffrd_dout;
     assign raf_wren = 1'b0;
+    assign rdf_rden = 1'b0;
     assign raf_addr = 28'h0;
+    assign framebits_w = 0;
+    assign irq_frame = 0;
+
+    assign video = ffrd_dout;
 
     reg [15:0] sweep_RGB; //In cpu_clk_g domain
     reg [63:0] sweep_cnt;
+    wire first_x = (sweep_cnt == 0);
+    wire last_x = (sweep_cnt == (200 - 1)); //TODO: Compute based on screen size and X_PIX_PER_CHUNK
     always @(posedge cpu_clk_g) begin
         if (cpu_rst_r) begin
             sweep_RGB <= 16'hE2A2;
             sweep_cnt <= 0;
-        end else if (ffwr_valid && (sweep_cnt == (200 - 1))) begin
+        end else if (ffwr_valid && last_x) begin
             sweep_RGB <= 16'hE2A2;
             sweep_cnt <= 0;
         end else if (ffwr_valid) begin
             sweep_RGB <= sweep_RGB + 5;
-            sweep_cnt <= sweep_cnt + 1; //Sent another 4 pixelssweep_RGB
+            sweep_cnt <= sweep_cnt + 1; //Sent another 4 pixels
         end else begin
             sweep_RGB <= sweep_RGB; //Hold value steady if not advancing
             sweep_cnt <= sweep_cnt; //Hold value steady if not advancing
@@ -337,19 +343,30 @@ end:_PIXFO_DDREAD_ else if (COLT45_TESTPAT == 1) begin:_PIXFO_SWEEP_
     end
 
     assign ffwr_valid = !ffwr_prog_full; //WAS: !ffwr_full;
-    assign ffwr_din = {
-        8'd0, 24'h808080, // Grey stripe
-        8'd0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0],
-        8'd0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0],
-        8'd0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]
-    };
+    wire [127:0] sweep_pattern = { // Normal pattern (uses "sweep_RGB" value)
+                    8'd0, 24'h808080, // Grey stripe
+                    8'd0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0],
+                    8'd0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0],
+                    8'd0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]
+                };
+    assign ffwr_din =
+        (first_x) ? {4{32'h00F0FFF0}} : // White stripe
+        (last_x)  ? {4{32'h0022FF22}} : // Green stripe
+                    sweep_pattern; // Normal pattern (uses "sweep_RGB" value)
 
 end:_PIXFO_SWEEP_ else if (COLT45_TESTPAT == 2) begin:_DIRECT_SWEEP_
 
 // *** DIRECTLY send a pretty and scrolling pattern (NO FIFO) ***
+    assign raf_wren = 1'b0;
+    assign rdf_rden = 1'b0;
+    assign raf_addr = 28'h0;
+    assign framebits_w = 0;
+    assign irq_frame = 0;
+
     reg [15:0] sweep_RGB_dvi; //In dvi_clk_g domain
     assign video = {8'h00, sweep_RGB_dvi[15:8], sweep_RGB_dvi[11:4], sweep_RGB_dvi[7:0]};
     assign video_valid = !dvi_rst_r; //WAS: 1'b1
+
     always @(posedge dvi_clk_g) begin
         if (dvi_rst_r) begin
             sweep_RGB_dvi <= 16'hE2A2;
@@ -363,6 +380,12 @@ end:_PIXFO_SWEEP_ else if (COLT45_TESTPAT == 2) begin:_DIRECT_SWEEP_
 end:_DIRECT_SWEEP_ else if (COLT45_TESTPAT == 3) begin:_DIRECT_PAT_
 
 // *** DIRECTLY inject simple moving pattern gen from FALL-2013-CP1 ***
+    assign raf_wren = 1'b0;
+    assign rdf_rden = 1'b0;
+    assign raf_addr = 28'h0;
+    assign framebits_w = 0;
+    assign irq_frame = 0;
+
     PatternGenerator #(
         .CLOCK_HZ(DVI_CLOCK_HZ), //DVI Clock
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
