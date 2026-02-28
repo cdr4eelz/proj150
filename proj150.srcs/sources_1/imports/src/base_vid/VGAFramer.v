@@ -66,37 +66,41 @@ module VGAFramer (
     reg h_sync_dly_reg = !H_POL;
     reg v_sync_dly_reg = !V_POL;
 
-    reg [3:0] vga_red_reg   = 0;
-    reg [3:0] vga_green_reg = 0;
-    reg [3:0] vga_blue_reg  = 0;
+    reg [11:0] VGA_RGB_reg = 0;
 
     assign video_ready = !rst_pix && !waiting && active;
     wire liveActive = video_ready; // && active;
-    wire [3:0] vga_red, vga_green, vga_blue;
+    wire [11:0] VGA_RGB;
 
 
 //NOTE: VGA-PMOD only supports 4 bits/color, so take upper 4 bits
 generate
 if (GEN_PATTERN == 1) begin:_PAT_GEN1_
 
-        wire TT_R = (h_cntr_reg <= (v_cntr_reg +  89)),
-             TT_G = (h_cntr_reg <= (v_cntr_reg -   0)),
-             TT_B = (h_cntr_reg <= (v_cntr_reg - 130));
-        wire XY_R = (h_cntr_reg %  33 == 0) && (h_cntr_reg %  33 == 1),
-             XY_G = (h_cntr_reg %  50 == 0) && (h_cntr_reg %  50 == 2),
-             XY_B = (h_cntr_reg % 100 == 1) && (h_cntr_reg % 100 == 5);
-        wire [3:0]  T_R = (TT_R || XY_R) ? 4'hF : (v_cntr_reg[3:0]),
-                    T_G = (TT_G || XY_G) ? 4'hF : (v_cntr_reg[5:2]),
-                    T_B = (TT_B || XY_B) ? 4'hF : (v_cntr_reg[7:4]);
-        assign  vga_red     = (liveActive) ? T_R : 4'h0;
-        assign  vga_green   = (liveActive) ? T_G : 4'h0;
-        assign  vga_blue    = (liveActive) ? T_B : 4'h0;
+    wire TT_R = (h_cntr_reg <= (v_cntr_reg +  89)),
+            TT_G = (h_cntr_reg <= (v_cntr_reg -   0)),
+            TT_B = (h_cntr_reg <= (v_cntr_reg - 130));
+    wire XY_R = (h_cntr_reg %  33 == 0) && (h_cntr_reg %  33 == 1),
+            XY_G = (h_cntr_reg %  50 == 0) && (h_cntr_reg %  50 == 2),
+            XY_B = (h_cntr_reg % 100 == 1) && (h_cntr_reg % 100 == 5);
+    wire [3:0]  T_R = (TT_R || XY_R) ? 4'hF : (v_cntr_reg[3:0]),
+                T_G = (TT_G || XY_G) ? 4'hF : (v_cntr_reg[5:2]),
+                T_B = (TT_B || XY_B) ? 4'hF : (v_cntr_reg[7:4]);
+
+    assign  VGA_RGB = (liveActive) ? {
+                    T_R,
+                    T_G,
+                    T_B
+                } : 12'h000000;
 
 end:_PAT_GEN1_ else begin:_PASS_THRU_VID_
 
-        assign  vga_red     = (liveActive) ? video[ 7: 4] : 4'h0;
-        assign  vga_green   = (liveActive) ? video[15:12] : 4'h0;
-        assign  vga_blue    = (liveActive) ? video[23:20] : 4'h0;
+    assign  VGA_RGB = (liveActive) ? {
+                    video[23:20],
+                    video[15:12],
+                    video[ 7: 4]
+                } : 12'h000000;
+//TODO: Was "red in low bits" based on docs/example???
 
 end:_PASS_THRU_VID_
 endgenerate
@@ -151,16 +155,14 @@ endgenerate
         //NOTE: Ignore reset. We don't need it.
         v_sync_dly_reg  <= v_sync_reg;
         h_sync_dly_reg  <= h_sync_reg;
-        vga_red_reg     <= vga_red;
-        vga_green_reg   <= vga_green;
-        vga_blue_reg    <= vga_blue;
+        VGA_RGB_reg     <= VGA_RGB;
     end
 
-    assign VGA_HS_O = h_sync_dly_reg; // VGA_HS_O <= h_sync_dly_reg;
-    assign VGA_VS_O = v_sync_dly_reg; // VGA_VS_O <= v_sync_dly_reg;
-    assign VGA_R    = vga_red_reg;    // VGA_R <= vga_red_reg;
-    assign VGA_G    = vga_green_reg;  // VGA_G <= vga_green_reg;
-    assign VGA_B    = vga_blue_reg;   // VGA_B <= vga_blue_reg;
+    assign VGA_HS_O = h_sync_dly_reg;
+    assign VGA_VS_O = v_sync_dly_reg;
+    assign VGA_R    = VGA_RGB_reg[11:8];
+    assign VGA_G    = VGA_RGB_reg[7:4];
+    assign VGA_B    = VGA_RGB_reg[3:0];
 
 endmodule
 
