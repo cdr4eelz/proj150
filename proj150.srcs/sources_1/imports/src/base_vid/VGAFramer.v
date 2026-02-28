@@ -74,8 +74,11 @@ module VGAFramer (
     wire liveActive = video_ready; // && active;
     wire [3:0] vga_red, vga_green, vga_blue;
 
-    //NOTE: VGA PMOD only supports 4 bits per color, so we take upper 4 bits of each
-    generate if (GEN_PATTERN == 1) begin:PAT_GEN1
+
+//NOTE: VGA-PMOD only supports 4 bits/color, so take upper 4 bits
+generate
+if (GEN_PATTERN == 1) begin:_PAT_GEN1_
+
         wire TT_R = (h_cntr_reg <= (v_cntr_reg +  89)),
              TT_G = (h_cntr_reg <= (v_cntr_reg -   0)),
              TT_B = (h_cntr_reg <= (v_cntr_reg - 130));
@@ -88,11 +91,15 @@ module VGAFramer (
         assign  vga_red     = (liveActive) ? T_R : 4'h0;
         assign  vga_green   = (liveActive) ? T_G : 4'h0;
         assign  vga_blue    = (liveActive) ? T_B : 4'h0;
-    end else begin:PASS_THRU_VID
+
+end:_PAT_GEN1_ else begin:_PASS_THRU_VID_
+
         assign  vga_red     = (liveActive) ? video[ 7: 4] : 4'h0;
         assign  vga_green   = (liveActive) ? video[15:12] : 4'h0;
         assign  vga_blue    = (liveActive) ? video[23:20] : 4'h0;
-    end endgenerate
+
+end:_PASS_THRU_VID_
+endgenerate
 
 
     //CLOCK IS RESPONSIBILTY OF THE ENCOMPASING MODULE

@@ -152,8 +152,11 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 
 
 // synthesis translate_off
-generate if (COLT45_SHAKE)
-    always @(posedge clk) begin:_SHAKE_MSG_
+
+generate
+if (COLT45_SHAKE) begin:_SHAKE_MSG_
+
+    always @(posedge clk) begin
         if (isRead) case (addra)
             12'h000: if (COLT45_POLLS) $display("MEMIO: Poll Tx (%b)   @%t", Tx_Ready, $time);
             12'h001: if (COLT45_POLLS) $display("MEMIO: Poll Rx (%b)   @%t", Rx_Valid, $time);
@@ -169,7 +172,11 @@ generate if (COLT45_SHAKE)
             default: $display("MEMIO: MISS-WRITE (%h)   @%t", addra, $time);
         endcase
     end
+
+end:_SHAKE_MSG_
 endgenerate //COLT45_SHAKE
+
 // synthesis translate_on
+
 
 endmodule

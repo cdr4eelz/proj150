@@ -190,7 +190,8 @@ module LineEngine #(
     end
 
 
-generate if (SCANLINERUNNER) begin:_WITH_SLR_
+generate
+if (SCANLINERUNNER) begin:_WITH_SLR_
 
 //Write "run" of pixels instead via ScanLineRunner module
     assign SLR_valid        = cs_M[MH_RUN1],
@@ -213,7 +214,7 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
             wdf_data    = 128'bx,
             wdf_mask    = 16'bx;
 
-end else begin:_NO_SLR_
+end:_WITH_SLR_ else begin:_NO_SLR_
 
     assign SLR_valid = 1'b0;
 
@@ -244,7 +245,8 @@ end else begin:_NO_SLR_
         endcase
     end
 
-end endgenerate
+end:_NO_SLR_
+endgenerate
 
 //synthesis translate_off
 /*

@@ -258,11 +258,13 @@ module MemBank #(
 //=============DEBUGGING TOOLS BELOW THIS POINT=============
 `ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!
 
-// SIMULATION ONLY business
 
+// *** SIMULATION ONLY business ***
 // synthesis translate_off
 
-generate if (COLT45_MEMWRITE) begin:_MEMWRITE_
+generate
+if (COLT45_MEMWRITE) begin:_MEMWRITE_
+
     always@(posedge clk) if (!stall && |_WriteMask) begin
         // Plan to log these into a sequential list of critical actions (for stricter testing)
         $display("** [%h,%d] <= %h(%d) {%b}",
@@ -270,9 +272,14 @@ generate if (COLT45_MEMWRITE) begin:_MEMWRITE_
         $display("** TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b IB=%b DB=%b",
             DMEM_ADDR[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
     end
-end endgenerate
 
-generate if (COLT45_SCRATCH) begin:_SCRATCH_
+end:_MEMWRITE_
+endgenerate
+
+
+generate
+if (COLT45_SCRATCH) begin:_SCRATCH_
+
     always@(posedge clk) if (!stall && _hot_DB) begin
         $display("\n=============");
         DUMP_PC();
@@ -288,7 +295,9 @@ generate if (COLT45_SCRATCH) begin:_SCRATCH_
         end
         $display("=============\n");
     end
-end endgenerate
+
+end:_SCRATCH_
+endgenerate
 
 // synthesis translate_on
 

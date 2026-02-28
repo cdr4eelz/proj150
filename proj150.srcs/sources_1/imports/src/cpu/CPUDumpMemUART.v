@@ -94,18 +94,25 @@ module CPUDumpMemUART #(
         .DataOutValidRX(  ),  .DataOutRX(  ) // ...but insolent :(
     );
 
+
 // synthesis translate_off
-generate if (COLT45_STEPMAX > 0) begin:_STEPS_
+generate
+if (COLT45_STEPMAX > 0) begin:_STEPS_
+
     initial begin
         $monitor("M: %h %h %h %h %h %h",
             TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
     end
+
     always @(posedge clk) begin
         if (0) $strobe("C: %b %b %h %h %h %h %h %h", 
             rst, stall, TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
         if (ADDR > COLT45_STEPMAX) $stop();
     end
-end endgenerate
+
+end:_STEPS_
+endgenerate
 // synthesis translate_on
+
 
 endmodule

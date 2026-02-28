@@ -75,12 +75,13 @@ module MIPS150 #(
     wire  [ 3: 0] _WriteMask;
 
 
-generate if (CPU_CORE=="ECHODDR") begin:NOMEMS
+generate
+if (CPU_CORE=="ECHODDR") begin:NOMEMS
 
     assign pf_vframe = 1'b0, gp_vcode = 1'b0, gp_vframe = 1'b0,
             pf_wframe = 32'bx, gp_wcode = 32'bx, gp_wframe = 32'bx;
 
-end else begin:MEMS //"MIPS" & any others wanting MemBank
+end:NOMEMS else begin:MEMS //"MIPS" & any others wanting MemBank
 
     // Memory Bank & Memory Mapped I/O
     MemBank #(
@@ -111,15 +112,15 @@ end else begin:MEMS //"MIPS" & any others wanting MemBank
         .pf_status(pf_status),                          .gp_status(gp_status)   //input[15:0]
     );
 
-
-end endgenerate
+end:MEMS
+endgenerate
 
 
 // CPU-CORE (MIPS150 or alternate)
-generate if (CPU_CORE=="ECHODDR") begin:ECHODDR
+generate
+if (CPU_CORE=="ECHODDR") begin:ECHODDR
 
     //MemBank & RegFile unused (left to raisin)
-
     CPUEchoDDR #(
         .CPU_FREQ(CPU_FREQ),
         .BAUD_RATE(BAUD_RATE)
@@ -133,7 +134,7 @@ generate if (CPU_CORE=="ECHODDR") begin:ECHODDR
         .dcache_dout (dcache_dout),   .icache_dout (icache_dout)
     );
 
-end else begin:MIPS
+end:ECHODDR else begin:MIPS
 
     CPUMIPS #(
         .PC_BOOT(PC_BOOT), .PC_ISR(PC_ISR)
@@ -158,8 +159,8 @@ end else begin:MIPS
         ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
         .DBG_COUNT(DBG_COUNT)
     );
-end //<default> CPUMIPS
 
+end:MIPS //<default> CPUMIPS
 endgenerate
 
 endmodule

@@ -121,8 +121,10 @@ module PixelFeeder #(
     //Additional signals for debugging
     wire ffwr_ack, ffwr_overflow, ffrd_underflow;
 
+generate
+if ((COLT45_TESTPAT == 0) || (COLT45_TESTPAT == 1)) begin:_WITH_FIFO_
+
 //TODO:Insert DDRStage before pixel_fifo to allow LITTLEWORDIAN flip
-generate if (COLT45_TESTPAT <= 1) begin:WITH_FIFO
 //NOTE: Renamed FIFO signals to distinguish in/out, rd/wr, & clarify clock domain
     wire ffrd_prog_empty, ffrd_ready;
     pixel_fifo pf_fifo (
@@ -168,7 +170,9 @@ generate if (COLT45_TESTPAT <= 1) begin:WITH_FIFO
     assign ffrd_ready = fifo_running && video_ready; //TODO: Use ffrd_ready to detect xfer
     assign video_valid = fifo_running && ffrd_valid;
     
-end endgenerate
+end:_WITH_FIFO_
+endgenerate
+
 
 //TODO: Use REAL synchronizers for cross-clock signals!
 //FAULT and ACTVE detection
@@ -212,7 +216,9 @@ end endgenerate
     end
 
 
-generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
+generate
+if (COLT45_TESTPAT == 0) begin:_PIXFO_DDREAD_
+
 // *** Normal PixelFeeder activity (DDR -> FIFO) ***
 
     assign ffwr_valid = rdf_wren;
@@ -305,7 +311,8 @@ always @(posedge cpu_clk_g) begin
 end
 // synthesis translate_on
 
-end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
+end:_PIXFO_DDREAD_ else if (COLT45_TESTPAT == 1) begin:_PIXFO_SWEEP_
+
 // *** Simple test pattern output THROUGH the FIFO ***
     assign video = ffrd_dout;
     assign raf_wren = 1'b0;
@@ -337,7 +344,8 @@ end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
         8'd0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]
     };
 
-end else if (COLT45_TESTPAT == 2) begin:DIRECT_SWEEP
+end:_PIXFO_SWEEP_ else if (COLT45_TESTPAT == 2) begin:_DIRECT_SWEEP_
+
 // *** DIRECTLY send a pretty and scrolling pattern (NO FIFO) ***
     reg [15:0] sweep_RGB_dvi; //In dvi_clk_g domain
     assign video = {8'h00, sweep_RGB_dvi[15:8], sweep_RGB_dvi[11:4], sweep_RGB_dvi[7:0]};
@@ -352,7 +360,8 @@ end else if (COLT45_TESTPAT == 2) begin:DIRECT_SWEEP
         end
     end
 
-end else if (COLT45_TESTPAT == 3) begin:DIRECT_PAT
+end:_DIRECT_SWEEP_ else if (COLT45_TESTPAT == 3) begin:_DIRECT_PAT_
+
 // *** DIRECTLY inject simple moving pattern gen from FALL-2013-CP1 ***
     PatternGenerator #(
         .CLOCK_HZ(DVI_CLOCK_HZ), //DVI Clock
@@ -365,7 +374,10 @@ end else if (COLT45_TESTPAT == 3) begin:DIRECT_PAT
         .video_valid(video_valid),
         .video_ready(video_ready)
     );
-end endgenerate
+
+end:_DIRECT_PAT_
+endgenerate
+
 
 endmodule
 

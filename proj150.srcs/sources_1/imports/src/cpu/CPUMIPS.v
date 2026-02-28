@@ -257,12 +257,18 @@ assign trace = {
 };
 
 
-generate if (COLT45_BRK) begin:_BRK_
+generate
+if (COLT45_BRK) begin:_BRK_
+
     //TODO: Move from top to here
-end endgenerate //COLT45_BRK
+
+end:_BRK_
+endgenerate //COLT45_BRK
 
 
-generate if (COLT45_SCOPE) begin:_SCOPE_MIPSY_
+generate
+if (COLT45_SCOPE) begin:_SCOPE_MIPSY_
+
     wire [31:0] CS_TRIG0 = keywatch[31:0];
     wire [31:0] CS_TRIG1 = PC_DX[31:0];
     wire [31:0] CS_TRIG2 = INST_DX[31:0];
@@ -281,14 +287,16 @@ generate if (COLT45_SCOPE) begin:_SCOPE_MIPSY_
         .TRIG2( CS_TRIG2 ), // IN BUS [31:0]
         .TRIG3( CS_TRIG3 )  // IN BUS [31:0]
     ) /* synthesis syn_noprune=1 */;
-end endgenerate //COLT45_SCOPE
+
+end:_SCOPE_MIPSY_
+endgenerate //COLT45_SCOPE
 
 
-// SIMULATION ONLY business
-
+// *** SIMULATION ONLY business below ***
 // synthesis translate_off
+generate
+if (COLT45_STEPMAX) begin:_STEPS_
 
-generate if (COLT45_STEPMAX) begin:_STEPS_
     reg [15:0] DBG_cycle, DBG_step;
     initial begin
         $display ("%m");
@@ -340,19 +348,30 @@ generate if (COLT45_STEPMAX) begin:_STEPS_
 //        $display("%d]      : %b", DBG_cycle, IControl_MW); // Make a task to break into fields
         $strobe ("%d] -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
     end
-end endgenerate //COLT45_STEPMAX
+
+end:_STEPS_
+endgenerate //COLT45_STEPMAX
+
 
 task DUMP_PC; begin
     $display("PC: [%d] PC_DX=%h INST_DX=%h PC_MW=%h", CNT_Inst, PC_DX, INST_DX, PC_MW);
 end endtask
 
-generate if (COLT45_PC) begin:_PC_
+
+generate
+if (COLT45_PC) begin:_PC_
+
     always@(posedge clk) if (!stall && !rst) begin
         DUMP_PC();
     end
-end endgenerate //COLT45_PC
 
-generate if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "care" at clock edge
+end:_PC_
+endgenerate //COLT45_PC
+
+
+generate
+if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "care" at clock edge
+
     always@(posedge clk) if (!rst) begin
         if (REGFILE_ra1 != 0) begin
             $display(" reg1:FWD=%b R1(%h,%d)=%h (%d)", FWD_1, REGFILE_ra1, REGFILE_ra1, FWD_rd1, FWD_rd1);
@@ -361,13 +380,15 @@ generate if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "ca
             $display(" reg2:FWD=%b R2(%h,%d)=%h (%d)", FWD_2, REGFILE_ra2, REGFILE_ra2, FWD_rd2, FWD_rd2);
         end
     end
-end endgenerate
+
+end:_REGREAD_
+endgenerate
 
 // synthesis translate_on
 
 `else //COLT45_KILLFUN (either def/ndef check)
 
-assign trace = 1024'd0;
+    assign trace = 1024'd0;
 
 `endif //COLT45_KILLFUN (either def/ndef check)
 

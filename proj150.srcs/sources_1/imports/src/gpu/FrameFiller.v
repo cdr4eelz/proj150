@@ -93,7 +93,8 @@ module FrameFiller #(
     end
 
 
-generate if (SCANLINERUNNER) begin:_WITH_SLR_
+generate
+if (SCANLINERUNNER) begin:_WITH_SLR_
 
     assign SLR_valid        = (cs == S_RUN),
             SLR_frame       = {4'h1, framebits[5:0], 22'b0},
@@ -115,7 +116,7 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
             wdf_data    = 128'bx,
             wdf_mask    = 16'bx;
 
-end else begin:_NO_SLR_
+end:_WITH_SLR_ else begin:_NO_SLR_
 
     assign SLR_valid        = 1'b0,
             SLR_frame       = 32'bx,
@@ -138,7 +139,8 @@ end else begin:_NO_SLR_
             wdf_data        = {4{color_r}},             //Replicate same color on all 4 pixels of both writes
             wdf_mask        = {4{4'b0000}};             //Write all bytes on every write
 
-end endgenerate
+end:_NO_SLR_
+endgenerate
 
 //synthesis translate_off
     always @(posedge clk) begin

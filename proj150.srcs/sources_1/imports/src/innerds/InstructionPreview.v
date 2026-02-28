@@ -11,7 +11,9 @@ module InstructionPreview #(
 );
 
 //TODO:Consider a pretty simple casex for this
-generate if (USE_DECODER) begin:_DECODER_
+generate
+if (USE_DECODER) begin:_DECODER_
+
 /* verilator lint_off PINCONNECTEMPTY */
     InstructionControl decodeControl(
         ._inst(_inst),
@@ -29,7 +31,9 @@ generate if (USE_DECODER) begin:_DECODER_
         .Deviant(couldBranch)
     );
 /* verilator lint_on PINCONNECTEMPTY */
-end else begin:_COMPUTE_
+
+end:_DECODER_ else begin:_COMPUTE_
+
     wire [5:0] _opcode_ = _inst[31:26];
     wire [5:0] _funct_  = _inst[5:0];
 
@@ -41,6 +45,9 @@ end else begin:_COMPUTE_
     wire isRJump    = (isRType && (_funct_[5:1] == 5'b00100_));
 
     assign couldBranch  = (isBSimple || isBGELTZ || isJType || isRJump);
-end endgenerate
+
+end:_COMPUTE_
+endgenerate
+
 
 endmodule

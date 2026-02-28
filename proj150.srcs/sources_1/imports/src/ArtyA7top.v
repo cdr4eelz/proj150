@@ -143,153 +143,154 @@ module ArtyA7top #(
         fpga_serial_rx_iob <= FPGA_SERIAL_RX;
     end
 
-    generate if (CPU_CORE=="ECHOUART") begin:ECHOUART
+generate
+if (CPU_CORE=="ECHOUART") begin:ECHOUART
 
-        CPUEchoUART #( .CPU_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
-        ) CPU ( .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
-            .SerialRX(cpu_rx),  .SerialTX(cpu_tx) );
-        assign init_done = 1'b1;
+    CPUEchoUART #( .CPU_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
+    ) CPU ( .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
+        .SerialRX(cpu_rx),  .SerialTX(cpu_tx) );
+    assign init_done = 1'b1;
 
-    end else if (CPU_CORE=="DUMPUART") begin:DUMPUART
+end:ECHOUART else if (CPU_CORE=="DUMPUART") begin:DUMPUART
 
-        CPUDumpUART #( .CPU_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
-        ) CPU ( .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
-            .SerialRX(cpu_rx),  .SerialTX(cpu_tx) );
-        assign init_done = 1'b1;
+    CPUDumpUART #( .CPU_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
+    ) CPU ( .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
+        .SerialRX(cpu_rx),  .SerialTX(cpu_tx) );
+    assign init_done = 1'b1;
 
-    end else begin:MIPS150
+end:DUMPUART else begin:MIPS150
 
-        (* mark_debug = "true" *) wire stall_top, stall_dip;
-        // Debounce??? Once stall is asserted, perhaps momentary pushbutton could "step" the CPU???
-        assign stall_dip = switches[1]; //1'b0;  // TODO: Tie-in to a GPIO switch (and invert repeatedly)
+    (* mark_debug = "true" *) wire stall_top, stall_dip;
+    // Debounce??? Once stall is asserted, perhaps momentary pushbutton could "step" the CPU???
+    assign stall_dip = switches[1]; //1'b0;  // TODO: Tie-in to a GPIO switch (and invert repeatedly)
 
-        // MemoryDDR (WAS: Memory150)
-        (* mark_debug = "true" *) wire [31:0] dcache_addr;
-        (* mark_debug = "true" *) wire [ 3:0] dcache_we;
-        (* mark_debug = "true" *) wire        dcache_re;
-        (* mark_debug = "true" *) wire [31:0] dcache_din;
-        (* mark_debug = "true" *) wire [31:0] dcache_dout;
-        (* mark_debug = "true" *) wire        stall_dcache; //stall_cache;
-        (* mark_debug = "true" *) wire  [3:0] DBG_dcache;
+    // MemoryDDR (WAS: Memory150)
+    (* mark_debug = "true" *) wire [31:0] dcache_addr;
+    (* mark_debug = "true" *) wire [ 3:0] dcache_we;
+    (* mark_debug = "true" *) wire        dcache_re;
+    (* mark_debug = "true" *) wire [31:0] dcache_din;
+    (* mark_debug = "true" *) wire [31:0] dcache_dout;
+    (* mark_debug = "true" *) wire        stall_dcache; //stall_cache;
+    (* mark_debug = "true" *) wire  [3:0] DBG_dcache;
 
-        wire [31:0] icache_addr;
-        wire [ 3:0] icache_we;
-        wire        icache_re;
-        wire [31:0] icache_din;
-        wire [31:0] icache_dout;
-        wire        stall_icache; //stall_cache;
-        wire  [3:0] DBG_icache;
+    wire [31:0] icache_addr;
+    wire [ 3:0] icache_we;
+    wire        icache_re;
+    wire [31:0] icache_din;
+    wire [31:0] icache_dout;
+    wire        stall_icache; //stall_cache;
+    wire  [3:0] DBG_icache;
 
-        (* mark_debug = "true" *) wire  [3:0] DBG_adapt;
+    (* mark_debug = "true" *) wire  [3:0] DBG_adapt;
 
-        wire        video_ready,    video_valid;
-        wire [31:0] video;//[23:0]
-    //  wire        fb0; ???Was this "framebuffer0" like pf_wframe???
-        wire        pf_vframe,  gp_vcode,   gp_vframe;
-        wire [31:0] pf_wframe,  gp_wcode,   gp_wframe;
-        wire [31:0]             gp_rcode;
-        wire [15:0] pf_status,              gp_status;
-        wire        irq_pf_frame,   irq_gp_done;
+    wire        video_ready,    video_valid;
+    wire [31:0] video;//[23:0]
+//  wire        fb0; ???Was this "framebuffer0" like pf_wframe???
+    wire        pf_vframe,  gp_vcode,   gp_vframe;
+    wire [31:0] pf_wframe,  gp_wcode,   gp_wframe;
+    wire [31:0]             gp_rcode;
+    wire [15:0] pf_status,              gp_status;
+    wire        irq_pf_frame,   irq_gp_done;
 
-        MemoryDDR #(
-            .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT)
-        ) mem_arch (
-        // Critical clock & reset
-            .clk_cpu        (clk_cpu),
-            .rst_cpu_mem    (rst_cpu),
-            .rst_cpu_bus    (rst_cpu),  //TODO: Distinguish "mem" & "bus" & CPU resets?
-            .clk_mig_sys    (clk_mig_sys),
-            .rst_mig_sys_n  (rst_mig_sys_n),
-            .clk_mig_ref    (clk_mig_ref),
-            .clk_pix        (clk_pix),
-            .rst_pix        (rst_pix),
-            //.locked         (locked_top_clocks),  //No longer needed for MIG
-            .init_done      (init_done),  // Output HIGH when MIG is ready, likely in clk_mig_ui clock domain
-            .clk_mig_ui     (clk_mig_ui),
-            .rst_mig_ui     (rst_mig_ui),
-            .DBG_adapt      (DBG_adapt),
+    MemoryDDR #(
+        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT)
+    ) mem_arch (
+    // Critical clock & reset
+        .clk_cpu        (clk_cpu),
+        .rst_cpu_mem    (rst_cpu),
+        .rst_cpu_bus    (rst_cpu),  //TODO: Distinguish "mem" & "bus" & CPU resets?
+        .clk_mig_sys    (clk_mig_sys),
+        .rst_mig_sys_n  (rst_mig_sys_n),
+        .clk_mig_ref    (clk_mig_ref),
+        .clk_pix        (clk_pix),
+        .rst_pix        (rst_pix),
+        //.locked         (locked_top_clocks),  //No longer needed for MIG
+        .init_done      (init_done),  // Output HIGH when MIG is ready, likely in clk_mig_ui clock domain
+        .clk_mig_ui     (clk_mig_ui),
+        .rst_mig_ui     (rst_mig_ui),
+        .DBG_adapt      (DBG_adapt),
 
-        // DDR3 InOuts
-            .ddr3_dq        (ddr3_dq),      // inout  [15:0]
-            .ddr3_dqs_n     (ddr3_dqs_n),   // inout  [1:0]
-            .ddr3_dqs_p     (ddr3_dqs_p),   // inout  [1:0]
-        // DDR3 Outputs
-            .ddr3_addr      (ddr3_addr),    // output [13:0]
-            .ddr3_ba        (ddr3_ba),      // output [2:0]
-            .ddr3_ras_n     (ddr3_ras_n),   // output
-            .ddr3_cas_n     (ddr3_cas_n),   // output
-            .ddr3_we_n      (ddr3_we_n),    // output
-            .ddr3_ck_p      (ddr3_ck_p),    // output [0:0]
-            .ddr3_ck_n      (ddr3_ck_n),    // output [0:0]
-            .ddr3_cke       (ddr3_cke),     // output [0:0]
-            .ddr3_cs_n      (ddr3_cs_n),    // output [0:0]
-            .ddr3_dm        (ddr3_dm),      // output [1:0]
-            .ddr3_odt       (ddr3_odt),     // output [0:0]
-            .ddr3_reset_n   (ddr3_reset_n), // output //How to utilize this???
+    // DDR3 InOuts
+        .ddr3_dq        (ddr3_dq),      // inout  [15:0]
+        .ddr3_dqs_n     (ddr3_dqs_n),   // inout  [1:0]
+        .ddr3_dqs_p     (ddr3_dqs_p),   // inout  [1:0]
+    // DDR3 Outputs
+        .ddr3_addr      (ddr3_addr),    // output [13:0]
+        .ddr3_ba        (ddr3_ba),      // output [2:0]
+        .ddr3_ras_n     (ddr3_ras_n),   // output
+        .ddr3_cas_n     (ddr3_cas_n),   // output
+        .ddr3_we_n      (ddr3_we_n),    // output
+        .ddr3_ck_p      (ddr3_ck_p),    // output [0:0]
+        .ddr3_ck_n      (ddr3_ck_n),    // output [0:0]
+        .ddr3_cke       (ddr3_cke),     // output [0:0]
+        .ddr3_cs_n      (ddr3_cs_n),    // output [0:0]
+        .ddr3_dm        (ddr3_dm),      // output [1:0]
+        .ddr3_odt       (ddr3_odt),     // output [0:0]
+        .ddr3_reset_n   (ddr3_reset_n), // output //How to utilize this???
 
-        // Cache <=> CPU interface:
-            .dcache_addr(dcache_addr),  .icache_addr(icache_addr),  //input[31:0]
-            .dcache_we  (dcache_we  ),  .icache_we  (icache_we  ),  //input[3:0]
-            .dcache_re  (dcache_re  ),  .icache_re  (icache_re  ),  //input
-            .dcache_din (dcache_din ),  .icache_din (icache_din ),  //input[31:0]
-            .dcache_dout(dcache_dout),  .icache_dout(icache_dout),  //output[31:0]
-            .d_stall   (stall_dcache),  .i_stall   (stall_icache),  //output
-            .DBG_dcache (DBG_dcache ),  .DBG_icache (DBG_icache ),  //output[3:0]
+    // Cache <=> CPU interface:
+        .dcache_addr(dcache_addr),  .icache_addr(icache_addr),  //input[31:0]
+        .dcache_we  (dcache_we  ),  .icache_we  (icache_we  ),  //input[3:0]
+        .dcache_re  (dcache_re  ),  .icache_re  (icache_re  ),  //input
+        .dcache_din (dcache_din ),  .icache_din (icache_din ),  //input[31:0]
+        .dcache_dout(dcache_dout),  .icache_dout(icache_dout),  //output[31:0]
+        .d_stall   (stall_dcache),  .i_stall   (stall_icache),  //output
+        .DBG_dcache (DBG_dcache ),  .DBG_icache (DBG_icache ),  //output[3:0]
 
-        // PixelFeeder <=> DVI driver:
-            .video_ready(video_ready),  //input
-            .video_valid(video_valid),  //output
-            .video      (video      ),  //output[31:0] ([23:0] high byte not used)
+    // PixelFeeder <=> DVI driver:
+        .video_ready(video_ready),  //input
+        .video_valid(video_valid),  //output
+        .video      (video      ),  //output[31:0] ([23:0] high byte not used)
 
-        // GPU <=> CPU interface:
-            .pf_vframe  (pf_vframe),    .gp_vcode(gp_vcode),    .gp_vframe(gp_vframe),  //input
-            .pf_wframe  (pf_wframe),    .gp_wcode(gp_wcode),    .gp_wframe(gp_wframe),  //input [31:0]
-                                        .gp_rcode(gp_rcode),                            //output[31:0]
-            .pf_status  (pf_status),                            .gp_status(gp_status),  //output[15:0]
-            .irq_pf_frame(irq_pf_frame), .irq_gp_done(irq_gp_done)                      //output
-        );
+    // GPU <=> CPU interface:
+        .pf_vframe  (pf_vframe),    .gp_vcode(gp_vcode),    .gp_vframe(gp_vframe),  //input
+        .pf_wframe  (pf_wframe),    .gp_wcode(gp_wcode),    .gp_wframe(gp_wframe),  //input [31:0]
+                                    .gp_rcode(gp_rcode),                            //output[31:0]
+        .pf_status  (pf_status),                            .gp_status(gp_status),  //output[15:0]
+        .irq_pf_frame(irq_pf_frame), .irq_gp_done(irq_gp_done)                      //output
+    );
 
-        //assign video_ready = 1'b0;
+    //assign video_ready = 1'b0;
 
-        (* mark_debug = "true" *) wire [3:0] DBG_COUNT;
+    (* mark_debug = "true" *) wire [3:0] DBG_COUNT;
 
-        // MIPS 150 CPU
-        MIPS150 #(
-            .CPU_FREQ(CPU_FREQ),
-            .BAUD_RATE(BAUD_RATE),
-            .PC_BOOT(32'h4000_0000),
-            .PC_ISR(32'hC000_0180),
-            .CPU_CORE("MIPS")
-        ) CPU (
-            .clk(clk_cpu),  .rst(rst_cpu),  .stall(stall_top),
-        // Serial (UART):
-            .SerialRX(cpu_rx),  .SerialTX(cpu_tx),
-        // Memory Caches:
-            .dcache_addr(dcache_addr),  .icache_addr(icache_addr),
-            .dcache_we  (dcache_we  ),  .icache_we  (icache_we  ),
-            .dcache_re  (dcache_re  ),  .icache_re  (icache_re  ),
-            .dcache_din (dcache_din ),  .icache_din (icache_din ),
-            .dcache_dout(dcache_dout),  .icache_dout(icache_dout),
-        // GPU:
-            .pf_vframe  (pf_vframe),    .gp_vcode(gp_vcode),    .gp_vframe(gp_vframe),
-            .pf_wframe  (pf_wframe),    .gp_wcode(gp_wcode),    .gp_wframe(gp_wframe),
-                                        .gp_rcode(gp_rcode),
-            .pf_status  (pf_status),                            .gp_status(gp_status),
-            .irq_pf_frame(irq_pf_frame),    .irq_gp_done(irq_gp_done),
+    // MIPS 150 CPU
+    MIPS150 #(
+        .CPU_FREQ(CPU_FREQ),
+        .BAUD_RATE(BAUD_RATE),
+        .PC_BOOT(32'h4000_0000),
+        .PC_ISR(32'hC000_0180),
+        .CPU_CORE("MIPS")
+    ) CPU (
+        .clk(clk_cpu),  .rst(rst_cpu),  .stall(stall_top),
+    // Serial (UART):
+        .SerialRX(cpu_rx),  .SerialTX(cpu_tx),
+    // Memory Caches:
+        .dcache_addr(dcache_addr),  .icache_addr(icache_addr),
+        .dcache_we  (dcache_we  ),  .icache_we  (icache_we  ),
+        .dcache_re  (dcache_re  ),  .icache_re  (icache_re  ),
+        .dcache_din (dcache_din ),  .icache_din (icache_din ),
+        .dcache_dout(dcache_dout),  .icache_dout(icache_dout),
+    // GPU:
+        .pf_vframe  (pf_vframe),    .gp_vcode(gp_vcode),    .gp_vframe(gp_vframe),
+        .pf_wframe  (pf_wframe),    .gp_wcode(gp_wcode),    .gp_wframe(gp_wframe),
+                                    .gp_rcode(gp_rcode),
+        .pf_status  (pf_status),                            .gp_status(gp_status),
+        .irq_pf_frame(irq_pf_frame),    .irq_gp_done(irq_gp_done),
 
-            .DBG_COUNT(DBG_COUNT)
-        );
+        .DBG_COUNT(DBG_COUNT)
+    );
 
-        assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
+    assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
 
-        assign LED[0] = buttons[0] ^ (locked_top_clocks && init_done);
-        assign LED[1] = buttons[1] ^ (reset_top_clocks && rst_cpu);
-        assign LED[2] = buttons[2] ^ stall_dcache;
-        assign LED[3] = buttons[3] ^ stall_top;
-        // TODO: Map RGB LEDs in constraints file and drive them with PWM
-        (* mark_debug = "true" *) wire [3:0] led_rgb_set;
-        assign led_rgb_set = (switches[0]) ? DBG_dcache : DBG_adapt; //DBG_COUNT;
-        assign { led3_b, led2_r, led1_g, led0_b } = led_rgb_set ^ buttons;
+    assign LED[0] = buttons[0] ^ (locked_top_clocks && init_done);
+    assign LED[1] = buttons[1] ^ (reset_top_clocks && rst_cpu);
+    assign LED[2] = buttons[2] ^ stall_dcache;
+    assign LED[3] = buttons[3] ^ stall_top;
+    // TODO: Map RGB LEDs in constraints file and drive them with PWM
+    (* mark_debug = "true" *) wire [3:0] led_rgb_set;
+    assign led_rgb_set = (switches[0]) ? DBG_dcache : DBG_adapt; //DBG_COUNT;
+    assign { led3_b, led2_r, led1_g, led0_b } = led_rgb_set ^ buttons;
 
 //        (* mark_debug = "true" *) wire [3:0] DBG_dcache_MIG;
 //        Synchronizer #( .Width(4) ) sync_cache_dbg (
@@ -299,25 +300,26 @@ module ArtyA7top #(
 //        );
 //        (* mark_debug = "true" *) wire DBG_STUCK_MIG = DBG_dcache_MIG[3];
 
-        VGAFramer #(
-            .GEN_PATTERN(0) //The contents comes from PixelFeeder within MemoryDDR.
-            //.GEN_PATTERN(1) //Rather beautiful pattern generator, to verify basic VGA PMOD.
-        ) VGA (
-            .clk_pix(clk_pix), // input
-            .rst_pix(rst_pix), // input
+    VGAFramer #(
+        .GEN_PATTERN(0) //The contents comes from PixelFeeder within MemoryDDR.
+        //.GEN_PATTERN(1) //Rather beautiful pattern generator, to verify basic VGA PMOD.
+    ) VGA (
+        .clk_pix(clk_pix), // input
+        .rst_pix(rst_pix), // input
 
-            .video(video),  // input [31:0]
-            .video_valid(video_valid), // input
-            .video_ready(video_ready), // output
+        .video(video),  // input [31:0]
+        .video_valid(video_valid), // input
+        .video_ready(video_ready), // output
 
-            .VGA_HS_O(VGA_HS_O), // output
-            .VGA_VS_O(VGA_VS_O), // output
-            .VGA_R(VGA_R), // output [3:0]
-            .VGA_G(VGA_G), // output [3:0]
-            .VGA_B(VGA_B) // output [3:0]
-        );
+        .VGA_HS_O(VGA_HS_O), // output
+        .VGA_VS_O(VGA_VS_O), // output
+        .VGA_R(VGA_R), // output [3:0]
+        .VGA_G(VGA_G), // output [3:0]
+        .VGA_B(VGA_B) // output [3:0]
+    );
 
-    end endgenerate
+end:MIPS150
+endgenerate
 
     //assign {VGA_HS_O,VGA_VS_O,VGA_R,VGA_G,VGA_B} = 14'd0; // No video yet
 /*  VGATestPattern vga_gen (
