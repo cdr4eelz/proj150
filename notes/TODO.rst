@@ -2,7 +2,27 @@
 *** Modern TODOs and critical NOTES ***
 =======================================
 
-On deck
+*** Consider defining VGAPixels as only 4-bit per channel (12-bit total)
+        Allows twice the density in FIFOs and memory, and less "bandwidth"
+        between GPU and DDR3 (which has high latency). The VGA-PMOD wonly
+        has 4-bits per channel anyway. As a ridiculous option, the 12-bits
+        could be packed and unpacked in the FIFOs and memory, to squeeze
+        20 pixels * 12 bits-per-pixel = 240 bits (wasting 256-240=16 bits).
+        Even 21 pixels per transaction would be possible if tolerating an
+        odd packing arrangement. Some hardware assistance could shelter
+        most modules in the video pipelines with the odd pack/unpack stage:
+            Current 32-bits/pixel == 8 pix/tran;
+            Max 12-bits/pixel == 21/transaction (only 4 bits wasted);
+            Simpler 12-bits/pixel == 20/transaction (with 16 bits wasted).
+*** Combined pixel packing with lower resolution, {4-xtra,4-R,4-G,4-B}...
+        640x480 == 307200 pix/frame:
+            2457600 bytes/frame (307200 / ) @ 32-bits/pix (8 pix/trans * 256 bits/tran)
+            xyz bytes/frame @ 16-bits/pix 20 pix/tran / 256 pix/tran == 12288 transactions/frame @ 32-bits/pixel.
+            21 pix/2560 pix/transaction == 11657 transactions/frame @ 12
+
+
+On deck:
+    For each "named-block" (like begin:name"), ensure "end:name" is used too.
     On all FIFOs, adhear to wr_rst_busy/rd_rst_busy signals.
     Pixel FIFO has reset OUTPUTS that should pause their use until resets done.
     Enforce a minimum reset duration (and de-assert CPU last???).
@@ -24,6 +44,7 @@ On deck
     Clean out PixelFeeder/VGAFramer conditional synth (alternate video).
     PixelFeeder uses backogus "synchronizers" (maybe elsewhere too).
     Remove "hysteresis" from Pixel FIFO to avoid stammering fetches from memory.
+    Utilize "busy" signals from ALL FIFOs.
 
 
 // DDR3, CACHE, MIGADAPTER, MIG REPAIRS //

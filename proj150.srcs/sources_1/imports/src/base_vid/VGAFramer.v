@@ -70,41 +70,47 @@ module VGAFramer (
 
     assign video_ready = !rst_pix && !waiting && active;
     wire liveActive = video_ready; // && active;
-    wire [11:0] VGA_RGB;
+    wire [11:0] PAT_RGB, VGA_RGB;
 
 
 //NOTE: VGA-PMOD only supports 4 bits/color, so take upper 4 bits
 generate
 if (GEN_PATTERN == 1) begin:_PAT_GEN1_
 
-    wire TT_R = (h_cntr_reg <= (v_cntr_reg +  89)),
+    wire    TT_R = (h_cntr_reg <= (v_cntr_reg +  89)),
             TT_G = (h_cntr_reg <= (v_cntr_reg -   0)),
             TT_B = (h_cntr_reg <= (v_cntr_reg - 130));
-    wire XY_R = (h_cntr_reg %  33 == 0) && (h_cntr_reg %  33 == 1),
+    wire    XY_R = (h_cntr_reg %  33 == 0) && (h_cntr_reg %  33 == 1),
             XY_G = (h_cntr_reg %  50 == 0) && (h_cntr_reg %  50 == 2),
             XY_B = (h_cntr_reg % 100 == 1) && (h_cntr_reg % 100 == 5);
     wire [3:0]  T_R = (TT_R || XY_R) ? 4'hF : (v_cntr_reg[3:0]),
                 T_G = (TT_G || XY_G) ? 4'hF : (v_cntr_reg[5:2]),
                 T_B = (TT_B || XY_B) ? 4'hF : (v_cntr_reg[7:4]);
 
-    assign  VGA_RGB = (liveActive) ? {
-                    T_R,
-                    T_G,
-                    T_B
-                } : 12'h000000;
+    assign PAT_RGB  = {T_R, T_G, T_B};
 
 end:_PAT_GEN1_ else begin:_PASS_THRU_VID_
 
-    assign  VGA_RGB = (liveActive) ? {
-                    video[23:20],
-                    video[15:12],
-                    video[ 7: 4]
-                } : 12'h000000;
-//TODO: Was "red in low bits" based on docs/example???
+    //NOTE: VGA-PMOD only supports 4 bits/color, so take upper 4 bits
+    assign PAT_RGB  = {video[23:20], video[15:12], video[7:4]};
 
 end:_PASS_THRU_VID_
 endgenerate
 
+
+    localparam BORDER_WIDTH = 6, BORDER_HEIGHT = 6;
+    wire isLeft   = (h_cntr_reg < BORDER_WIDTH);
+    wire isRight  = (h_cntr_reg >= (H_MAX - BORDER_WIDTH));
+    wire isTop    = (v_cntr_reg < BORDER_HEIGHT);
+    wire isBottom = (v_cntr_reg >= (V_MAX - BORDER_HEIGHT));
+    wire isBorder = (isLeft || isRight || isTop || isBottom);
+
+//  .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
+    assign  VGA_RGB = (liveActive)
+                        ? (isBorder)
+                            ? 12'h4F8 // Greenish border
+                            : PAT_RGB
+                        : 12'h000;
 
     //CLOCK IS RESPONSIBILTY OF THE ENCOMPASING MODULE
 
@@ -112,6 +118,8 @@ endgenerate
     -------         SYNC GENERATION                 ------
     ----------------------------------------------------*/
 
+//TODO: I don't think I'm handling front/back porch correctly...
+//          If changed, might have to change other "h_cntr_reg/v_cntr_reg" usage
     always @(posedge clk_pix) begin
         if (rst_pix || waiting) begin
             h_cntr_reg <= 0;
@@ -148,7 +156,6 @@ endgenerate
         end
     end
     
-    
     assign active = ((h_cntr_reg < FRAME_WIDTH) && (v_cntr_reg < FRAME_HEIGHT));
 
     always @(posedge clk_pix) begin
@@ -160,6 +167,7 @@ endgenerate
 
     assign VGA_HS_O = h_sync_dly_reg;
     assign VGA_VS_O = v_sync_dly_reg;
+//TODO: *** Red was in low bits before. Was that based on docs/example??? ***
     assign VGA_R    = VGA_RGB_reg[11:8];
     assign VGA_G    = VGA_RGB_reg[7:4];
     assign VGA_B    = VGA_RGB_reg[3:0];

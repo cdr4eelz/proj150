@@ -36,3 +36,7 @@ more tests
 ----------------------------
 
 report_timing -from [get_clocks sys_clk_pin] -to [get_clocks clk_mig_101MHz_clk_wiz_1]
+
+
+Research warnings like this (even though it is for an IP "OOC" run):
+[DRC REQP-1839] RAMB36 async control check: The RAMB36E1 MIPS150.CPU/MEMS.bank/bram_dmem/U0/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/prim_init.ram/DEVICE_7SERIES.NO_BMM_INFO.SP.SIMPLE_PRIM36.ram has an input control pin MIPS150.CPU/MEMS.bank/bram_dmem/U0/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/prim_init.ram/DEVICE_7SERIES.NO_BMM_INFO.SP.SIMPLE_PRIM36.ram/ENARDEN (net: MIPS150.CPU/MEMS.bank/bram_dmem/U0/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/prim_init.ram/ena) which is driven by a register (MIPS150.mem_arch/ddr3_cadr_fifo/U0/inst_fifo_gen/gconvfifo.rf/gbi.bi/g7ser_birst.rstbt/rsync.ric.wr_rst_reg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
