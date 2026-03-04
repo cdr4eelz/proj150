@@ -1,12 +1,22 @@
-/proj150.srcs/sources_1/ip/
+#Delicate balance used to capture ONLY definitional IP files
+/proj150.srcs/sources_1/ip/*/*
+!/proj150.srcs/sources_1/ip/*/*.xci
+!/proj150.srcs/sources_1/ip/*/*.xml
+
 /proj150.cache/
 /proj150.hw/
 /proj150.ip_user_files/
 /proj150.runs/
 /proj150.sim/
+
+#Try to match temp/cache directories
 .Xil/
-*.jou
-*.log
+**/.Xil/
+
+**/*.jou
+**/*.log
 vivado_*.zip
 vivado_*.str
+
 .DS_Store
+**/.DS_Store
