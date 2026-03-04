@@ -106,12 +106,23 @@ endgenerate
     wire isBorder = (isLeft || isRight || isTop || isBottom);
 
 //  .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
-    assign  VGA_RGB = (liveActive)
-                        ? (isBorder)
-                            ? 12'h4F8 // Greenish border
-                            : PAT_RGB
-                        : 12'h000;
+// Create a matrix of colors selected by concatenation of the above border signals...
+//     case {isLeft, isRight, isTop, isBottom}...
+//         0000: Inside frame (not border) -- use pattern or video data
+//         0001: Bottom border -- Blueish
+//         0010: Top border -- Greenish
+//         0100: Right border -- Blueish
+//         1000: Left border -- Greenish
+//  etc... (Use casez to simplify the "table" logic
 
+    assign  VGA_RGB = (!liveActive)
+                        ? 12'h000
+                        : (!isBorder)
+                            ? PAT_RGB
+                            : (isLeft)
+                                ? 12'h4F8 // Greenish border
+                                : 12'h44F // Blueish border
+                        ;
     //CLOCK IS RESPONSIBILTY OF THE ENCOMPASING MODULE
 
     /*----------------------------------------------------
