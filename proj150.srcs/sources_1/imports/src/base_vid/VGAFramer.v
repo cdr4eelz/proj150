@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 /*--------------------------------------------------------------------------------
 -- This test-pattern generator was adapted to provide VGA frame/sync signals.
--- 
+--
 -- ORIGINAL BASE FILE came from a DIGILENT PmodVGA example in VHDL --
 -- Company: Digilent  Engineer: Arthur Brown  Copyright Digilent 2017
 --
@@ -98,11 +98,11 @@ end:_PASS_THRU_VID_
 endgenerate
 
 
-    localparam BORDER_WIDTH = 6, BORDER_HEIGHT = 6;
+    localparam BORDER_WIDTH = 10, BORDER_HEIGHT = 10;
     wire isLeft   = (h_cntr_reg < BORDER_WIDTH);
-    wire isRight  = (h_cntr_reg >= (H_MAX - BORDER_WIDTH));
+    wire isRight  = (h_cntr_reg >= (FRAME_WIDTH - BORDER_WIDTH)) && (h_cntr_reg < FRAME_WIDTH);
     wire isTop    = (v_cntr_reg < BORDER_HEIGHT);
-    wire isBottom = (v_cntr_reg >= (V_MAX - BORDER_HEIGHT));
+    wire isBottom = (v_cntr_reg >= (FRAME_HEIGHT - BORDER_HEIGHT)) && (v_cntr_reg < FRAME_HEIGHT);
     wire isBorder = (isLeft || isRight || isTop || isBottom);
 
 //  .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
@@ -119,7 +119,7 @@ endgenerate
                         ? 12'h000
                         : (!isBorder)
                             ? PAT_RGB
-                            : (isLeft)
+                            : (isLeft || isBottom)
                                 ? 12'h4F8 // Greenish border
                                 : 12'h44F // Blueish border
                         ;
@@ -153,20 +153,20 @@ endgenerate
                 v_cntr_reg <= v_cntr_reg; //Ensure signal gets a value
             end
 
-            if ((h_cntr_reg >= (H_FP + FRAME_WIDTH - 1)) &&  (h_cntr_reg < (H_FP + FRAME_WIDTH + H_PW - 1))) begin
+            if ((h_cntr_reg >= (H_FP + FRAME_WIDTH - 1)) && (h_cntr_reg < (H_FP + FRAME_WIDTH + H_PW - 1))) begin
                 h_sync_reg <= H_POL;
             end else begin
                 h_sync_reg <= !(H_POL);
             end
 
-            if  ((v_cntr_reg >= (V_FP + FRAME_HEIGHT - 1)) &&  (v_cntr_reg < (V_FP + FRAME_HEIGHT + V_PW - 1))) begin
+            if  ((v_cntr_reg >= (V_FP + FRAME_HEIGHT - 1)) && (v_cntr_reg < (V_FP + FRAME_HEIGHT + V_PW - 1))) begin
                 v_sync_reg <= V_POL;
             end else begin
                 v_sync_reg <= !(V_POL);
             end
         end
     end
-    
+
     assign active = ((h_cntr_reg < FRAME_WIDTH) && (v_cntr_reg < FRAME_HEIGHT));
 
     always @(posedge clk_pix) begin

@@ -72,7 +72,7 @@ module MemoryDDR #(
     output wire         irq_pf_frame, irq_gp_done
 );
 
-    
+
     (* mark_debug = "true" *) wire [3:0]  DBG_dcache_cs;
     wire [3:0]  DBG_icache_cs;
 
@@ -109,7 +109,7 @@ module MemoryDDR #(
     (* mark_debug = "true" *) wire            fifo_rdf_wr_en; //  DDR3: "valid"
     (* mark_debug = "true" *) wire [127:0]    fifo_rdf_din;   //  DDR3: data                NOTE:Same width
     (* mark_debug = "true" *) wire fifo_caf_under, fifo_wdf_under, fifo_rdf_wr_ack; //FOR DEBUG
-    
+
 // RequestController/MASTER <=> FIFOs:      [clk_cpu domain]
     (* mark_debug = "true" *) wire            rcon_caf_full;  //FIFO: "!ready"
     (* mark_debug = "true" *) wire            rcon_caf_wr_en; //  RCON: "valid"
@@ -328,7 +328,7 @@ module MemoryDDR #(
         .rst   (rst_mig_ui),        // input    : rst_cpu_bus vs rst_mig_ui
         // FIFO-WR: DDR3 clock-domain
         .wr_clk(clk_mig_ui),        // input    : MIG controller clock (2:1 or 4:1 of PHY clock)
-        .full  (fifo_rdf_full),     // output   : FIFO =>  DDR3: N/A (always ready) MIG doesn't check this 
+        .full  (fifo_rdf_full),     // output   : FIFO =>  DDR3: N/A (always ready) MIG doesn't check this
         .wr_en (fifo_rdf_wr_en),    // input    : FIFO  <= DDR3: "ready"
         .din   (fifo_rdf_din),      // input[127:0] : FIFO  <= DDR3: data-128
         .wr_ack(fifo_rdf_wr_ack),   // output   : <Unused> FOR debugging waveform
@@ -490,8 +490,8 @@ module MemoryDDR #(
     PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
-.COLT45_TESTPAT(0)  //Real deal w/FIFO (fetch from DDR3 frames)
-//.COLT45_TESTPAT(1)  //Simple "sweep" still with w/FIFO
+//.COLT45_TESTPAT(0)  //Real deal w/FIFO (fetch from DDR3 frames)
+.COLT45_TESTPAT(1)  //Simple "sweep" still with w/FIFO
 //.COLT45_TESTPAT(2)  //Non-FIFO Simple "sweep" no w/FIFO
 //.COLT45_TESTPAT(3)  //Non-FIFO pattern from FALL-2013
     ) pixfeed (
