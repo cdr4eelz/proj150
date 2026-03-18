@@ -41,13 +41,13 @@
     <Option Name="WTVcsLaunchSim" Val="0"/>
     <Option Name="WTRivieraLaunchSim" Val="0"/>
     <Option Name="WTActivehdlLaunchSim" Val="0"/>
-    <Option Name="WTXSimExportSim" Val="130"/>
-    <Option Name="WTModelSimExportSim" Val="127"/>
-    <Option Name="WTQuestaExportSim" Val="127"/>
-    <Option Name="WTIesExportSim" Val="127"/>
-    <Option Name="WTVcsExportSim" Val="127"/>
-    <Option Name="WTRivieraExportSim" Val="127"/>
-    <Option Name="WTActivehdlExportSim" Val="127"/>
+    <Option Name="WTXSimExportSim" Val="131"/>
+    <Option Name="WTModelSimExportSim" Val="128"/>
+    <Option Name="WTQuestaExportSim" Val="128"/>
+    <Option Name="WTIesExportSim" Val="128"/>
+    <Option Name="WTVcsExportSim" Val="128"/>
+    <Option Name="WTRivieraExportSim" Val="128"/>
+    <Option Name="WTActivehdlExportSim" Val="128"/>
     <Option Name="GenerateIPUpgradeLog" Val="TRUE"/>
     <Option Name="XSimRadix" Val="hex"/>
     <Option Name="XSimTimeUnit" Val="ns"/>
@@ -708,6 +708,12 @@
           <Attr Name="ImportTime" Val="1741031700"/>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <File Path="$PSRCDIR/sources_1/imports/software/simplesend/simplesend.inst.coe">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>

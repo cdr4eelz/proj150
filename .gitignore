@@ -8,6 +8,7 @@
 /proj150.ip_user_files/
 /proj150.runs/
 /proj150.sim/
+/icarus/
 
 #Try to match temp/cache directories
 .Xil/
@@ -20,3 +21,90 @@ vivado_*.str
 
 .DS_Store
 **/.DS_Store
+
+
+#### Alternate approach (incomplete list below) ####
+
+### # Ignore everything by default
+### * #Could remove/adjust temporarily to find files...
+###
+### # But explicitly allow what we need
+### !.gitignore
+### !proj150.xpr
+### !proj150.srcs/
+### !proj150.srcs/sources_1/
+### !proj150.srcs/sources_1/imports/
+### !proj150.srcs/sources_1/imports/src/
+### !proj150.srcs/sources_1/imports/src/**      # All your Verilog + any subdirs
+### !proj150.srcs/sources_1/ip/                 # MIG IP core files
+### !proj150.srcs/sources_1/ip/**/*.xci
+### !proj150.srcs/sources_1/ip/**/*.xcix
+### !proj150.srcs/sources_1/constrs/            # Constraints if here
+### !proj150.srcs/sources_1/constrs/*.xdc
+### !proj150.srcs/sources_1/bd/                 # If you ever add block designs
+### TODO: deal with constraints and other leftovers
+
+
+#### Alternate approach (from GROK... incomplete???)
+### # Vivado generated / temporary / cache directories (safe to delete/recreate)
+### .Xil/
+### *.cache/
+### *.runs/
+### *.sim/
+### *.ip_user_files/
+### *.gen/               # Especially .gen/sources_* and DCPs inside
+### *.hw/                # Hardware Manager debug sessions
+### 
+### # Logs, journals, backups, crash files
+### *.jou
+### *.log
+### *.str
+### vivado*.debug
+### vivado_pid*.str
+### *~
+### *.backup*
+### *.old
+### .DS_Store            # macOS junk, if you ever edit on Mac
+### 
+### # Bitstream and large binaries (re-generated on build)
+### *.bit
+### *.bin
+### *.mcs
+### *.elf                # If you ever add soft-core later
+### 
+### # Simulation / waveform junk
+### *.wdb
+### *.wcfg
+### xsim.dir/
+### *.vcd
+### *.vpd
+### *.fsdb
+### 
+### # IP output products that regenerate (keep .xci/.xcix for MIG config!)
+### *.dcp                # Checkpoints - huge and regenerate
+### *.edn
+### *.ngc
+### *.ngd
+### *.edf
+### *.sdf
+### *.stub.v             # Auto-generated stubs if any
+### 
+### # Project-specific ignores (add if you see other cruft)
+### *.lpr                # Sometimes in .hw/
+### *.ltx                # Debug probes
+### 
+### # Optional: If you regenerate everything via scripts/Tcl and don't commit .xpr
+### # proj150.xpr        # Uncomment only if using pure scripted flow
+### 
+### # Keep your sources explicitly (these are already added via git add, but helps clarity)
+### !proj150.srcs/
+### !proj150.srcs/sources_1/
+### !proj150.srcs/sources_1/imports/
+### !proj150.srcs/sources_1/imports/src/
+### !proj150.srcs/sources_1/imports/src/*.v     # Your Verilog files
+### !proj150.srcs/sources_1/imports/src/*.vh    # If any headers
+### !proj150.srcs/sources_1/ip/                 # MIG .xci / .xcix lives here usually
+### !proj150.srcs/sources_1/ip/**/*.xci*
+### !proj150.srcs/sources_1/constrs/            # If you have .xdc here
+### !proj150.srcs/sources_1/constrs/*.xdc
+
