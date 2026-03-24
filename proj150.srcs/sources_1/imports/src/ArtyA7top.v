@@ -14,7 +14,7 @@ module ArtyA7top #(
     input  wire         CK_RST_N,  // "ChipKit Reset" (Active LOW)
 
     // Basic GPIO (Note that some IOs are ignored if not present on other board)
-    input  wire[1:0]    SWITCH,  // Only 2 of 4 switches, PYNQ has only 2
+    input  wire[3:0]    SWITCH,  // NOTE: PYNQ has only 2 switches
     input  wire[3:0]    BUTTON,  // 4 pushbuttons
     output wire[3:0]    LED,     // 4 on/off LEDs, not RBG LEDs
     output wire led0_b, led1_g, led2_r, led3_b, // 4 RGB LEDs distinguished by color
@@ -122,14 +122,14 @@ module ArtyA7top #(
 
 
     // Debounce all switch & button signals
-    wire [5:0] clean_combo;
-    wire [1:0] switches;
+    wire [7:0] clean_combo;
+    wire [3:0] switches;
     wire [3:0] buttons;
-    ButtonClean #( .Width(6) ) clean_GPIO (  // 4 buttons + 2 switches = 6 signals
-        .IN( { BUTTON[3:0], SWITCH[1:0] } ),  // Merge into 6-bit signal
+    ButtonClean #( .Width(8) ) clean_GPIO (  // 4 buttons + 4 switches = 8 signals
+        .IN( { BUTTON[3:0], SWITCH[3:0] } ),  // Merge into 8-bit signal
         .Clock(clk_cpu), .Reset(rst_cpu),
         .OUT(clean_combo) );
-    assign { buttons[3:0], switches[1:0] } = clean_combo;  // Separate the signals
+    assign { buttons[3:0], switches[3:0] } = clean_combo;  // Separate the signals
 //TODO: Let sync/debounce complete before letting CPU out of reset!
 
     // Borrowed from 2024/2019 top level IOBs to drive/sense UART serial lines...
@@ -300,10 +300,7 @@ end:DUMPUART else begin:MIPS150
 //        );
 //        (* mark_debug = "true" *) wire DBG_STUCK_MIG = DBG_dcache_MIG[3];
 
-    VGAFramer #(
-        .GEN_PATTERN(0) //The contents comes from PixelFeeder within MemoryDDR.
-        //.GEN_PATTERN(1) //Rather beautiful pattern generator, to verify basic VGA PMOD.
-    ) VGA (
+    VGAFramer VGA (
         .clk_pix(clk_pix), // input
         .rst_pix(rst_pix), // input
 
@@ -315,7 +312,11 @@ end:DUMPUART else begin:MIPS150
         .VGA_VS_O(VGA_VS_O), // output
         .VGA_R(VGA_R), // output [3:0]
         .VGA_G(VGA_G), // output [3:0]
-        .VGA_B(VGA_B) // output [3:0]
+        .VGA_B(VGA_B), // output [3:0]
+
+        .BORDER_HEIGHT(switches[2] ? 12'd16 : 12'd0),
+        .BORDER_WIDTH(switches[2] ? 12'd16 : 12'd0),
+        .GEN_PATTERN(switches[3] ? 1'b1 : 1'b0)
     );
 
 end:MIPS150

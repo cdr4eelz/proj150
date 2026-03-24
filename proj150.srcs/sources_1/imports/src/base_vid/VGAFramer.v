@@ -25,9 +25,13 @@ module VGAFramer (
     output wire VGA_VS_O,
     output wire [3:0] VGA_R,
     output wire [3:0] VGA_G,
-    output wire [3:0] VGA_B
+    output wire [3:0] VGA_B,
+
+    // Optional border around the frame (for debugging)
+    input wire [11:0] BORDER_HEIGHT, // Use zeros for no border
+    input wire [11:0] BORDER_WIDTH, // Use zeros for no border
+    input wire GEN_PATTERN // 0 = video data, 1 = test pattern
 );
-    parameter GEN_PATTERN = 0;
 
     // See the end of this file for settings for other resolutions.
     //   *** BE SURE TO ADJUST THE CLOCK-WIZARD OUTPUT FREQ ***
@@ -69,14 +73,11 @@ module VGAFramer (
     reg [11:0] VGA_RGB_reg = 0;
 
     assign video_ready = !rst_pix && !waiting && active;
-    wire liveActive = video_ready; // && active;
-    wire [11:0] PAT_RGB, VGA_RGB;
+    wire [11:0] PAT_RGB;
+    reg  [11:0] VGA_RGB;
 
-
-//NOTE: VGA-PMOD only supports 4 bits/color, so take upper 4 bits
-generate
-if (GEN_PATTERN == 1) begin:_PAT_GEN1_
-
+//NOTE: VGA-PMOD is 4 bits/color, so take/generate upper 4 bits only
+    // Test pattern video signal
     wire    TT_R = (h_cntr_reg <= (v_cntr_reg +  89)),
             TT_G = (h_cntr_reg <= (v_cntr_reg -   0)),
             TT_B = (h_cntr_reg <= (v_cntr_reg - 130));
@@ -87,23 +88,18 @@ if (GEN_PATTERN == 1) begin:_PAT_GEN1_
                 T_G = (TT_G || XY_G) ? 4'hF : (v_cntr_reg[5:2]),
                 T_B = (TT_B || XY_B) ? 4'hF : (v_cntr_reg[7:4]);
 
-    assign PAT_RGB  = {T_R, T_G, T_B};
-
-end:_PAT_GEN1_ else begin:_PASS_THRU_VID_
-
-    //NOTE: VGA-PMOD only supports 4 bits/color, so take upper 4 bits
-    assign PAT_RGB  = {video[23:20], video[15:12], video[7:4]};
-
-end:_PASS_THRU_VID_
-endgenerate
+    assign PAT_RGB  = (GEN_PATTERN == 1'b0)
+                        ? {video[23:20], video[15:12], video[7:4]}
+                        : {T_R, T_G, T_B};
 
 
-    localparam BORDER_WIDTH = 10, BORDER_HEIGHT = 10;
+    //localparam BORDER_WIDTH = 16, BORDER_HEIGHT = 16;
     wire isLeft   = (h_cntr_reg < BORDER_WIDTH);
     wire isRight  = (h_cntr_reg >= (FRAME_WIDTH - BORDER_WIDTH)) && (h_cntr_reg < FRAME_WIDTH);
     wire isTop    = (v_cntr_reg < BORDER_HEIGHT);
     wire isBottom = (v_cntr_reg >= (FRAME_HEIGHT - BORDER_HEIGHT)) && (v_cntr_reg < FRAME_HEIGHT);
     wire isBorder = (isLeft || isRight || isTop || isBottom);
+    wire drawBorder = (BORDER_WIDTH > 0) || (BORDER_HEIGHT > 0);
 
 //  .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 // Create a matrix of colors selected by concatenation of the above border signals...
@@ -115,14 +111,19 @@ endgenerate
 //         1000: Left border -- Greenish
 //  etc... (Use casez to simplify the "table" logic
 
-    assign  VGA_RGB = (!liveActive)
-                        ? 12'h000
-                        : (!isBorder)
-                            ? PAT_RGB
-                            : (isLeft || isBottom)
-                                ? 12'h4F8 // Greenish border
-                                : 12'h44F // Blueish border
-                        ;
+always @(*) begin
+    VGA_RGB = 12'hFFF; // Default to white (should never be used unless error below)
+    if (!video_ready) begin // RGB should be 0's unless on screen and valid video data is ready
+        VGA_RGB = 12'h000;
+    end else if (!isBorder || !drawBorder) begin
+        VGA_RGB = PAT_RGB;
+    end else if (isLeft || isBottom) begin
+        VGA_RGB = 12'h4F8; // Greenish border
+    end else begin
+        VGA_RGB = 12'h44F; // Blueish border
+    end
+end
+
     //CLOCK IS RESPONSIBILTY OF THE ENCOMPASING MODULE
 
     /*----------------------------------------------------
