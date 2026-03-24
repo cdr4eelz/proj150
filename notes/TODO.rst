@@ -45,6 +45,13 @@ On deck:
     PixelFeeder uses backogus "synchronizers" (maybe elsewhere too).
     Remove "hysteresis" from Pixel FIFO to avoid stammering fetches from memory.
     Utilize "busy" signals from ALL FIFOs.
+(DONE) Use switch to select border overlay by VGAFramer module
+(Fun) Use button to cycle through PixelFeeder test patterns
+(Important) Try partial fake memory fetch or repeat same location to pin down PixelFeeder problem
+(InProgress) Create cleanup script and ensure "notes" directory is in .gitignore and cleanup script
+(Useful) Unify location of imported coefficient (*.coe) files
+(Useful) Export project as TCL script and attempt reconstruction in other location
+(Useful) Upgrade project to latest major version, upgrade & regen IP, etc. (Will it help bugs?)
 
 
 // DDR3, CACHE, MIGADAPTER, MIG REPAIRS //

@@ -23,9 +23,8 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 
 set_property -dict {PACKAGE_PIN A8 IOSTANDARD LVCMOS33} [get_ports {SWITCH[0]}]
 set_property -dict {PACKAGE_PIN C11 IOSTANDARD LVCMOS33} [get_ports {SWITCH[1]}]
-## IGNORE upper 2 switches since PYNQ boards lack them:set_multicycle_path
-#set_property -dict { PACKAGE_PIN C10   IOSTANDARD LVCMOS33 } [get_ports { SWITCH[2] }]; #IO_L13N_T2_MRCC_16 Sch=sw[2]
-#set_property -dict { PACKAGE_PIN A10   IOSTANDARD LVCMOS33 } [get_ports { SWITCH[3] }]; #IO_L14P_T2_SRCC_16 Sch=sw[3]
+set_property -dict {PACKAGE_PIN C10 IOSTANDARD LVCMOS33} [get_ports {SWITCH[2]}]
+set_property -dict {PACKAGE_PIN A10 IOSTANDARD LVCMOS33} [get_ports {SWITCH[3]}]
 
 ##RGB LEDs
 
@@ -351,5 +350,3 @@ set_max_delay -datapath_only -from [get_pins {raw_locked_r_reg/C}] -to [get_pins
 #######################################################################
 # ChipScope/ILA debug setup gets appended/removed below...            #
 #######################################################################
-
-
