@@ -1,0 +1,29 @@
+Matching version from MINT 21.3 (Ubu 22.04):
+    binutils-2.38
+    gcc-10.3.0
+
+Matching versions from MATE 24 (Ubu 24.04):
+    binutils-2.42
+    gcc-12.4.0
+
+Matching versions from ancient class (32-bit):
+GNU ld (GNU Binutils) 2.20.1.20100303
+mips-gcc (GCC) 4.1.2
+
+
+https://bigsearcher.com/mirrors/gcc/releases/
+https://ftp.gnu.org/gnu/binutils/
+
+wget https://ftp.gnu.org/gnu/binutils/binutils-2.42.tar.xz
+wget https://ftp.gnu.org/gnu/gcc/gcc-12.4.0/gcc-12.4.0.tar.xz
+
+../configure --prefix=/opt/mips --target=mips-unknown-elf --program-prefix=mips-unknown-elf- ### binutils elf
+../configure --prefix=/opt/mips --target=mips-linux-gnu   --program-prefix=mips-linux-gnu-   ### binutils lin
+make -j6 && make install
+
+../configure --prefix=$HOME/opt --target=mips-unknown-elf --program-prefix=mips-unknown-elf- --enable-languages=c
+../configure --prefix=$HOME/opt --target=mips-linux-gnu   --program-prefix=mips-linux-gnu-   --enable-languages=c
+   ### ??? --with-gnu-as --with-gnu-ld
+
+make -j6 LANGUAGES=c && make install LANGUAGES=c
+
