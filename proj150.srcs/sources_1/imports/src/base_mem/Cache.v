@@ -77,8 +77,9 @@ module Cache #(
 // Needed for set-associative cache
     output wire         tag_hit,
     output wire         tag_valid,
-// Debug state machine current-state:
-    output wire[3:0]    DBG_cache_cs
+// Debug state machine current-state & allow disable of cache matching:
+    output wire[3:0]    DBG_cache_cs,
+    input wire          DBG_disable
 );
 
     // State declarations:
@@ -181,7 +182,7 @@ module Cache #(
     // Some signals to make the FSM cleaner:
     assign tag_valid = tag_line_out[`IDX_TAG_VALID];
     assign tag_equal = tag_line_out[`IDX_TAG_TAG] == tag_hold;
-    assign tag_hit = tag_valid && tag_equal;
+    assign tag_hit   = tag_valid && tag_equal && !DBG_disable;
 
     assign write_hit_hold = |we_hold && tag_hit;
 
