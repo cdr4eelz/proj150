@@ -50,10 +50,11 @@ module ArtyA7top #(
 );
 //TODO: Use Debouncer.v & ButtonParser.v rather than custom crap.
     // BUFFER the board clock (manually switch between Arty-A7 vs PYNQ)
+    //TODO: If IBUFG or BUFG work, change clock name to have "_g" suffix
     wire clk_in_100MHz; //, clk_in_100MHz_g;  // Arty-A7 or PYNQ ARM-CPU clk-out
     //IBUF vs BUFG
-    IBUF board_clk_ibuf (.I(CLK_100MHz), .O(clk_in_100MHz));  // Vivado refuses IBUFG!
-    //BUFG board_clk_bufg (.I(clk_temp_1), .O(clk_in_100MHz_g));  // Must explicitly add BUFG.
+    IBUF board_clk_ibuf (.I(CLK_100MHz), .O(clk_in_100MHz));
+    //BUFG board_clk_bufg (.I(CLK_100MHz), .O(clk_in_100MHz));  // Must explicitly add BUFG.
     //wire clk_in_125MHz_G;  // PYNQ board clockDDR
     //IBUFG (.I(CLK_125MHz), .O(clk_in_125MHz_g));
 
@@ -69,7 +70,7 @@ module ArtyA7top #(
     wire locked_clock0, locked_clock1, locked_top_clocks;  // Participate in startup sequence
     wire clk_mig_sys, clk_mig_ref, clk_cpu, clk_pix;
 //TODO: Figure out if we need BUFG on these clocks???
-    clk_wiz_0 top_clocks (  // Generate various clocks for components
+    clk_wiz_0 TOP_clocks (  // Generate various clocks for components
     // Clock in ports
         .clk_in_100MHz(clk_in_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
         //.clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board)
@@ -85,7 +86,7 @@ module ArtyA7top #(
     //assign locked_clock1 = 1'b1; // Disable MIG clock, use approximate 100MHz directly
     //assign clk_mig_sys = clk_in_100MHz; // Drive MIG (input) clock directly from board clock (100MHz)
     // ^^^ Using clk_in_100MHz directly is approximate (wants 101.01MHz) but hopefully a cleaner clock!
-    clk_wiz_1 MIG_clock (
+    clk_wiz_1 MIG_clocks (
     // Clock in ports
         .clk_in_100MHz(clk_in_100MHz),
     // Clock out ports
@@ -247,7 +248,9 @@ end:DUMPUART else begin:MIPS150
         .pf_wframe  (pf_wframe),    .gp_wcode(gp_wcode),    .gp_wframe(gp_wframe),  //input [31:0]
                                     .gp_rcode(gp_rcode),                            //output[31:0]
         .pf_status  (pf_status),                            .gp_status(gp_status),  //output[15:0]
-        .irq_pf_frame(irq_pf_frame), .irq_gp_done(irq_gp_done)                      //output
+        .irq_pf_frame(irq_pf_frame), .irq_gp_done(irq_gp_done),                     //output
+    // Debug signals:
+        .DBG_no_cache(switches[0])
     );
 
     //assign video_ready = 1'b0;
@@ -283,14 +286,14 @@ end:DUMPUART else begin:MIPS150
 
     assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
 
-    assign LED[0] = buttons[0] ^ (locked_top_clocks && init_done);
-    assign LED[1] = buttons[1] ^ (reset_top_clocks && rst_cpu);
-    assign LED[2] = buttons[2] ^ stall_dcache;
-    assign LED[3] = buttons[3] ^ stall_top;
+    assign LED[0] = (locked_top_clocks && init_done);
+    assign LED[1] = (reset_top_clocks && rst_cpu);
+    assign LED[2] = stall_dcache;
+    assign LED[3] = stall_top;
     // TODO: Map RGB LEDs in constraints file and drive them with PWM
     (* mark_debug = "true" *) wire [3:0] led_rgb_set;
-    assign led_rgb_set = (switches[0]) ? DBG_dcache : DBG_adapt; //DBG_COUNT;
-    assign { led3_b, led2_r, led1_g, led0_b } = led_rgb_set ^ buttons;
+    assign led_rgb_set = (buttons[0]) ? DBG_dcache : DBG_adapt; //DBG_COUNT;
+    assign { led3_b, led2_r, led1_g, led0_b } = led_rgb_set;
 
 //        (* mark_debug = "true" *) wire [3:0] DBG_dcache_MIG;
 //        Synchronizer #( .Width(4) ) sync_cache_dbg (
