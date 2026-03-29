@@ -78,8 +78,8 @@ module Cache #(
     output wire         tag_hit,
     output wire         tag_valid,
 // Debug state machine current-state & allow disable of cache matching:
-    output wire[3:0]    DBG_cache_cs,
-    input wire          DBG_disable
+    input wire          DBG_disable,
+    output wire[3:0]    DBG_cache_cs
 );
 
     // State declarations:
