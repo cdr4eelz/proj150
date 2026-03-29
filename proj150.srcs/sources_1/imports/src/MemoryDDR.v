@@ -495,8 +495,8 @@ module MemoryDDR #(
     PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
-.COLT45_TESTPAT(0)  //Real deal w/FIFO (fetch from DDR3 frames)
-//.COLT45_TESTPAT(1)  //Simple "sweep" still with w/FIFO
+//.COLT45_TESTPAT(0)  //Real deal w/FIFO (fetch from DDR3 frames)
+.COLT45_TESTPAT(1)  //Simple "sweep" still with w/FIFO
 //.COLT45_TESTPAT(2)  //Non-FIFO Simple "sweep" no w/FIFO
 //.COLT45_TESTPAT(3)  //Non-FIFO pattern from FALL-2013
     ) pixfeed (
