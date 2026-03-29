@@ -69,7 +69,10 @@ module MemoryDDR #(
     input  wire[31: 0]  pf_wframe,    gp_wcode, gp_wframe,
     output wire[31: 0]                gp_rcode,
     output wire[15: 0]  pf_status,              gp_status,
-    output wire         irq_pf_frame, irq_gp_done
+    output wire         irq_pf_frame, irq_gp_done,
+
+    // Debug signals:
+    input  wire DBG_no_cache
 );
 
 
@@ -444,8 +447,8 @@ module MemoryDDR #(
         .wdf_wren   (inst_wdf_wren),
         //Unused in this project
         .tag_hit(), .tag_valid(),
-        .DBG_cache_cs(DBG_icache_cs),
-        .DBG_disable(1'b1)
+        .DBG_disable(DBG_no_cache),
+        .DBG_cache_cs(DBG_icache_cs)
     );
 //    assign i_stall = 1'b0;
 //    assign DBG_icache_cs = 4'b0000;
@@ -478,8 +481,8 @@ module MemoryDDR #(
         .wdf_wren   (data_wdf_wren),
         //Unused in this project
         .tag_hit(), .tag_valid(),
-        .DBG_cache_cs(DBG_dcache_cs),
-        .DBG_disable(1'b1)
+        .DBG_disable(DBG_no_cache),
+        .DBG_cache_cs(DBG_dcache_cs)
     );
 //...ENABLE-DATA...
 /*  assign d_stall = 1'b0;
