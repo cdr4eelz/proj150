@@ -11,6 +11,10 @@ GNU ld (GNU Binutils) 2.20.1.20100303
 mips-gcc (GCC) 4.1.2
 
 
+yum install gmp gmp-devel gmp-static  mpfr mpfr-devel libmpc libmpc-devel compat-libmpc make gcc g++ bison flex texinfo llvm clang parted gparted wget curl m4 autoconf automake gtkwave.x86_64
+
+
+
 https://bigsearcher.com/mirrors/gcc/releases/
 https://ftp.gnu.org/gnu/binutils/
 
@@ -21,9 +25,14 @@ wget https://ftp.gnu.org/gnu/gcc/gcc-12.4.0/gcc-12.4.0.tar.xz
 ../configure --prefix=/opt/mips --target=mips-linux-gnu   --program-prefix=mips-linux-gnu-   ### binutils lin
 make -j6 && make install
 
-../configure --prefix=$HOME/opt --target=mips-unknown-elf --program-prefix=mips-unknown-elf- --enable-languages=c
-../configure --prefix=$HOME/opt --target=mips-linux-gnu   --program-prefix=mips-linux-gnu-   --enable-languages=c
-   ### ??? --with-gnu-as --with-gnu-ld
+*** Add /opt/mips/bin to PATH before compile GCC
+
+#../configure --prefix=/opt/mips --target=mips-unknown-elf --program-prefix=mips-unknown-elf- --enable-languages=c
+#../configure --prefix=/opt/mips --target=mips-linux-gnu   --program-prefix=mips-linux-gnu-   --enable-languages=c
+#   ### ??? --with-gnu-as --with-gnu-ld
+
+../configure --prefix=/opt/mips --target=mips-unknown-elf --program-prefix=mips-unknown-elf- --enable-languages=c --disable-libssp --disable-threads --without-libssp --disable-lto
+
 
 make -j6 LANGUAGES=c && make install LANGUAGES=c
 
