@@ -134,7 +134,7 @@ end:_WITH_SLR_ else begin:_NO_SLR_
 
     wire [31:0] head_addr   = {4'h1, framebits, y[9:0], x[9:0], 2'b00}; //"Byte" address
     assign caf_wren         = ((cs == S_RUN) && !x[2]), //Skip address on odds's
-            caf_addr        = {3'b000, head_addr[27:3]},  //Turn into 31-bit "DoubleWord" or DDR-address
+            caf_addr        = {1'b0, head_addr[27:1]},    // byte addr -> MIG units (16-bit); was >>3
             wdf_wren        = (cs == S_RUN),            //Data & mask on odd & even
             wdf_data        = {4{color_r}},             //Replicate same color on all 4 pixels of both writes
             wdf_mask        = {4{4'b0000}};             //Write all bytes on every write

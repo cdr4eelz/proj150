@@ -227,7 +227,7 @@ module GraphicsProcessor #(
 
 
 //FETCH GPCode chunks & present as 32-bit INSTruction stream
-    assign raf_addr  = {3'd0, code_chunk, 2'b00}; //WAS: 3'd0  Chunk addr in 64-bit "resolution"
+    assign raf_addr  = {1'b0, code_chunk, 4'b0000}; // 256-bit chunk -> MIG units (16-bit): byte addr >> 1
     assign raf_wren  = (cs_M==MS_PROC) && !rdf_rden && chunk_advance;
     //NOTE:Don't base raf_wren on !raf_full when using RequestController!!!
 

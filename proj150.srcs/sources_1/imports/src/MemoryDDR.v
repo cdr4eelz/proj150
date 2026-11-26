@@ -173,6 +173,13 @@ module MemoryDDR #(
     wire [127:0] line_wdf_data;
     wire [143:0] line_wdf_mdat = {line_wdf_mask,line_wdf_data};
 
+    // The GPU drives all of its writes through the slr_* (bpas_*) port; the separate FrameFiller and
+    // LineEngine RequestController ports are unused here. Tie them off (they were left undriven).
+    assign fill_waf_wren = 1'b0, fill_waf_addr = 28'd0, fill_wdf_wren = 1'b0,
+           fill_wdf_mask = 16'd0, fill_wdf_data = 128'd0;
+    assign line_waf_wren = 1'b0, line_waf_addr = 28'd0, line_wdf_wren = 1'b0,
+           line_wdf_mask = 16'd0, line_wdf_data = 128'd0;
+
     //Bypass/SLR <=> RequestController:         [Write-only]
     wire         bpas_waf_full; //RCON:
     wire         bpas_waf_wren;
