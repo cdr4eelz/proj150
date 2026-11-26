@@ -271,8 +271,8 @@ if (COLT45_TESTPAT == 0) begin:_PIXFO_DDREAD_
 
     // Local pattern: white border, green right edge, colour ramps elsewhere (4 equal pixels per beat)
     wire [ 7:0] pat_r  = head_x[9:2];
-    wire [ 7:0] pat_g  = head_y[8:1];
-    wire [ 7:0] pat_b  = head_x[9:2] ^ head_y[7:0];
+    wire [ 7:0] pat_g  = head_y[9:2];               // 0..149 over 600 lines (head_y[8:1] wrapped at line 512)
+    wire [ 7:0] pat_b  = head_x[9:2] ^ head_y[9:2];
     wire [31:0] pat_px = (head_x == 0 || head_y == 0 || last_y) ? 32'h00F0F0F0 :
                          (last_x && local_half)                 ? 32'h0022FF22 : {8'd0, pat_r, pat_g, pat_b};
 
