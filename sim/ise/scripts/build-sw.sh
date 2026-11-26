@@ -13,7 +13,7 @@
 set -euo pipefail
 sw=$1; scratch=$2; run=$3; bios=$4; prog=${5:-}; shift 5 2>/dev/null || shift $#
 here=$(cd "$(dirname "$0")" && pwd)
-src=$here/../../src
+src=$here/../../../proj150.srcs/sources_1/imports/src   # proj150 RTL tree
 mkdir -p "$scratch" "$run"
 
 bin2mif() { python3 -c '

@@ -25,17 +25,21 @@ VVP      ?= vvp
 STD      ?= -g2005
 # -Wtimescale is off: most repo sources (e.g. base_util/*.v) have no `timescale.
 WFLAGS   ?= -Wall -Wno-timescale
-IFLAGS   ?= -grelative-include
+# -I$(SRC)/cpu: the ISE testbenches (testbench/) include "../cpuglobal.vh" relative to their old home src/testbench/
+IFLAGS   ?= -grelative-include -I$(SRC)/cpu
 TIMEOUT  ?= 600
 BUILD    := build
-SRC      := ../src
-TBSRC    := $(SRC)/testbench
+# proj150: the RTL lives in the Vivado source tree; the ISE testbenches were copied to testbench/
+SRC      := ../../proj150.srcs/sources_1/imports/src
+TBSRC    := testbench
 # Library dirs for tests that let iverilog find modules by file name (<name>.YDIRS := $(SRC_YDIRS))
 SRC_YDIRS := $(addprefix $(SRC)/,. cpu innerds base_util base_io base_mem gpu base_vid cross)
 # CoreGen wrapper dirs (BRAM/FIFO cores; need XILINX_SRC) and the whole-system dirs
 CORE_YDIRS := $(patsubst %/,%,$(sort $(dir $(wildcard $(SRC)/core_ip/*/*.v $(SRC)/core_ip/*/*/*.v))))
 SYS_YDIRS  := $(SRC_YDIRS) $(SRC)/base_mem/mig_v3_61 $(CORE_YDIRS)
-SW       := ../../software
+# MIPS software is not part of proj150: it is built in the adjacent cs150-1245 checkout
+CS150    ?= ../../../cs150-1245
+SW       := $(CS150)/software
 DEFINES  ?=
 PLUSARGS ?=
 WAVES    ?=
@@ -67,10 +71,10 @@ COREGEN_OUTPUTS := $(COREGEN_XCO:.xco=.v) $(patsubst %.xco,%.mif,$(filter $(SRC)
 COREGEN_MISSING := $(filter-out $(wildcard $(COREGEN_OUTPUTS)),$(COREGEN_OUTPUTS))
 HAVE := $(if $(and $(XILINX_SRC),$(wildcard $(XILINX_SRC)/glbl.v),$(wildcard $(XILINX_SRC)/unisims/BUFG.v)),xilinx) \
         $(if $(shell command -v $(M_PRE)-gcc >/dev/null 2>&1 && command -v $(M_PRE)-objcopy >/dev/null 2>&1 && echo y),mips) \
-        $(if $(COREGEN_MISSING),,coregen)
+        $(if $(COREGEN_XCO),$(if $(COREGEN_MISSING),,coregen))
 NEED_HINT.xilinx := needs Xilinx sim sources: set XILINX_SRC=<ISE>/verilog/src
 NEED_HINT.mips   := needs the MIPS toolchain ($(M_PRE)-gcc)
-NEED_HINT.coregen := needs CoreGen outputs ($(firstword $(COREGEN_MISSING)) ...): run coregen (make -C ../src/core_ip) or copy them in, see README
+NEED_HINT.coregen := $(if $(COREGEN_XCO),needs CoreGen outputs ($(firstword $(COREGEN_MISSING)) ...): run coregen or copy them in (see README),proj150 has no CoreGen cores: Vivado IP sim models come with port-sim-system)
 missing = $(filter-out $(HAVE),$($(1).NEEDS))
 # Xilinx library dirs: -y only, so iverilog compiles just the modules a test uses (no caching needed)
 XILINX_YFLAGS = -y $(XILINX_SRC)/unisims -y $(XILINX_SRC)/XilinxCoreLib -s glbl
@@ -89,6 +93,14 @@ FAIL_RE ?= ERRORS: [1-9]|FAIL
 
 TESTS := $(sort $(basename $(notdir $(wildcard tests/*.mk))))
 include $(wildcard tests/*.mk)
+
+# proj150 port: tests that need RTL from a later port branch are SKIPped with the branch name;
+# each branch deletes its line once the RTL is in (RUN_SKIPPED=1 runs them anyway)
+PENDING.port-cpu-fixes := byte_access4 byte_access4x cop0 cpu_bal_untaken_link cpu_isa cpu_isa_ddr cpu_jalr_rd \
+  cpu_lb_lh_sign isr_epc_nostall isr_epc_stall12 isr_epc_stall4 isr_mtc0_collision stage_dx stage_mw
+PENDING.port-gpu-v2 := frame_filler gpu_raster_lw0 gpu_raster_lw1 graphics_processor line_engine
+PENDING.port-mmio-uart := memmapio_haltval memmapio_prng memmapio_uart prng32lfsr
+$(foreach b,$(patsubst PENDING.%,%,$(filter PENDING.%,$(.VARIABLES))),$(foreach t,$(PENDING.$(b)),$(eval $(t).SKIP := pending $(b))))
 
 # per-test value with fallback: $(call tv,<test>,<VAR>,<default>)
 tv = $(if $(filter undefined,$(origin $(1).$(2))),$(3),$($(1).$(2)))

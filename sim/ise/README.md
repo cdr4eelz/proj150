@@ -1,3 +1,10 @@
+> **proj150 note.** This rig was imported from cs150-1245 ISE (`hardware/sim-icarus`, `hardware/src/testbench`)
+> and runs against proj150's RTL (`SRC = ../../proj150.srcs/sources_1/imports/src`, ISE benches in
+> `testbench/`). Tests that need RTL from a later port branch are SKIPped as `pending <branch>` (see
+> `PENDING.*` in the Makefile). Software is not built here: `CS150=<cs150-1245 checkout>` (default
+> `../../../cs150-1245`) is only used by the whole-system tests. Run from the top with `make sim-ise`.
+> Paths below that mention `../src` or `../../software` refer to the ISE layout.
+
 # sim-icarus: Icarus Verilog tests
 
 Small self-checking testbenches run with [Icarus Verilog](https://steveicarus.github.io/iverilog/).
