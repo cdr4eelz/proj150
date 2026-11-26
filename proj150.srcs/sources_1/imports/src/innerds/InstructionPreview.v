@@ -1,20 +1,18 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 
 module InstructionPreview #(
-    parameter DD=`COLT45_DD,
     parameter USE_DECODER=1
 )(
     // Inputs to decode (PC to pin down branch/jump)
-    input  wire[31:0 ]  _inst,
+    input [31:0 ] _inst,
     // Preview basics about instruction
-    output wire         couldBranch
+    output couldBranch
 );
 
 //TODO:Consider a pretty simple casex for this
-generate
-if (USE_DECODER) begin:_DECODER_
-
-/* verilator lint_off PINCONNECTEMPTY */
+generate if (USE_DECODER) begin:_DECODER_
     InstructionControl decodeControl(
         ._inst(_inst),
         // Global control signals
@@ -30,10 +28,7 @@ if (USE_DECODER) begin:_DECODER_
         // Specific to Instruction-Preview
         .Deviant(couldBranch)
     );
-/* verilator lint_on PINCONNECTEMPTY */
-
-end:_DECODER_ else begin:_COMPUTE_
-
+end else begin:_COMPUTE_
     wire [5:0] _opcode_ = _inst[31:26];
     wire [5:0] _funct_  = _inst[5:0];
 
@@ -45,9 +40,6 @@ end:_DECODER_ else begin:_COMPUTE_
     wire isRJump    = (isRType && (_funct_[5:1] == 5'b00100_));
 
     assign couldBranch  = (isBSimple || isBGELTZ || isJType || isRJump);
-
-end:_COMPUTE_
-endgenerate
-
+end endgenerate
 
 endmodule

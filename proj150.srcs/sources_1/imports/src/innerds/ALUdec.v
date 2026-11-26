@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 // UC Berkeley CS150
 // Lab 3, Spring 2012
 // Module: ALUdecoder
@@ -10,7 +12,7 @@
 `include "aluop.vh"
 
 module ALUdec(
-  input wire [5:0] funct, opcode,
+  input [5:0] funct, opcode,
   output reg [3:0] ALUop
 );
 
