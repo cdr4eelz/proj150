@@ -1,10 +1,10 @@
 # Whole MIPS150: BIOS jal's to software/math (mutmath mul16u32u/sqr16u32u, prints results with reference values); golden in tb/data/sys/math.golden
 sys_math.TOP      := SysUART_tb
 sys_math.TB       := tb/SysUART_tb.v
-sys_math.SRCS     := $(SRC)/tuntap.vh $(SRC)/TunTap.v $(SRC)/cpu/MemMapIO.v $(SRC)/cpu/MemBank.v $(SRC)/base_io/UARTRVA.v
+sys_math.SRCS     := tb/models/brams.v tb/models/uarx_fifo.v $(SRC)/tuntap.vh $(SRC)/TunTap.v $(SRC)/cpu/MemMapIO.v $(SRC)/cpu/MemBank.v $(SRC)/base_io/UARTRVA.v
 sys_math.INCS     := $(SRC)
-sys_math.YDIRS    := $(SYS_YDIRS)
-sys_math.NEEDS    := xilinx mips coregen
+sys_math.YDIRS    := $(SRC_YDIRS)
+sys_math.NEEDS    := mips
 sys_math.SW_BIOS  := bios150v3
 sys_math.SW_PROG  := math
 sys_math.QUIET_RE := Untrapped ALU op:|^MEMIO: |^.\)  +@|Block Memory Generator

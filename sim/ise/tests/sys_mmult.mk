@@ -1,10 +1,10 @@
 # Whole MIPS150: BIOS jal's to software/mmult (4x4 matrix multiply, matrices in cache-side memory at 0x10018000); golden in tb/data/sys/mmult.golden
 sys_mmult.TOP      := SysUART_tb
 sys_mmult.TB       := tb/SysUART_tb.v
-sys_mmult.SRCS     := $(SRC)/tuntap.vh $(SRC)/TunTap.v $(SRC)/cpu/MemMapIO.v $(SRC)/cpu/MemBank.v $(SRC)/base_io/UARTRVA.v
+sys_mmult.SRCS     := tb/models/brams.v tb/models/uarx_fifo.v $(SRC)/tuntap.vh $(SRC)/TunTap.v $(SRC)/cpu/MemMapIO.v $(SRC)/cpu/MemBank.v $(SRC)/base_io/UARTRVA.v
 sys_mmult.INCS     := $(SRC)
-sys_mmult.YDIRS    := $(SYS_YDIRS)
-sys_mmult.NEEDS    := xilinx mips coregen
+sys_mmult.YDIRS    := $(SRC_YDIRS)
+sys_mmult.NEEDS    := mips
 sys_mmult.SW_BIOS  := bios150v3
 sys_mmult.SW_PROG  := mmult
 sys_mmult.QUIET_RE := Untrapped ALU op:|^MEMIO: |^.\)  +@|Block Memory Generator
