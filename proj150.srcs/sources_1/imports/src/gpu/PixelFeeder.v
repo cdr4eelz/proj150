@@ -449,3 +449,5 @@ endmodule
 
 WARNING:Xst:2170 - Unit ml505top : the following signal(s) form a combinatorial loop: mem_arch/pixel_raf_wren, mem_arch/req_con/fifo_access<5>.
 */
+
+`default_nettype wire  // do not leak "none" into later files (Vivado reads all sources as one unit)

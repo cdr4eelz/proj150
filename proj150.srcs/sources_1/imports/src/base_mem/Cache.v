@@ -331,3 +331,5 @@ module Cache #(
     (* MARK_DEBUG = "TRUE" *) wire TAP_CSH_rdf_wren = rdf_wren;
 
 endmodule
+
+`default_nettype wire  // do not leak "none" into later files (Vivado reads all sources as one unit)
