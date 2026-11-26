@@ -8,7 +8,8 @@
 #   <ddr-prog>   optional; its .inst image becomes ddr.hex for the behavioral cache-side memory
 #                (linked at 0x10000000, e.g. LDSTYLE inject_cache), and a non-empty .data image
 #                becomes dmem_blk_ram.mif
-# isr_mem.mif / imem_blk_ram.mif (and dmem_blk_ram.mif otherwise) are the CoreGen defaults.
+# isr_mem.mif / imem_blk_ram.mif (and dmem_blk_ram.mif otherwise) come from proj150's sw/ images.
+# A <bios-prog> ending in .coe is taken from sw/ as is (no build, no toolchain needed).
 # Needs the MIPS toolchain (M_PRE, default mips-linux-gnu) and python3.
 set -euo pipefail
 sw=$1; scratch=$2; run=$3; bios=$4; prog=${5:-}; shift 5 2>/dev/null || shift $#
@@ -21,6 +22,12 @@ import sys, struct
 d = open(sys.argv[1], "rb").read()
 d += b"\0" * (-len(d) % 4)
 for i in range(0, len(d), 4): print(format(struct.unpack(">L", d[i:i+4])[0], "032b"))
+' "$1"; }
+coe2mif() { python3 -c '
+import sys, re
+t = open(sys.argv[1]).read()
+v = t.split("memory_initialization_vector", 1)[1].split("=", 1)[1]
+for w in re.findall(r"[0-9a-fA-F]+", v.split(";")[0]): print(format(int(w, 16), "032b"))
 ' "$1"; }
 bin2hex() { python3 -c '
 import sys, struct
@@ -43,10 +50,16 @@ build() {  # build <prog> [make args] -> $scratch/<prog>/<prog>.{inst,data}.bin
   echo "build-sw: built $p ($(wc -c < "$scratch/$p/$p.inst.bin" | tr -d " ") bytes code, $(wc -c < "$scratch/$p/$p.data.bin" | tr -d " ") bytes data)"
 }
 
-for m in isr_mem imem_blk_ram dmem_blk_ram; do cp -f "$src/core_ip/brams/$m/$m.mif" "$run/"; done
+# proj150: the default BRAM contents are the local copies in sw/ (make sw-import), as for the IP
+swdir=$here/../../../sw
+coe2mif "$swdir/isr7.coe"       > "$run/isr_mem.mif"
+coe2mif "$swdir/proj7.inst.coe" > "$run/imem_blk_ram.mif"
+coe2mif "$swdir/bench.inst.coe" > "$run/dmem_blk_ram.mif"
 rm -rf "$scratch/common" "$scratch/link"
-build "$bios"
-bin2mif "$scratch/$bios/$bios.inst.bin" > "$run/bios_mem.mif"
+case "$bios" in
+  *.coe) coe2mif "$swdir/$bios" > "$run/bios_mem.mif" ;;   # an image from sw/: nothing to build
+  *)     build "$bios"; bin2mif "$scratch/$bios/$bios.inst.bin" > "$run/bios_mem.mif" ;;
+esac
 rm -f "$run/ddr.hex"
 if [ -n "$prog" ]; then
   build "$prog" "$@"
