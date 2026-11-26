@@ -96,7 +96,6 @@ include $(wildcard tests/*.mk)
 
 # proj150 port: tests that need RTL from a later port branch are SKIPped with the branch name;
 # each branch deletes its line once the RTL is in (RUN_SKIPPED=1 runs them anyway)
-PENDING.port-mmio-uart := stage_mw memmapio_haltval memmapio_prng memmapio_uart prng32lfsr
 $(foreach b,$(patsubst PENDING.%,%,$(filter PENDING.%,$(.VARIABLES))),$(foreach t,$(PENDING.$(b)),$(eval $(t).SKIP := pending $(b))))
 
 # per-test value with fallback: $(call tv,<test>,<VAR>,<default>)
