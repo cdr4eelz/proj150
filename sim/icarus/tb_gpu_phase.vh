@@ -73,12 +73,14 @@ integer gpc_n;
 task gpc_w(input [31:0] w);
     begin dsw(GPC_BASE + 4*gpc_n, w, 4'b1111); gpc_n = gpc_n + 1; end
 endtask
-task gpc_fill(input [23:0] c);  begin gpc_w({8'h01, c}); end endtask
+// GPU v2 (cs150-1245 ISE gpcommands.vh): {GOP[31:28], colour[27:0]}; ELIP/RECT take a trailing XRGB32
+// fill colour (top byte 0 = outline only)
+task gpc_fill(input [23:0] c);  begin gpc_w({4'h1, 4'h0, c}); end endtask
 task gpc_line(input [23:0] c, input integer x0, input integer y0, input integer x1, input integer y1);
-    begin gpc_w({8'h02, c}); gpc_w((x0 << 16) | y0); gpc_w((x1 << 16) | y1); end
+    begin gpc_w({4'h2, 4'h0, c}); gpc_w((x0 << 16) | y0); gpc_w((x1 << 16) | y1); end
 endtask
 task gpc_elip(input [23:0] c, input integer xc, input integer yc, input integer a, input integer b);
-    begin gpc_w({8'h03, c}); gpc_w((xc << 16) | yc); gpc_w((a << 16) | b); end
+    begin gpc_w({4'h3, 4'h0, c}); gpc_w((xc << 16) | yc); gpc_w((a << 16) | b); gpc_w(32'h0); end
 endtask
 task gpc_end; begin gpc_w(32'h0); gpc_w(32'h0); gpc_w(32'h0); gpc_w(32'h0); gpc_w(32'h0); gpc_w(32'h0); gpc_w(32'h0); gpc_w(32'h0); end endtask
 
@@ -118,7 +120,9 @@ task gp_px(input [5:0] frame, input integer x, input integer y);
     begin
         d_access(32'h1000_0000 | (frame << 22) | (y << 12) | (x << 2), 4'b0000, 0, got);
         e = gx[y*800 + x]; gp_checks = gp_checks + 1;
-        if (got !== e) begin
+        // GPU v2 (ISE) writes XRGB32 pixels whose X (top) byte is the GOP's fill flag (FILL writes ff);
+        // the display uses [23:0], so drawn pixels (model top byte 00) compare RGB only
+        if ((e[31:24] == 8'h00) ? (got[23:0] !== e[23:0]) : (got !== e)) begin
             gp_errors = gp_errors + 1;
             if (gp_errors <= 16) $display("[%0t] GP MISMATCH frame %0d (%0d,%0d): got %08h expected %08h", $time, frame, x, y, got, e);
         end
