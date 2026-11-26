@@ -1,36 +1,36 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 
 module CPUMIPS #(
     parameter PC_BOOT=32'h4000_0000, PC_ISR=32'hC000_0180,
-    parameter DD=`COLT45_DD,
     parameter COLT45_SCOPE=0, COLT45_BRK=0,
     parameter COLT45_PC=0, COLT45_REGREAD=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
-    input  wire clk, rst, stall,
+    input   clk, rst, stall,
 
 // Regfile lines
-    output wire         REGFILE_we,
-    output wire [31: 0] REGFILE_wd,
-    output wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa,
-    input  wire [31: 0] REGFILE_rd1, REGFILE_rd2,
+    output          REGFILE_we,
+    output [31: 0]  REGFILE_wd,
+    output [ 4: 0]  REGFILE_ra1, REGFILE_ra2, REGFILE_wa,
+    input  [31: 0]  REGFILE_rd1, REGFILE_rd2,
 
 // COP0 lines
-    output wire         COP0_we,
-    output wire [31: 0] COP0_wd,
-    output wire [ 4: 0] COP0_ra,
-    input  wire [31: 0] COP0_rd,
-    output wire [31: 0] intr_pc,
-    output wire         intr_handled,
-    input  wire         intr_request,
+    output          COP0_we,
+    output [31: 0]  COP0_wd,
+    output [ 4: 0]  COP0_ra,
+    input  [31: 0]  COP0_rd,
+    output [31: 0]  intr_pc,
+    output          intr_handled,
+    input           intr_request,
 
 // Memory lines
-    output wire [31: 0] IMEM_ADDR, DMEM_ADDR,
-    input  wire [31: 0] IMEM_DATA, DMEM_DATA,
-    output wire         MemToRegDX_, MemWriteDX_, PCinBIOSDX_,
-    output wire[31: 0]  _WDataMasked,
-    output wire[ 3: 0]  _WriteMask,
+    output [31: 0]  IMEM_ADDR, DMEM_ADDR,
+    input  [31: 0]  IMEM_DATA, DMEM_DATA,
+    output          MemToRegDX_, MemWriteDX_, PCinBIOSDX_,
+    output [31: 0]  _WDataMasked,
+    output [ 3: 0]  _WriteMask
 
-    output wire[ 3: 0]  DBG_COUNT
 );
 
 //BRK tap (in transition)
@@ -73,12 +73,12 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
 
     // Forward declare feedback related wires (other key wires declared just prior to use, ALAP)
-    wire         #DD BRA_DoBranch_DX2F_;
-    wire [31: 0] #DD BRA_PCBranch_DX2F_;
-    wire         #DD BRA_IRQPending_DX2F_;
-    wire [ 4: 0] #DD WBK_Reg_MW2DX_;
-    wire [31: 0] #DD WBK_Val_MW2DX_;
-    wire         #DD WBK_CanFWD_MW2DX_;
+    wire         BRA_DoBranch_DX2F_;
+    wire [31: 0] BRA_PCBranch_DX2F_;
+    wire         BRA_IRQPending_DX2F_;
+    wire [ 4: 0] WBK_Reg_MW2DX_;
+    wire [31: 0] WBK_Val_MW2DX_;
+    wire         WBK_CanFWD_MW2DX_;
 
     // Declare outputs of F stage
     wire [31: 0] PC_F_, PCNEXT_F_;
@@ -114,9 +114,6 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     assign DO_ISR = BRA_IRQPending_DX2F_ && ~|{stall,INST_CouldBranch_F_,INST_IsMTC0_F_,WAS_Branch,WAS_ISR};
     // DO_ISR waits if instruction is "mtc0" so that a stale value doesn't end up in EPC and ISR loops forever
 
-    assign DBG_COUNT = CNT_Inst[10:7];
-
-
 //=============--- "PIPELINE"-PEEK: F/DX ---=============
     wire [31: 0] PC_DX, INST_DX;
     PipelineRegister #( .Width(32) )
@@ -134,13 +131,14 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire FWD_Allow = (REGFILE_wa != 0) ? WBK_CanFWD_MW2DX_ : 1'b0;
     wire FWD_1 = FWD_Allow && (REGFILE_wa == REGFILE_ra1);
     wire FWD_2 = FWD_Allow && (REGFILE_wa == REGFILE_ra2);
-    wire [31: 0] #DD FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
-    wire [31: 0] #DD FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
+    wire [31: 0] FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
+    wire [31: 0] FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
 
     // Declare outputs of DX stage
     wire [31: 0] MemAddrDX_, RegWValueDX_, MemWValueDX_;
     wire [ 4: 0] DestRegDX_;
     wire [ 1: 0] MemShiftDX_;
+    wire         MemSignedDX_;
     wire         COPWriteDX_;
 //  wire         MemToRegDX_, MemWriteDX_;
 
@@ -162,7 +160,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         //Global control signals
         .COPWrite_(COPWriteDX_), //COP0 write (mtc0), this cycle!
         .DestReg_(DestRegDX_),
-        .MemShift_(MemShiftDX_), .MemSigned_( /*Unimplemented*/ ),
+        .MemShift_(MemShiftDX_), .MemSigned_(MemSignedDX_),
         .MemToReg_(MemToRegDX_), .MemWrite_(MemWriteDX_),
         //Stage Outputs
         .MemAddr_(MemAddrDX_), .RegWValue_(RegWValueDX_),
@@ -177,7 +175,9 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire  [31: 0]   RegWValue_MW;
     wire  [ 4: 0]   DestReg_MW;
     wire  [ 1: 0]   MemShift_MW;
+    wire            MemSigned_MW;
     wire            MemToReg_MW;
+//  wire            MemWrite_MW;
     PipelineRegister #( .Width(32) )
         PIPR_MemAddr_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(MemAddrDX_  ),  .Out(MemAddr_MW   ) );
@@ -186,13 +186,16 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
                             .In(RegWValueDX_),  .Out(RegWValue_MW ) );
     PipelineRegister #( .Width(5) )
         PIPR_DestReg_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
-                            .In(DestRegDX_ ),  .Out(DestReg_MW   ) );
+                            .In(DestRegDX_  ),  .Out(DestReg_MW   ) );
     PipelineRegister #( .Width(2) )
         PIPR_MemShift_MW  ( .clk(clk), .rst(1'b0), .stall(stall),
-                            .In(MemShiftDX_),  .Out(MemShift_MW  ) );
+                            .In(MemShiftDX_ ),  .Out(MemShift_MW  ) );
+    PipelineRegister #( .Width(1) )
+        PIPR_MemSigned_MW ( .clk(clk), .rst(1'b0), .stall(stall),
+                            .In(MemSignedDX_),  .Out(MemSigned_MW ) );
     PipelineRegister #( .Width(1) )
         PIPR_MemToReg_MW  ( .clk(clk), .rst(1'b0), .stall(stall),
-                            .In(MemToRegDX_),  .Out(MemToReg_MW  ) );
+                            .In(MemToRegDX_ ),  .Out(MemToReg_MW  ) );
 //Debug use only
     wire  [31: 0]   PC_MW;
     PipelineRegister #( .Width(32) )
@@ -209,6 +212,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         ._MemShift(MemShiftDX_), ._MemAddrShift(DMEM_ADDR[1:0]),
         ._MemWValue(MemWValueDX_), ._MemWrite(MemWriteDX_),
         // Inputs (post-clock results)
+        .MemSigned_MW(MemSigned_MW),
         .MemShift_MW(MemShift_MW), .MemAddrShift_MW(MemAddr_MW[1:0]),
         .RDataRaw(DMEM_DATA),
         .DestReg_MW(DestReg_MW), .MemToReg_MW(MemToReg_MW),
@@ -227,7 +231,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
 wire [31:0] keywatch = {
     REGFILE_we,REGFILE_wa[4:0],REGFILE_ra2[4:0], REGFILE_ra1[4:0],
-    FWD_Allow,FWD_2,FWD_1,32'd0,//DBG_MEM150[31]
+    FWD_Allow,FWD_2,FWD_1,1'b0,//DBG_MEM150[31]
         4'b0000, //_hot_IO,_hot_BR,_hot_IC,_hot_DC,
         4'b0000, //hoti_[3:0],
         rst,BRA_IRQPending_DX2F_,BRA_DoBranch_DX2F_,stall
@@ -260,18 +264,12 @@ assign trace = {
 };
 
 
-generate
-if (COLT45_BRK) begin:_BRK_
-
+generate if (COLT45_BRK) begin:_BRK_
     //TODO: Move from top to here
-
-end:_BRK_
-endgenerate //COLT45_BRK
+end endgenerate //COLT45_BRK
 
 
-generate
-if (COLT45_SCOPE) begin:_SCOPE_MIPSY_
-
+generate if (COLT45_SCOPE) begin:_SCOPE_MIPSY_
     wire [31:0] CS_TRIG0 = keywatch[31:0];
     wire [31:0] CS_TRIG1 = PC_DX[31:0];
     wire [31:0] CS_TRIG2 = INST_DX[31:0];
@@ -290,16 +288,14 @@ if (COLT45_SCOPE) begin:_SCOPE_MIPSY_
         .TRIG2( CS_TRIG2 ), // IN BUS [31:0]
         .TRIG3( CS_TRIG3 )  // IN BUS [31:0]
     ) /* synthesis syn_noprune=1 */;
-
-end:_SCOPE_MIPSY_
-endgenerate //COLT45_SCOPE
+end endgenerate //COLT45_SCOPE
 
 
-// *** SIMULATION ONLY business below ***
+// SIMULATION ONLY business
+
 // synthesis translate_off
-generate
-if (COLT45_STEPMAX) begin:_STEPS_
 
+generate if (COLT45_STEPMAX) begin:_STEPS_
     reg [15:0] DBG_cycle, DBG_step;
     initial begin
         $display ("%m");
@@ -351,30 +347,19 @@ if (COLT45_STEPMAX) begin:_STEPS_
 //        $display("%d]      : %b", DBG_cycle, IControl_MW); // Make a task to break into fields
         $strobe ("%d] -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
     end
-
-end:_STEPS_
-endgenerate //COLT45_STEPMAX
-
+end endgenerate //COLT45_STEPMAX
 
 task DUMP_PC; begin
     $display("PC: [%d] PC_DX=%h INST_DX=%h PC_MW=%h", CNT_Inst, PC_DX, INST_DX, PC_MW);
 end endtask
 
-
-generate
-if (COLT45_PC) begin:_PC_
-
+generate if (COLT45_PC) begin:_PC_
     always@(posedge clk) if (!stall && !rst) begin
         DUMP_PC();
     end
+end endgenerate //COLT45_PC
 
-end:_PC_
-endgenerate //COLT45_PC
-
-
-generate
-if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "care" at clock edge
-
+generate if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "care" at clock edge
     always@(posedge clk) if (!rst) begin
         if (REGFILE_ra1 != 0) begin
             $display(" reg1:FWD=%b R1(%h,%d)=%h (%d)", FWD_1, REGFILE_ra1, REGFILE_ra1, FWD_rd1, FWD_rd1);
@@ -383,15 +368,13 @@ if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "care" at cl
             $display(" reg2:FWD=%b R2(%h,%d)=%h (%d)", FWD_2, REGFILE_ra2, REGFILE_ra2, FWD_rd2, FWD_rd2);
         end
     end
-
-end:_REGREAD_
-endgenerate
+end endgenerate
 
 // synthesis translate_on
 
 `else //COLT45_KILLFUN (either def/ndef check)
 
-    assign trace = 1024'd0;
+assign trace = 1024'd0;
 
 `endif //COLT45_KILLFUN (either def/ndef check)
 

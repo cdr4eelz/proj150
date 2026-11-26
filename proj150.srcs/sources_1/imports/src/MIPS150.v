@@ -156,9 +156,9 @@ end:ECHODDR else begin:MIPS
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
         .PCinBIOSDX_(PCinBIOSDX_),
-        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
-        .DBG_COUNT(DBG_COUNT)
+        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask)
     );
+    assign DBG_COUNT = 4'd0;    // ISE CPUMIPS has no DBG_COUNT port (only a mark_debug wire in ArtyA7top)
 
 end:MIPS //<default> CPUMIPS
 endgenerate

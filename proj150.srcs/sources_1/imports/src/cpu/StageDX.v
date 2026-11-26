@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 
 module StageDX(
@@ -5,27 +7,27 @@ module StageDX(
 //    input clk, rst, stall,
 
     // Asynchronous plugs to shared outer components
-    output wire[ 4: 0] REG_R1_, REG_R2_, COP0_R_,
-    input  wire[31: 0] REG_D1_, REG_D2_, COP0_D_,
+    output [ 4: 0] REG_R1_, REG_R2_, COP0_R_,
+    input  [31: 0] REG_D1_, REG_D2_, COP0_D_,
 
     // Prior stage inputs
-    input  wire[31: 0] _PC,
-    input  wire[31: 0] _INST,
+    input  [31: 0] _PC,
+    input  [31: 0] _INST,
 
     // Global control signals
-    output wire        COPWrite_,
-    output wire[ 1: 0] MemShift_,
-    output wire        MemToReg_, MemWrite_, MemSigned_,
+    output         COPWrite_,
+    output [ 1: 0] MemShift_,
+    output         MemToReg_, MemWrite_, MemSigned_,
 
     // Outputs (Execute related computations)
-    output wire[31: 0] MemAddr_,
-    output wire[31: 0] MemWValue_,
-    output wire[ 4: 0] DestReg_,
-    output wire[31: 0] RegWValue_,
+    output [31: 0] MemAddr_,
+    output [31: 0] MemWValue_,
+    output [ 4: 0] DestReg_,
+    output [31: 0] RegWValue_,
 
     // Feedback to prior stages (branching)
-    output wire[31: 0] PCBranch_,
-    output wire        DOBranch_
+    output [31: 0] PCBranch_,
+    output         DOBranch_
 );
 
 //TODO: Use prior stage to more pre-computation like using pre-added PC value
