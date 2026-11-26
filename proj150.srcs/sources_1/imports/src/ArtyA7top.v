@@ -171,6 +171,7 @@ end:DUMPUART else begin:MIPS150
     wire  [3:0] DBG_icache;
 
     (* mark_debug = "true" *) wire  [3:0] DBG_adapt;
+    wire        rdf_overflow;   // MIG read beat dropped because mig_rdf was full (sticky)
 
     wire        video_ready,    video_valid;
     wire [31:0] video;//[23:0]
@@ -198,6 +199,7 @@ end:DUMPUART else begin:MIPS150
         .clk_mig_ui     (clk_mig_ui),
         .rst_mig_ui     (rst_mig_ui),
         .DBG_adapt      (DBG_adapt),
+        .DBG_rdf_overflow(rdf_overflow), // sticky, must never light (LED[1])
 
     // DDR3 InOuts
         .ddr3_dq        (ddr3_dq),      // inout  [15:0]
@@ -275,7 +277,7 @@ end:DUMPUART else begin:MIPS150
     assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
 
     assign LED[0] = (locked_top_clocks && init_done);
-    assign LED[1] = (reset_top_clocks && rst_cpu);
+    assign LED[1] = rdf_overflow;  // WAS: (reset_top_clocks && rst_cpu). Lit = read data lost (bug)
     assign LED[2] = stall_dcache;
     assign LED[3] = stall_top;
     // TODO: Map RGB LEDs in constraints file and drive them with PWM

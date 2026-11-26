@@ -694,7 +694,7 @@
           <Attr Name="ScopedToCell" Val="mig_arty_a7_100"/>
         </FileInfo>
       </File>
-      <File Path="$PSRCDIR/sources_1/imports/src/base_mem/MIGAdapter.v">
+      <File Path="$PSRCDIR/sources_1/imports/src/base_mem/MigUiAdapter.v">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>

@@ -14,7 +14,9 @@
 
 module MemoryDDR #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
-    parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter LITTLEWORDIAN=1, //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter PF_TESTPAT=1,    //PixelFeeder COLT45_TESTPAT (0 = feed video from DDR3 frames)
+    parameter RD_CREDIT_EN=1   //MigUiAdapter read flow control (0 = old overflowing behavior, sim only)
 ) (
 // Clocks & Resets:
     input  wire         clk_cpu,
@@ -58,6 +60,7 @@ module MemoryDDR #(
     output wire         d_stall,        i_stall,
     output wire[ 3:0]   DBG_dcache,     DBG_icache,
     output wire[ 3:0]   DBG_adapt,
+    output wire         DBG_rdf_overflow, // sticky: MIG read beat lost (mig_rdf full) [clk_mig_ui]
 
 // PixelFeeder <=> DVI/VGA Controller:
     input  wire         video_ready,
@@ -187,10 +190,10 @@ module MemoryDDR #(
     (* mark_debug = "true" *) wire [ 27:0]    app_addr;
     (* mark_debug = "true" *) wire            app_wdf_wren;
     (* mark_debug = "true" *) wire            app_wdf_rdy;
-    (* mark_debug = "true" *) wire [ 63:0]    app_wdf_data;
-    (* mark_debug = "true" *) wire [  7:0]    app_wdf_mask;
+    (* mark_debug = "true" *) wire [127:0]    app_wdf_data;  // 4:1 => one 128-bit beat per command
+    (* mark_debug = "true" *) wire [ 15:0]    app_wdf_mask;  // 1 = byte NOT written
     (* mark_debug = "true" *) wire            app_wdf_end;
-    (* mark_debug = "true" *) wire [ 63:0]    app_rd_data;
+    (* mark_debug = "true" *) wire [127:0]    app_rd_data;
     (* mark_debug = "true" *) wire            app_rd_data_valid;
     (* mark_debug = "true" *) wire            app_rd_data_end;
 
@@ -222,12 +225,12 @@ module MemoryDDR #(
 
         .app_wdf_rdy        (app_wdf_rdy),      // output         WAS: !.app_wdf_afull(fifo_wdf_full)
         .app_wdf_wren       (app_wdf_wren),     // input  : DDR3  <= FIFO: "valid"  STAYS: .app_wdf_wren
-        .app_wdf_data       (app_wdf_data),     // input  [ 63:0]  STAYS: .app_wdf_data
+        .app_wdf_data       (app_wdf_data),     // input  [127:0]  STAYS: .app_wdf_data
         .app_wdf_mask       (app_wdf_mask),     // input  [ 15:0]  WAS: .app_wdf_mask_data
         .app_wdf_end        (app_wdf_end),      // input  Obsolete or depricated
 
         .app_rd_data_valid  (app_rd_data_valid),// output         WAS: .rd_data_valid
-        .app_rd_data        (app_rd_data),      // output [ 63:0] WAS: .rd_data_fifo_out
+        .app_rd_data        (app_rd_data),      // output [127:0] WAS: .rd_data_fifo_out
         .app_rd_data_end    (app_rd_data_end),  // output  UNUSED / OBSOLETE
 
         // Unneeded new signals, related to low-level DRAM management
@@ -248,44 +251,39 @@ module MemoryDDR #(
         .device_temp        ( ) // output [11:0]  UNUSED
     );
 
-    MIGAdapter MIGAdapt ( // Performs extra manipulations to match FIFO with MIG specs
-        // Entire adapter lives in clk_mig_ui clock domain
-        .clk_mig_ui     (clk_mig_ui),
-        .rst_mig_ui     (rst_mig_ui), // Reset is ACTIVE-HIGH
-
-        // Command/Address FIFO input (from mig_caf, 31 bits: {cmd[2:0], addr[27:0]})
-        .fifo_caf_rd_en (fifo_caf_rd_en),
-        .fifo_caf_valid (fifo_caf_valid),
-        .fifo_caf_dout  (fifo_caf_dout),
-        .fifo_caf_empty (fifo_caf_empty),
-        // Write Data FIFO input (from mig_wdf dout, 143:0)
-        .fifo_wdf_rd_en (fifo_wdf_rd_en),
-        .fifo_wdf_valid (fifo_wdf_valid),
-        .fifo_wdf_dout  (fifo_wdf_dout),
-        .fifo_wdf_empty (fifo_wdf_empty),
-        // Read Data FIFO output (to mig_rdf din, 127:0 → pure 128-bit read data)
-        .fifo_rdf_full  (fifo_rdf_full),
-        .fifo_rdf_wr_en (fifo_rdf_wr_en),
-        .fifo_rdf_din   (fifo_rdf_din),
-
-        // MIG standard interface ports (UG586)
-        .app_rdy    (app_rdy),
-        .app_en     (app_en),
-        .app_cmd    (app_cmd),         // 000 = WRITE, 001 = READ
-        .app_addr   (app_addr),
-        // Write Data interface
+    // Native-UI adapter for the 4:1 / 128-bit MIG (one beat per command), with read credits
+    // so mig_rdf can never overflow. Lives entirely in the clk_mig_ui domain.
+    wire fifo_rdf_prog_full;
+    MigUiAdapter #(
+        .CREDIT_EN(RD_CREDIT_EN)
+    ) mig_adapt (
+        .clk            (clk_mig_ui),
+        .rst            (rst_mig_ui),
+        .caf_rd_en      (fifo_caf_rd_en),
+        .caf_valid      (fifo_caf_valid),
+        .caf_dout       (fifo_caf_dout),
+        .wdf_rd_en      (fifo_wdf_rd_en),
+        .wdf_valid      (fifo_wdf_valid),
+        .wdf_dout       (fifo_wdf_dout),
+        .rdf_wr_en      (fifo_rdf_wr_en),
+        .rdf_din        (fifo_rdf_din),
+        .rdf_full       (fifo_rdf_full),
+        .rdf_prog_full  (fifo_rdf_prog_full),
+        .init_calib_complete(init_calib_complete),
+        .app_addr       (app_addr),
+        .app_cmd        (app_cmd),
+        .app_en         (app_en),
+        .app_rdy        (app_rdy),
         .app_wdf_data   (app_wdf_data),
         .app_wdf_mask   (app_wdf_mask),
-        .app_wdf_end    (app_wdf_end), // depricated
         .app_wdf_wren   (app_wdf_wren),
+        .app_wdf_end    (app_wdf_end),
         .app_wdf_rdy    (app_wdf_rdy),
-        // Read Data interface
-        .app_rd_data_valid  (app_rd_data_valid),
-        .app_rd_data        (app_rd_data),
-        .app_rd_data_end    (app_rd_data_end),
-        // NOTE: No "ready" signal. MIG read data is output when it wants, no holding it back!
-        .DBG_adapt  (DBG_adapt)
-);
+        .app_rd_data    (app_rd_data),
+        .app_rd_data_valid(app_rd_data_valid),
+        .rdf_overflow   (DBG_rdf_overflow),
+        .dbg_state      (DBG_adapt)
+    );
 
 
 // Clock-crossing FIFOs (RCON[clk_cpu] <=> FIFOs <=> MIG[clk_mig_ui]):
@@ -335,6 +333,7 @@ module MemoryDDR #(
         .wr_en (fifo_rdf_wr_en),    // input    : FIFO  <= DDR3: "ready"
         .din   (fifo_rdf_din),      // input[127:0] : FIFO  <= DDR3: data-128
         .wr_ack(fifo_rdf_wr_ack),   // output   : <Unused> FOR debugging waveform
+        .prog_full(fifo_rdf_prog_full), // output : read-credit limit for MigUiAdapter (scripts/ip/mig_fifos.tcl)
         // FIFO-RD: RCON clock-domain
         .rd_clk(clk_cpu),           // input    : CPU/RCON clock
         .empty (rcon_rdf_empty),    // output   : <Unused>  FOR debugging waveform
@@ -491,12 +490,18 @@ module MemoryDDR #(
     assign DBG_dcache = DBG_dcache_cs;
     assign DBG_icache = DBG_icache_cs;
 
+    // pf_status[0] reports the sticky MIG read-overflow flag (2-flop sync into clk_cpu).
+    wire [15:0] pf_status_raw;
+    (* ASYNC_REG = "TRUE" *) reg [1:0] rdf_ovf_sync;
+    always @(posedge clk_cpu) rdf_ovf_sync <= {rdf_ovf_sync[0], DBG_rdf_overflow};
+    assign pf_status = {pf_status_raw[15:1], pf_status_raw[0] | rdf_ovf_sync[1]};
+
     // For feeding pixels to the DVI module:
     PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
 //.COLT45_TESTPAT(0)  //Real deal w/FIFO (fetch from DDR3 frames)
-.COLT45_TESTPAT(1)  //Simple "sweep" still with w/FIFO
+.COLT45_TESTPAT(PF_TESTPAT)  //0=DDR3 frames, 1=sweep w/FIFO, 2/3=non-FIFO patterns
 //.COLT45_TESTPAT(2)  //Non-FIFO Simple "sweep" no w/FIFO
 //.COLT45_TESTPAT(3)  //Non-FIFO pattern from FALL-2013
     ) pixfeed (
@@ -518,7 +523,7 @@ module MemoryDDR #(
     // FRAME control <=> CPU:
         .pf_vframe(pf_vframe),
         .pf_wframe(pf_wframe),
-        .pf_status(pf_status), //OUT
+        .pf_status(pf_status_raw), //OUT
         .irq_frame(irq_pf_frame) //OUT
     );
     //assign video_valid = 1'b1;
