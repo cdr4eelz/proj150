@@ -15,7 +15,7 @@
 module MemoryDDR #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
     parameter LITTLEWORDIAN=1, //Order of 32-bit words in each 256-bit DDR block (not byte order)
-    parameter PF_TESTPAT=1,    //PixelFeeder COLT45_TESTPAT (0 = feed video from DDR3 frames)
+    parameter PF_TESTPAT=0,    //PixelFeeder COLT45_TESTPAT (0 = feed video from DDR3 frames)
     parameter RD_CREDIT_EN=1   //MigUiAdapter read flow control (0 = old overflowing behavior, sim only)
 ) (
 // Clocks & Resets:

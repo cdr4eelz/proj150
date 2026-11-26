@@ -6,7 +6,7 @@
 //   D-port: P1 fill 16 KB + read back, P2 random lw/sw/sh/sb over 64 KB (heavy cache conflicts),
 //           P3 bit-27 alias + line-offset tests (0x18000040 vs 0x10000040, offset-16 write / offset-0 fill)
 //   I-port: during P2, concurrent instruction fetches from a read-only 16 KB "code" area
-//   PixelFeeder: +PF=1 points it at frame 1 (0x10400000) during P2/P3 (it reads DDR at full rate)
+//   PixelFeeder: +PF=1 selects frame 1 (0x10400000) at reset; P2/P3 start once it is on frame 1 (DDR reads)
 // Plusargs: +OPS=n (P2 ops, default 3000) +PF=0/1 +SEED=n, and the stub's +RDY_PCT +INJECT ...
 // Compile-time: -DPF_TESTPAT=n -DRD_CREDIT=0/1 (MemoryDDR parameters); -DLEGACY for the untouched eee4d5d RTL.
 // Ends with "RESULT: PASS" or "RESULT: FAIL (...)".
@@ -155,7 +155,11 @@ module tb_memddr;
     // ---------------- monitors
     integer rdf_ovf = 0, pix_ovf = 0, video_faults = 0;
     always @(posedge clk_mig_ui) if (dut.fifo_rdf_wr_en && dut.fifo_rdf_full) rdf_ovf = rdf_ovf + 1;
+`ifdef LEGACY
     always @(posedge clk_cpu) if (dut.pixfeed.ffwr_valid && dut.pixfeed.ffwr_full) pix_ovf = pix_ovf + 1;
+`else
+    always @(posedge clk_cpu) if (dut.pixfeed.ffwr_drop) pix_ovf = pix_ovf + 1;  // beat lost (write is gated)
+`endif
     reg seen_vfault = 0;
     always @(posedge clk_cpu) if (pf_status[15] && !seen_vfault) begin seen_vfault = 1; $display("[%0t] PixelFeeder video_fault (pixel FIFO under/overflow)", $time); end
     integer pf_reads = 0;
@@ -167,12 +171,16 @@ module tb_memddr;
         r = $random(seed);
         wait (!rst_cpu); repeat (20) @(posedge clk_cpu);
         $display("[%0t] reset released (init_done), PF=%0d PF_TESTPAT=%0d RD_CREDIT=%0d OPS=%0d", $time, pf_en, `PF_TESTPAT, `RD_CREDIT, ops);
+        if (pf_en) begin @(negedge clk_cpu); pf_wframe = 32'h1040_0000; pf_vframe = 1; @(negedge clk_cpu); pf_vframe = 0; end
         // P1: fill 0x1000_0000..+16 KB (data) and 0x1000_8000..+16 KB (code), then read back data
         for (i = 0; i < 4096; i = i + 1) dsw(32'h1000_0000 + 4*i, 32'hA500_0000 ^ (i * 32'h9E37_79B9), 4'b1111);
         for (i = 0; i < 4096; i = i + 1) dsw(32'h1000_8000 + 4*i, 32'h0C0D_E000 ^ (i * 32'h85EB_CA6B), 4'b1111);
         for (i = 0; i < 4096; i = i + 1) dlw(32'h1000_0000 + 4*i);
         $display("[%0t] P1 done: %0d checks, %0d errors", $time, checks, errors);
-        if (pf_en) begin @(negedge clk_cpu); pf_wframe = 32'h1040_0000; pf_vframe = 1; @(negedge clk_cpu); pf_vframe = 0; end
+        if (pf_en) begin  // frame 1 takes effect at the next frame boundary (~16.6 ms of video)
+            i = 0; while (pf_status[13:8] == 0 && i < 1200000) begin @(posedge clk_cpu); i = i + 1; end
+            $display("[%0t] PixelFeeder now on frame %0d (DDR 0x%08h)", $time, pf_status[13:8], {4'h1, pf_status[13:8], 22'h0});
+        end
         // P2: random D-port ops over 64 KB; I-port fetches run concurrently (fork below)
         fork
             begin

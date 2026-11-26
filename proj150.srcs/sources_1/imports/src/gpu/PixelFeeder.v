@@ -111,6 +111,8 @@ module PixelFeeder #(
     // until the FIFO is reasonably full (custom "prog_full"). Other "fullness" signals are debug.
     wire [127:0] ffwr_din;
     wire         ffwr_valid, ffwr_full, ffwr_almost_full, ffwr_prog_full;
+    wire         ffwr_drop;        // write attempted while full: data lost (the FIFO write itself is gated)
+    wire         fifo_running_dvi; // FIFO has reached its start level (1 when there is no FIFO)
     wire [ 31:0] ffrd_dout; //TODO: Register "ffrd_dout" in case it is not immediatly used?
     wire         ffrd_empty, ffrd_valid;
 
@@ -165,8 +167,11 @@ if ((COLT45_TESTPAT == 0) || (COLT45_TESTPAT == 1)) begin:_WITH_FIFO_
     // Block both ready/valid signals to postpone video xfer until FIFO is full enough
     assign ffrd_ready = fifo_running && video_ready; //TODO: Use ffrd_ready to detect xfer
     assign video_valid = fifo_running && ffrd_valid;
+    assign fifo_running_dvi = fifo_running;
     
-end:_WITH_FIFO_
+end:_WITH_FIFO_ else begin:_NO_FIFO_
+    assign fifo_running_dvi = 1'b1;
+end:_NO_FIFO_
 endgenerate
 
 
@@ -186,7 +191,8 @@ endgenerate
             video_fault_dvi <= 1'b0;
         end else if (video_ready && video_valid && ffrd_empty) begin
             video_fault_dvi <= 1'b1; //DVI-side fault if we run out of pixels
-        end else if (ffrd_underflow || (video_ready && ffrd_empty)) begin
+        end else if (fifo_running_dvi && (ffrd_underflow || (video_ready && ffrd_empty))) begin
+            //NOTE: before the FIFO reaches its start level it is legitimately empty (no fault)
             //TODO: Could this just be "underflow" flag?
             video_fault_dvi <= 1'b1;
         end else begin
@@ -199,7 +205,7 @@ endgenerate
     always @(posedge cpu_clk_g) begin
         if (cpu_rst_g) begin
             video_fault_cpu <= 1'b0;
-        end else if (ffwr_valid && ffwr_full) begin //TODO: Could this just be "overflow" flag?
+        end else if (ffwr_drop) begin // a pixel beat arrived while the FIFO was full (dropped)
             video_fault_cpu <= 1'b1; //TODO: Distinguish different faults
         end
 
@@ -242,25 +248,55 @@ if (COLT45_TESTPAT == 0) begin:_PIXFO_DDREAD_
     reg [ 5:0] framebits_p, frame_next; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
     reg interrupt_r;
 
-    assign ffwr_valid = rdf_wren;
-    assign ffwr_din = rdf_data; //DDR-read to PIX-write
-    assign video = ffrd_dout;
-    assign framebits_w = framebits_p;
-    assign irq_frame = interrupt_r;
-    assign rdf_rden = 1'b1; //TODO: Research RequestController behavior (perhaps shouldn't be always asserted)
+    // Frame 0 = locally generated pattern (no DDR reads at all), frames 1..63 = DDR at frame<<22.
+    // GIOS "pf 1" (or "pf 10400000") switches to DDR fetching at the next frame boundary.
+    //
+    // DDR mode: one RAF request = one 256-bit CAF read = 2 RDF beats (8 pixels). The RDF cannot be
+    // back-pressured, so a request is only issued while the pixel FIFO is below prog_full AND fewer
+    // than MAX_PF_BEATS beats are outstanding; prog_full (448 of 512) leaves 64 entries of room.
+    localparam MAX_PF_BEATS = 32;
+    reg  [ 7:0] pf_outstanding; // RDF beats requested but not yet received
+    reg         local_half;     // local pattern: second 128-bit beat of the current chunk
+    wire        ddr_mode   = (framebits_p != 6'd0);
+    wire        ddr_beat   = rdf_wren;
+    wire        local_wr   = !ddr_mode && (pf_outstanding == 0) && !ddr_beat && !ffwr_prog_full && !cpu_rst_r;
 
 //NOTE: High nibble removed; framebits=6, y=10, x=10, low-align=2 ; total 28-bits ("byte" address)
     wire [27:0] head_addr = {framebits_p[5:0], head_y[9:0], head_x[9:0], 2'b00}; // 32-bit word/pixel aligned
     wire last_x = (head_x >= (((SCREEN_WIDTH/X_PIX_PER_CHUNK)-1) * X_PIX_PER_CHUNK));
     wire last_y = (head_y >= (SCREEN_HEIGHT-1));
     wire raf_advance = raf_wren && !raf_full; //NOTE: Always raf_full until we assert raf_wren first!
+    wire local_advance = local_wr && local_half; // 2 local beats = one 8-pixel chunk
+    wire head_advance = raf_advance || local_advance;
+
+    // Local pattern: white border, green right edge, colour ramps elsewhere (4 equal pixels per beat)
+    wire [ 7:0] pat_r  = head_x[9:2];
+    wire [ 7:0] pat_g  = head_y[8:1];
+    wire [ 7:0] pat_b  = head_x[9:2] ^ head_y[7:0];
+    wire [31:0] pat_px = (head_x == 0 || head_y == 0 || last_y) ? 32'h00F0F0F0 :
+                         (last_x && local_half)                 ? 32'h0022FF22 : {8'd0, pat_r, pat_g, pat_b};
+
+    assign ffwr_drop  = ddr_beat && ffwr_full;
+    assign ffwr_valid = (ddr_beat || local_wr) && !ffwr_full;
+    assign ffwr_din   = ddr_beat ? rdf_data : {4{pat_px}}; //DDR-read to PIX-write
+    assign video = ffrd_dout;
+    assign framebits_w = framebits_p;
+    assign irq_frame = interrupt_r;
+    assign rdf_rden = 1'b1; // Always accept: room in the pixel FIFO was reserved before issuing
 
     assign raf_addr  = {1'b0, head_addr[27:1]}; // Turn byte addr into DDR-address (16-bit spacing)
-    //TODO: Is it really appropriate to always assert "raf_wren"???
-    assign raf_wren  = 1'b1; //WAS: (state == FETCH); //Declare when FETCH addr ready (but might not happen)
+    assign raf_wren  = ddr_mode && !cpu_rst_r && !ffwr_prog_full && (pf_outstanding <= MAX_PF_BEATS - 2);
 
-    //Ensures 1+ IDLEs between FETCHs; also note (state==IDLE) ensures !raf_advance
-//TEMP:RUN FULL BLAST...    wire next_state = (!ffwr_prog_full && !raf_advance) ? FETCH : IDLE;
+    always @(posedge cpu_clk_g) begin
+        if (cpu_rst_r) begin
+            pf_outstanding <= 0;
+            local_half <= 0;
+        end else begin
+            pf_outstanding <= pf_outstanding + (raf_advance ? 8'd2 : 8'd0) - (ddr_beat ? 8'd1 : 8'd0);
+            if (local_wr) local_half <= ~local_half;
+        end
+    end
+
     wire next_state = (cpu_rst_r) ? IDLE : FETCH;
     reg fr, fr_r;
 
@@ -281,7 +317,7 @@ if (COLT45_TESTPAT == 0) begin:_PIXFO_DDREAD_
             head_x <= head_x;
             pixel_count <= pixel_count;
             framebits_p <= framebits_p;
-            if (raf_advance) begin //Advance x/y/frame (right AFTER end of this cycle)
+            if (head_advance) begin //Advance x/y/frame (right AFTER end of this cycle)
                 pixel_count <= pixel_count + X_PIX_PER_CHUNK;
                 if (last_y && last_x) begin
                     fr <= ~fr; // fr transition generates interupt pulse
@@ -301,7 +337,7 @@ if (COLT45_TESTPAT == 0) begin:_PIXFO_DDREAD_
 
 // synthesis translate_off
 always @(posedge cpu_clk_g) begin
-    if (raf_advance && ((head_x == 0) || (last_x && last_y))) begin
+    if (head_advance && ((head_x == 0) || (last_x && last_y))) begin
         if (last_x && last_y) $display("LAST:");
         $display("  aB:%08h aD:%08h  F:%b X:%04d Y:%04d  PIX:%0d",
                  head_addr, raf_addr,
@@ -316,6 +352,7 @@ end:_PIXFO_DDREAD_ else if (COLT45_TESTPAT == 1) begin:_PIXFO_SWEEP_
 // *** Simple test pattern output THROUGH the FIFO ***
     assign raf_wren = 1'b0;
     assign rdf_rden = 1'b0;
+    assign ffwr_drop = 1'b0;
     assign raf_addr = 28'h0;
     assign framebits_w = 0;
     assign irq_frame = 0;
@@ -359,6 +396,7 @@ end:_PIXFO_SWEEP_ else if (COLT45_TESTPAT == 2) begin:_DIRECT_SWEEP_
 // *** DIRECTLY send a pretty and scrolling pattern (NO FIFO) ***
     assign raf_wren = 1'b0;
     assign rdf_rden = 1'b0;
+    assign ffwr_drop = 1'b0;
     assign raf_addr = 28'h0;
     assign framebits_w = 0;
     assign irq_frame = 0;
@@ -382,6 +420,7 @@ end:_DIRECT_SWEEP_ else if (COLT45_TESTPAT == 3) begin:_DIRECT_PAT_
 // *** DIRECTLY inject simple moving pattern gen from FALL-2013-CP1 ***
     assign raf_wren = 1'b0;
     assign rdf_rden = 1'b0;
+    assign ffwr_drop = 1'b0;
     assign raf_addr = 28'h0;
     assign framebits_w = 0;
     assign irq_frame = 0;
