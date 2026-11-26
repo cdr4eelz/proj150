@@ -9,7 +9,7 @@ module ArtyA7top #(
                 SCREEN_HEIGHT   =     600,
     parameter   CPU_CORE        = "", //"DUMPUART"
     parameter   SW_STALL_EN     = 1  // 1: SWITCH[1] up stalls the CPU (debug). 0: ignore SWITCH[1]
-                                     //    (bring-up builds: build.tcl SW_STALL_EN=0)
+                                     //    (bring-up builds: make bit SW_STALL_EN=0)
 )(
     input  wire         CLK_100MHz,  // Board clock for Arty-A7
     //input CLK_125MHz,  // Board clock for PYNQ
@@ -75,7 +75,7 @@ module ArtyA7top #(
     // 200 MHz MIG reference and 100 MHz MIG system clock. This is the clocking proven by
     // arty-mig-test (MIG sys_clk_i/clk_ref_i are "No Buffer" inputs fed from one clk_wiz).
     // Replaces the old clk_wiz_0 + clk_wiz_1 (101.01 MHz) pair, which both hung off one IBUF.
-    // clk_wiz_0 gets its 4th output from scripts/ip/clk_wiz_0.tcl.
+    // clk_wiz_0 gets its 4th output from boards/arty/ip/clk_wiz_0.tcl.
     clk_wiz_0 TOP_clocks (  // Generate various clocks for components
     // Clock in ports
         .clk_in_100MHz(clk_in_100MHz),

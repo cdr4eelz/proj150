@@ -302,7 +302,7 @@ module MemoryDDR #(
     // FIFO-WR: RCON clock-domain
         .wr_clk (clk_cpu),          // input    : CPU/RCON clock
         .full   (rcon_caf_full),    // output   : FIFO =>  RCON: "!ready"
-        .prog_full(rcon_caf_backlog), // output : FIFO =>  RCON: backlog limit (scripts/ip/mig_fifos.tcl)
+        .prog_full(rcon_caf_backlog), // output : FIFO =>  RCON: backlog limit (ip/mig_caf.tcl)
         .wr_en  (rcon_caf_wr_en),   // input    : FIFO  <= RCON: "valid"
         .din    (rcon_caf_din),   //input[30:0] : FIFO  <= RCON: {cmd-3,addr-28} = 31
         .wr_ack (rcon_caf_wr_ack),  // output   : FIFO =>  DDR3: "valid"
@@ -342,7 +342,7 @@ module MemoryDDR #(
         .wr_en (fifo_rdf_wr_en),    // input    : FIFO  <= DDR3: "ready"
         .din   (fifo_rdf_din),      // input[127:0] : FIFO  <= DDR3: data-128
         .wr_ack(fifo_rdf_wr_ack),   // output   : <Unused> FOR debugging waveform
-        .prog_full(fifo_rdf_prog_full), // output : read-credit limit for MigUiAdapter (scripts/ip/mig_fifos.tcl)
+        .prog_full(fifo_rdf_prog_full), // output : read-credit limit for MigUiAdapter (ip/mig_rdf.tcl)
         // FIFO-RD: RCON clock-domain
         .rd_clk(clk_cpu),           // input    : CPU/RCON clock
         .empty (rcon_rdf_empty),    // output   : <Unused>  FOR debugging waveform

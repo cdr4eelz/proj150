@@ -19,7 +19,7 @@
 //   were lost, and RequestController (which matches data to requesters by counting) handed every
 //   later read to the wrong client. Here a read command is only issued while
 //      (beats in flight) < MAX_INFLIGHT  AND  mig_rdf prog_full is low,
-//   with prog_full set (scripts/ip/mig_fifos.tcl) far enough below the depth that every beat in
+//   with prog_full set (ip/mig_rdf.tcl) far enough below the depth that every beat in
 //   flight always has room. CREDIT_EN=0 restores the old unthrottled behavior (sim only).
 // rdf_overflow is a sticky flag (until rst) that must never assert: it goes to an LED.
 //=============================================================================

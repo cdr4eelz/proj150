@@ -1,15 +1,15 @@
 // ip_fifos.v - simulation stand-ins for the FIFO Generator IPs used by MemoryDDR/PixelFeeder.
-// Thresholds follow the IP settings: mig_rdf prog_full 400 (scripts/ip/mig_fifos.tcl);
+// Thresholds follow the IP settings: mig_rdf prog_full 400 (ip/mig_rdf.tcl);
 // pixel_fifo prog_full / prog_empty from PF_FULL / PF_EMPTY (defaults = current IP settings).
 `timescale 1ps/1ps
 `ifndef PIXEL_PF_FULL
- `define PIXEL_PF_FULL 448   // scripts/ip/pixel_fifo.tcl
+ `define PIXEL_PF_FULL 448   // ip/pixel_fifo.tcl
 `endif
 `ifndef CAF_PF_FULL
- `define CAF_PF_FULL 24      // scripts/ip/mig_fifos.tcl (mig_caf)
+ `define CAF_PF_FULL 24      // ip/mig_caf.tcl
 `endif
 `ifndef PIXEL_PF_EMPTY
- `define PIXEL_PF_EMPTY 1600  // scripts/ip/pixel_fifo.tcl
+ `define PIXEL_PF_EMPTY 1600  // ip/pixel_fifo.tcl
 `endif
 module mig_caf (input wire rst, wr_clk, wr_en, input wire [30:0] din, output wire full, output wire wr_ack,
                 output wire prog_full,
