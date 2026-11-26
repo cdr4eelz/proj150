@@ -18,7 +18,7 @@ Needs Vivado **2019.1** (MIG 7-series 4.2, clk_wiz 6.0, fifo_generator 13.2, blk
 make bit SW_STALL_EN=0      # IP + synthesis + place&route + bitstream  ->  build/arty/proj150_arty.bit
 make timing                 # WNS/WHS and utilization of the routed design
 make program                # load it into the Arty (Digilent cable only)
-make sim                    # Icarus regression
+make sim                    # ISE-ported Icarus tests (sim/ise) + MemoryDDR/GPU regression
 ```
 
 A clean `make bit` runs everything: about 4 min for the IP (the MIG is most of that; the IP are built
@@ -32,7 +32,7 @@ in parallel), then synthesis and implementation. Later runs only redo what chang
 | `make bit` | Bitstream `build/<board>/proj150_arty.bit`. Re-checks the timing gate, so a failing `impl` cannot be turned into a bitstream. |
 | `make timing` | Prints WNS/WHS, writes `build/<board>/timing.txt` (slack plus LUT/FF/BRAM/DSP use). |
 | `make program` | Programs the Arty over its **Digilent** JTAG cable, selected by serial (`HW_SERIAL`, see `boards/arty/board.mk`). Never opens other cables, e.g. the Xilinx Platform Cable USB II of the XUPV5. |
-| `make sim` | `sim/icarus/run_icarus.sh`: memory path, PixelFeeder and GPU against a behavioural MIG. No Xilinx tools needed. |
+| `make sim` | First `make sim-ise`: the unit, CPU and GPU tests carried over from the cs150-1245 ISE Icarus rig (`sim/ise`, see its README; uses the cs150 checkout at `CS150`, default `../cs150-1245`). Then `sim/icarus/run_icarus.sh`: memory path, PixelFeeder and GPU against a behavioural MIG. No Xilinx tools needed. |
 | `make clean` | Remove `build/<board>`. `make clean-impl` keeps the generated IP; `make clean-ip` removes only the IP. |
 | `make all` | `bit` + `timing` (default goal). `make help` prints the header of the Makefile. |
 
@@ -91,6 +91,31 @@ core in a scratch project and run
 `BOARD=arty` is the only board. `BOARD=pynq-z2` (`xc7z020clg400-1`) is reserved: the board has no
 PL-side DDR, so memory would go through the Zynq PS (S_AXI_HP/ACP) behind the `MemoryDDR` interface.
 `boards/pynq-z2/board.mk` explains what a new board directory needs.
+
+## Port history
+
+Before the ISE port, the Arty bring-up and build:
+
+1. [#1](https://github.com/cdr4eelz/proj150/pull/1) `timing_fixes`: timing fixes (Jan 2026).
+2. [#2](https://github.com/cdr4eelz/proj150/pull/2) `ddr-fix`: fix the DDR3/MIG path and PixelFeeder underrun.
+3. [#3](https://github.com/cdr4eelz/proj150/pull/3) `make-build`: Makefile + Tcl non-project build (no `.xpr`).
+4. [#4](https://github.com/cdr4eelz/proj150/pull/4) `ellipse-fix`: port the working ISE ellipse engine so hwelip finishes.
+
+The ISE port then landed as six stacked PRs, merged in order with merge commits (history kept); `master` at `ea3e210`:
+
+5. [#5](https://github.com/cdr4eelz/proj150/pull/5) `port-sim-rig`: ISE Icarus sim rig import (`sim/ise`).
+6. [#6](https://github.com/cdr4eelz/proj150/pull/6) `port-cpu-fixes`: CPU pipeline fixes and COP0.
+7. [#7](https://github.com/cdr4eelz/proj150/pull/7) `port-gpu-v2`: GPU v2, 4-bit GOPs, RectangleEngine.
+8. [#8](https://github.com/cdr4eelz/proj150/pull/8) `port-mmio-uart`: UART and MMIO.
+9. [#9](https://github.com/cdr4eelz/proj150/pull/9) `port-bram-map-apps`: `sw/` folder and MemBank.
+10. [#10](https://github.com/cdr4eelz/proj150/pull/10) `port-sim-system`: system sims and hardware tests (`hwtest/`).
+
+On the Arty every hardware test stage passed (banner, dcache, icache, pixfeed, gpu, elip with 134/134
+pixel reads and 547 row checksums matching, elipbig 36/36 and 600 rows), and `jal 60000000` ran the
+proj7 app at about 60 fps.
+
+Queued next: a cleanup PR that removes the duplicate UART IOB register stage (Place 30-73) and fixes
+the `VGAFramer` vertical sync compare so the declared front/back porch of 1/23 lines is realized.
 
 ## Notes
 
