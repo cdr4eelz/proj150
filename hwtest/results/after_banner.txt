@@ -1,0 +1,12 @@
+
+#### 2026-11-25 19:19:17 PST  port=/dev/serial/by-id/usb-Digilent_Digilent_USB_Device_210319BCC332-if01-port0
+
+?
+> help
+
+HELP: file jal lw lhu lbu sw sh sb dump copy  help result gs gc ff pf gf sf back clip color hwcolor swcolor fill hwfill swfill line hwline swline elip hwelip sw
+> gs
+0000000f PF#00-d  GF#00-ELFG  SF:10400000
+ hw:c044aaff sw:4044ffaa
+> 
+#### done

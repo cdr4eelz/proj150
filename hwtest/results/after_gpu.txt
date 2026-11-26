@@ -1,0 +1,47 @@
+
+#### 2026-11-25 19:23:02 PST  port=/dev/serial/by-id/usb-Digilent_Digilent_USB_Device_210319BCC332-if01-port0
+
+?
+> gs
+4100000f PF#01-D  GF#00-ELFG  SF:10800000
+ hw:c044aaff sw:00ff0000
+> pf 1
+> gf 1
+> hwcolor 00ff8040
+> hwfill
+> gs
+0100010f PF#01-d  GF#01-ELFG  SF:10800000
+ hw:00ff8040 sw:00ff0000
+> lw 10400000
+10400000: 00ff8040
+> lw 10400c7c
+10400c7c: 00ff8040
+> lw 10657c7c
+10657c7c: 00ff8040
+> lw 10400c80
+10400c80: b4c15ee6
+> hwcolor 000000ff
+> hwline 0 0 799 599
+> gs
+0100010f PF#01-d  GF#01-ELFG  SF:10800000
+ hw:000000ff sw:00ff0000
+> lw 10400000
+10400000: 000000ff
+> lw 1052c640
+1052c640: 000000ff
+> lw 1052c644
+1052c644: 00ff8040
+> hwcolor 0000ff00
+> hwelip 400 300 200 150
+> gs
+01000106 PF#01-d  GF#01-eLFg  SF:10800000
+ hw:0000ff00 sw:00ff0000
+> lw 10496640
+10496640: 0000ff00
+> lw 105c2640
+105c2640: 0000ff00
+> gs
+01000106 PF#01-d  GF#01-eLFg  SF:10800000
+ hw:0000ff00 sw:00ff0000
+> 
+#### done

@@ -1,0 +1,24 @@
+
+#### 2026-11-25 19:21:02 PST  port=/dev/serial/by-id/usb-Digilent_Digilent_USB_Device_210319BCC332-if01-port0
+
+?
+> gs
+0000000f PF#00-d  GF#00-ELFG  SF:10400000
+ hw:c044aaff sw:4044ffaa
+> pf 1
+> gs
+4100000f PF#01-D  GF#00-ELFG  SF:10400000
+ hw:c044aaff sw:4044ffaa
+> gs
+4100000f PF#01-D  GF#00-ELFG  SF:10400000
+ hw:c044aaff sw:4044ffaa
+> pf 0
+> gs
+0000000f PF#00-d  GF#00-ELFG  SF:10400000
+ hw:c044aaff sw:4044ffaa
+> pf 1
+> gs
+4100000f PF#01-D  GF#00-ELFG  SF:10400000
+ hw:c044aaff sw:4044ffaa
+> 
+#### done
