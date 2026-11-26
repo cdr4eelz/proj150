@@ -1,12 +1,20 @@
 # proj150
 
-The CS150 MIPS150 project (`cs150-1245`, ISE branch) ported to Vivado: MIPS CPU, UART, VGA + GPU and a
+The CS150 MIPS150 project (`cs150-1245`, ISE branch) ported to Vivado 2019.1, non-project mode: MIPS CPU, UART, VGA + GPU and a
 write-through cache in front of DDR3. Target board: **Digilent Arty A7-100T** (`xc7a100tcsg324-1`). A
 PYNQ-Z2 target is planned (`BOARD=pynq-z2`, see below) but not written yet.
 
 The build is a plain **Makefile + Tcl, Vivado non-project mode**, like the ISE flow in `cs150`
 (`make synth / impl / bit / timing / program`). There is no Vivado project (`.xpr`) and none is needed:
 every IP core is generated from the Tcl scripts in `ip/` and `boards/*/ip/`.
+
+## Background
+
+proj150 started as a quick, admittedly sloppy migration of the `cs150` repo into a GUI-based Vivado
+project, to avoid first working out a command-line make/Tcl flow in `cs150`. It was not created as a
+fork of `cs150`, and at the time it was not certain that every file needed to rebuild the project was
+committed. The non-project make build ([#3](https://github.com/cdr4eelz/proj150/pull/3)) and the ISE
+port (see Port history) replaced that setup.
 
 ## Build
 
