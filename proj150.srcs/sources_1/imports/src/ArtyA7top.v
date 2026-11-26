@@ -123,22 +123,30 @@ module ArtyA7top #(
     assign { buttons[3:0], switches[3:0] } = clean_combo;  // Separate the signals
 //TODO: Let sync/debounce complete before letting CPU out of reset!
 
-    // UART TX/RX go straight to the pins. UART.v's IORegister already has
-    // IOB=TRUE (same as ml505top). A second IOB stage here caused Place 30-73.
+    // Borrowed from 2024/2019 top level IOBs to drive/sense UART serial lines...
+    wire cpu_tx, cpu_rx;
+    (* IOB = "true" *) reg fpga_serial_tx_iob;
+    (* IOB = "true" *) reg fpga_serial_rx_iob;
+    assign FPGA_SERIAL_TX = fpga_serial_tx_iob;
+    assign cpu_rx = fpga_serial_rx_iob;
+    always @(posedge clk_cpu) begin
+        fpga_serial_tx_iob <= cpu_tx;
+        fpga_serial_rx_iob <= FPGA_SERIAL_RX;
+    end
 
 generate
 if (CPU_CORE=="ECHOUART") begin:ECHOUART
 
     CPUEchoUART #( .CPU_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
     ) CPU ( .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
-        .SerialRX(FPGA_SERIAL_RX),  .SerialTX(FPGA_SERIAL_TX) );
+        .SerialRX(cpu_rx),  .SerialTX(cpu_tx) );
     assign init_done = 1'b1;
 
 end:ECHOUART else if (CPU_CORE=="DUMPUART") begin:DUMPUART
 
     CPUDumpUART #( .CPU_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
     ) CPU ( .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
-        .SerialRX(FPGA_SERIAL_RX),  .SerialTX(FPGA_SERIAL_TX) );
+        .SerialRX(cpu_rx),  .SerialTX(cpu_tx) );
     assign init_done = 1'b1;
 
 end:DUMPUART else begin:MIPS150
@@ -249,7 +257,7 @@ end:DUMPUART else begin:MIPS150
     ) CPU (
         .clk(clk_cpu),  .rst(rst_cpu),  .stall(stall_top),
     // Serial (UART):
-        .FPGA_SERIAL_RX(FPGA_SERIAL_RX),  .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+        .FPGA_SERIAL_RX(cpu_rx),  .FPGA_SERIAL_TX(cpu_tx),
     // Memory Caches:
         .dcache_addr(dcache_addr),  .icache_addr(icache_addr),
         .dcache_we  (dcache_we  ),  .icache_we  (icache_we  ),
