@@ -17,7 +17,7 @@ run() {    # $1 = vvp name, $2 = label, rest = plusargs
     local o=$1 l=$2; shift 2
     echo "=== $l: $*"
     vvp -n out/$o.vvp "$@" > out/$l.log 2>&1 || true
-    grep -aE 'MISMATCH|OVERFLOW|TIMEOUT|PROTOCOL|video_fault|SUMMARY|RESULT' out/$l.log | head -24
+    grep -aE 'MISMATCH|OVERFLOW|TIMEOUT|PROTOCOL|video_fault|SUMMARY|RESULT|P5 |GP ' out/$l.log | head -24
 }
 if [ $# -gt 0 ]; then
     defs=(); while [ $# -gt 0 ] && [ "$1" != "--" ]; do defs+=("$1"); shift; done; [ $# -gt 0 ] && shift
@@ -34,4 +34,7 @@ run dut pf_wstream      +PF=1 +OPS=300 +WSTREAM=30000 ; chk pf_wstream pass
 run dut inject1_bitflip +PF=0 +INJECT=1 +INJECT_ADDR=1230 +INJECT_BIT=21 ; chk inject1_bitflip fail
 run dut inject2_alias   +PF=1 +INJECT=2            ; chk inject2_alias fail
 run dut inject3_nomask  +PF=0 +INJECT=3            ; chk inject3_nomask fail
+# GPU end to end (FILL / LINE / ELIP through GraphicsProcessor -> ScanLineRunner -> MemoryDDR); needs a 32 MB stub
+build dutgp -DPF_TESTPAT=0 -DRD_CREDIT=1 -DPIXEL_PF_FULL=448 -DPIXEL_PF_EMPTY=1600 -DSTUB_LOG2=21
+run dutgp gp_fill_line_elip +PF=0 +OPS=50 +GP=1 +GP_TMO=1000000 ; chk gp_fill_line_elip pass
 if [ $fail = 0 ]; then echo "ALL ICARUS TESTS AS EXPECTED"; else echo "SOME ICARUS TESTS UNEXPECTED"; exit 1; fi
