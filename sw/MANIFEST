@@ -1,0 +1,8 @@
+# sw/MANIFEST - built software images copied from the adjacent cs150-1245 checkout by
+# 'make sw-import CS150=../cs150-1245' (scripts/sw-import.sh). Software is built THERE
+# (cd ../cs150-1245/software && make); proj150 never builds it. One line per image:
+#   <path under cs150-1245/software>   <file in sw/>     <used by>
+gios/gios.inst.coe          gios.inst.coe       bios_mem     (0x4000_0000 BIOS ROM, ISE default)
+bench/bench.inst.coe        bench.inst.coe      dmem_blk_ram (0x5000_0000 X5 scratchpad, ISE default)
+proj_app7/proj7.inst.coe    proj7.inst.coe      imem_blk_ram (0x6000_0000 X6 scratchpad, ISE default)
+proj_app7/isr7.coe          isr7.coe            isr_mem      (0xC000_0000 ISR RAM, ISE default)

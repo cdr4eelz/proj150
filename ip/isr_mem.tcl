@@ -4,7 +4,7 @@ create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_
 set_property -dict [list \
     CONFIG.Assume_Synchronous_Clk                    {true} \
     CONFIG.Byte_Size                                 {8} \
-    CONFIG.Coe_File                                  "$::SRC1/imports/isr/basic.coe" \
+    CONFIG.Coe_File                                  "$::ROOT/sw/isr7.coe" \
     CONFIG.Enable_B                                  {Use_ENB_Pin} \
     CONFIG.Fill_Remaining_Memory_Locations           {true} \
     CONFIG.Load_Init_File                            {true} \

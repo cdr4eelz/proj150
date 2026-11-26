@@ -247,19 +247,17 @@ end:DUMPUART else begin:MIPS150
 
     //assign video_ready = 1'b0;
 
-    (* mark_debug = "true" *) wire [3:0] DBG_COUNT;
+    (* mark_debug = "true" *) wire [3:0] DBG_COUNT = 4'd0;   // ISE MIPS150 has no DBG_COUNT
 
     // MIPS 150 CPU
     MIPS150 #(
-        .CPU_FREQ(CPU_FREQ),
-        .BAUD_RATE(BAUD_RATE),
+        .CPU_FREQ(CPU_FREQ),    // (ISE MIPS150: UART at its default 115200 baud; ISR at 0xC000_0180)
         .PC_BOOT(32'h4000_0000),
-        .PC_ISR(32'hC000_0180),
         .CPU_CORE("MIPS")
     ) CPU (
         .clk(clk_cpu),  .rst(rst_cpu),  .stall(stall_top),
     // Serial (UART):
-        .SerialRX(cpu_rx),  .SerialTX(cpu_tx),
+        .FPGA_SERIAL_RX(cpu_rx),  .FPGA_SERIAL_TX(cpu_tx),
     // Memory Caches:
         .dcache_addr(dcache_addr),  .icache_addr(icache_addr),
         .dcache_we  (dcache_we  ),  .icache_we  (icache_we  ),
@@ -271,9 +269,7 @@ end:DUMPUART else begin:MIPS150
         .pf_wframe  (pf_wframe),    .gp_wcode(gp_wcode),    .gp_wframe(gp_wframe),
                                     .gp_rcode(gp_rcode),
         .pf_status  (pf_status),                            .gp_status(gp_status),
-        .irq_pf_frame(irq_pf_frame),    .irq_gp_done(irq_gp_done),
-
-        .DBG_COUNT(DBG_COUNT)
+        .irq_pf_frame(irq_pf_frame),    .irq_gp_done(irq_gp_done)
     );
 
     assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
