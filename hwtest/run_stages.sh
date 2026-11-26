@@ -20,7 +20,11 @@ case "$1" in
   pixfeed)
     $G --timeout 30 gs "pf 1" "@sleep 1" gs "@sleep 2" gs "pf 0" "@sleep 1" gs "pf 1" "@sleep 1" gs ;;
   gpu)
-    $G --timeout 60 gs "gf 1" "hwcolor 00ff8040" "hwfill" "@sleep 1" gs "lw 10400000" "lw 10400c7c" "lw 10657c7c" \
-       "hwcolor 000000ff" "hwline 0 0 799 599" "@sleep 1" gs "lw 10400000" "lw 10401004" ;;
+    # PixelFeeder shows frame 1 while the GPU writes it; pf_fault ('*' in gs) must stay clear.
+    # hwelip: ElipseEngine is unfinished (x/y never advance), so it rewrites two pixels forever and
+    # wedges the GPU until reset; it is kept here as a worst-case write flood for the display.
+    $G --timeout 60 gs "pf 1" "gf 1" "hwcolor 00ff8040" "hwfill" "@sleep 1" gs "lw 10400000" "lw 10400c7c" "lw 10657c7c" \
+       "lw 10400c80" "hwcolor 000000ff" "hwline 0 0 799 599" "@sleep 1" gs "lw 10400000" "lw 1052c640" "lw 1052c644" \
+       "hwcolor 0000ff00" "hwelip 400 300 200 150" "@sleep 3" gs "lw 10496640" "lw 105c2640" "@sleep 5" gs ;;
   *) echo "usage: $0 banner|dcache|icache|pixfeed|gpu"; exit 2 ;;
 esac
