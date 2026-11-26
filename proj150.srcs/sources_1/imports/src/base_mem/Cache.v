@@ -211,10 +211,10 @@ module Cache #(
             current_state <= next_state;
 
         if(rst) begin
-            addr_hold <= 32'h_0000_0000;
+            addr_hold <= 32'h0000_0000;
             re_hold   <= 1'b0;
-            we_hold   <= 4'b_0000;
-            din_hold  <= 32'h_0000_0000;
+            we_hold   <= 4'b0000;
+            din_hold  <= 32'h0000_0000;
         end else if(next_state == IDLE) begin //&& (|we || (re == 1'b1))) begin
 //      end else if((next_state == IDLE) && (|we || (re == 1'b1))) begin
             // This may cause immediate re-trigger of WRITE. Need to reset these after write done?
@@ -229,7 +229,7 @@ module Cache #(
                 din_hold  <= din_hold;
                 // Would be zero anyway!?!
                 re_hold   <= 1'b0;
-                we_hold   <= 4'b_0000;
+                we_hold   <= 4'b0000;
             end
         end else begin
             addr_hold <= addr_hold;
