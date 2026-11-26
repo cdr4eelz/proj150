@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 `include "branchcmpop.vh"
 
@@ -7,10 +9,10 @@
 module BranchCMP #(
     parameter WIDTH = 32
 )(
-  input wire [2:0] branchOp,
-  input wire signed [WIDTH-1:0] A,
-  input wire signed [WIDTH-1:0] B,
-  output wire doBranch
+  input [2:0] branchOp,
+  input signed [WIDTH-1:0] A,
+  input signed [WIDTH-1:0] B,
+  output doBranch
 );
 
     function [0:0] fullCompare;

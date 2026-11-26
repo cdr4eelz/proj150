@@ -1,27 +1,27 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 `include "opcode.vh"
 
-module InstructionControl #(
-    parameter DD=`COLT45_DD
-)(
+module InstructionControl (
     // Input instruction to decode (PC-relative branch/jump finalized elsewhere)
-    input   wire[31:0]  _inst,
+    input [31:0] _inst,
     // Signals used for instruction "Preview" during fetch stage
-    output  wire        Deviant,
+    output Deviant,
     // Global or post-DX control signals
-    output  wire        MemSigned, MemToReg, MemWrite,
-    output  wire[ 1:0]  MemShift,
-    output  wire[ 4:0]  DestReg,
+    output MemSigned, MemToReg, MemWrite,
+    output [ 1:0] MemShift,
+    output [ 4:0] DestReg,
     // Signals consumed mostly by DX stage
-    output  wire        ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link, Branch,
-    output  wire[ 3:0]  ALUOp,
-    output  wire[ 2:0]  CmpOp,
-    output  wire[15:0]  IMMED,
-    output  wire[27:0]  NEARADDR,
-    output  wire[ 4:0]  SRC1, SRC2, SHAMT,
+    output ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link, Branch,
+    output [ 3:0] ALUOp,
+    output [ 2:0] CmpOp,
+    output [15:0] IMMED,
+    output [27:0] NEARADDR,
+    output [ 4:0] SRC1, SRC2, SHAMT,
     // COP0 additions
-    output  wire        COPREAD, COPWRITE,
-    output  wire[ 4:0]  COPADDR
+    output COPREAD, COPWRITE,
+    output [ 4:0] COPADDR
 );
 
     // OPCODE and major categories
@@ -61,22 +61,22 @@ module InstructionControl #(
     assign isIComp     = (_opcode_[5:3] == 3'b001___);
     assign isICompS    = (_opcode_[5:2] == 4'b0010__);
     assign isISigned   = (isICompS || isMemory);
-    wire #DD isCopRead, isCopWrite;
+    wire isCopRead, isCopWrite;
     //assign isMSigned   = (isMemory && !isMStore && !_opcode_[1] && !_opcode_[2]);
     assign isCopRead   = (isCType && (_rs_ == `OS_MFC0));
     assign isCopWrite  = (isCType && (_rs_ == `OS_MTC0));
-    wire #DD isRShift, isRShiftI, isRShiftR, isROther;
+    wire isRShift, isRShiftI, isRShiftR, isROther;
     assign isRShift    = (isRType  && (_funct_[5:3] == 3'b000___));
     assign isRShiftI   = (isRShift && (_funct_[2]   ==    1'b0__));
     assign isRShiftR   = (isRShift && (_funct_[2]   ==    1'b1__));
     assign isROther    = (isRType  && (_funct_[5:4] == 2'b10____));
     wire isIJump;
     assign isIJump     = isJType;
-    wire #DD isRJump, isJump, isJLink;
+    wire isRJump, isJump, isJLink;
     assign isRJump     = (isRType  && (_funct_[5:1] == 5'b00100_));
     assign isJump      = (isIJump || isRJump);
     assign isJLink     = (isIJump && _opcode_[0]) || (isRJump && _funct_[0]); //JAL/JALR lo-bit==1
-    wire #DD isBSimple, isBranchX, isBranchZo, isBranchZr, isBranch, isBranch0, isBLink;
+    wire isBSimple, isBranchX, isBranchZo, isBranchZr, isBranch, isBranch0, isBLink;
     assign isBSimple   = (_opcode_[5:2] == 4'b0001__);
     assign isBranchX   = (_opcode_[5:1] == 5'b00010_); //Subset of BSimple
     assign isBranchZo  = (_opcode_[5:1] == 5'b00011_); //Subset of BSimple
@@ -112,7 +112,7 @@ module InstructionControl #(
                         ,  2, isMemory); // ~x == 3-x (1's complement)
     assign DestReg  = (isJump || isBranch)
                         ? ( (isLink) // JUMP-LINK/BRANCH-LINK to $ra else $0
-                            ? 5'd31
+                            ? (isRJump ? _rd_ : 5'd31) // This fixes "jalr"
                             : 5'd0)
                         : ( (isRType)
                             ? _rd_

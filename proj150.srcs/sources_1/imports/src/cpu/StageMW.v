@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 
 /*          Fetch/Read/Write table (blended with old Partition Table)
@@ -25,30 +27,32 @@ module StageMW (
 //    input clk, rst, stall,
 
     // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)
-    input  wire[ 1: 0]  _MemShift, _MemAddrShift,
-    input  wire[31: 0]  _MemWValue,
-    input  wire         _MemWrite,
+    input  [ 1: 0]  _MemShift, _MemAddrShift,
+    input  [31: 0]  _MemWValue,
+    input           _MemWrite,
 
     // Inputs held stable during our stage for us
-    input  wire[ 1: 0]  MemShift_MW, MemAddrShift_MW,
-    input  wire[31: 0]  RDataRaw,
-    input  wire[ 4: 0]  DestReg_MW,
-    input  wire         MemToReg_MW,
-    input  wire[31: 0]  RegWValue_MW,
+    input           MemSigned_MW,
+    input  [ 1: 0]  MemShift_MW, MemAddrShift_MW,
+    input  [31: 0]  RDataRaw,
+    input  [ 4: 0]  DestReg_MW,
+    input           MemToReg_MW,
+    input  [31: 0]  RegWValue_MW,
 
     // Outputs fed back to prior stages
-    output wire[ 4: 0]  WBK_Reg_,
-    output wire[31: 0]  WBK_Val_,
-    output wire         WBK_CanFWD_,
+    output [ 4: 0]  WBK_Reg_,
+    output [31: 0]  WBK_Val_,
+    output          WBK_CanFWD_,
 
     // Memory/IO drives
-    output wire[ 3: 0] _WriteMask,
-    output wire[31: 0] _WDataMasked
+    output [ 3: 0] _WriteMask,
+    output [31: 0] _WDataMasked
 );
 
     wire [3:0] _ByteMask;
     ByteAccess4 ba4_write (
-        .MemShift(_MemShift), .SubIndex(_MemAddrShift), .WordFull(_MemWValue),
+        .MemShift(_MemShift), .SubIndex(_MemAddrShift), .IsSigned(1'b0),
+        .WordFull(_MemWValue),
         .ByteMask(_ByteMask), .WordMasked(_WDataMasked), .ValExtract()
     );
     assign _WriteMask = (_MemWrite) ? _ByteMask : 4'b0000;
@@ -58,7 +62,8 @@ module StageMW (
 
     wire [31:0] DataLoad;
     ByteAccess4 ba4_read (
-        .MemShift(MemShift_MW), .SubIndex(MemAddrShift_MW), .WordFull(RDataRaw),
+        .MemShift(MemShift_MW), .SubIndex(MemAddrShift_MW), .IsSigned(MemSigned_MW),
+        .WordFull(RDataRaw),
         .ByteMask( ), .WordMasked(), .ValExtract(DataLoad)
     );
 

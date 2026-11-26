@@ -320,3 +320,5 @@ endmodule // end Behavioral;
 --constant H_POL : std_logic := '1';
 --constant V_POL : std_logic := '1';
 */
+
+`default_nettype wire  // do not leak "none" into later files (Vivado reads all sources as one unit)

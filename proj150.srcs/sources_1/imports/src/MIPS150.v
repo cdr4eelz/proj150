@@ -62,7 +62,7 @@ module MIPS150 #(
         .intr_handled(intr_handled),    //IN  (Acknowledge ISR is happening)
         .intr_request(intr_request),    //OUT (Like branch to fixed address)
     // Interrupt Requests <==> Devices
-        .irq_uart0(irq_uart0), .irq_uart1(irq_uart1),
+        .irq_UARX(irq_uart0), .irq_UATX(irq_uart1),
         .irq_pf_frame(irq_pf_frame), .irq_gp_done(irq_gp_done)
     );
 
@@ -156,9 +156,9 @@ end:ECHODDR else begin:MIPS
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
         .PCinBIOSDX_(PCinBIOSDX_),
-        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
-        .DBG_COUNT(DBG_COUNT)
+        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask)
     );
+    assign DBG_COUNT = 4'd0;    // ISE CPUMIPS has no DBG_COUNT port (only a mark_debug wire in ArtyA7top)
 
 end:MIPS //<default> CPUMIPS
 endgenerate
