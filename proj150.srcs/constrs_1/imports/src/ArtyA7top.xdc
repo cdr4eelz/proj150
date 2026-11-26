@@ -350,3 +350,14 @@ set_max_delay -datapath_only -from [get_pins {raw_rst_r_reg/C}] -to [get_pins {s
 #######################################################################
 # ChipScope/ILA debug setup gets appended/removed below...            #
 #######################################################################
+
+## ---- Clock domain crossings (ddr-fix) ----------------------------------------------------------
+## clk_cpu (50 MHz), clk_pix (40 MHz) and the MIG ui_clk (81.25 MHz) only exchange data through
+## independent-clock FIFOs (mig_caf/wdf/rdf, pixel_fifo) and 2-3 flop synchronizers (resets,
+## init_done, rdf_overflow, PixelFeeder status). Without this, Vivado times cpu<->pix as related
+## clocks of one MMCM (5 ns requirement) and ui_clk<->cpu as unrelated-but-timed paths.
+## (This supersedes the reset set_max_delay lines above for these domains.)
+set_clock_groups -name cdc_cpu_pix_ui -asynchronous \
+    -group [get_clocks -of_objects [get_nets clk_cpu]] \
+    -group [get_clocks -of_objects [get_nets clk_pix]] \
+    -group [get_clocks -of_objects [get_nets clk_mig_ui]]
