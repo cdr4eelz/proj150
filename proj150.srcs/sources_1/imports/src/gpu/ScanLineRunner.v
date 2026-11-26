@@ -176,7 +176,7 @@ module ScanLineRunner #(
     end
 
     assign SLR_MASTER_ready = (cs_M[MH_IDLE]);
-    assign caf_addr  = {3'b000, cpu_addr[27:3]}; //WAS:6'd0, Make 31-bit DDR-address (@double-word)
+    assign caf_addr  = {1'b0, cpu_addr[27:1]}; // byte addr -> MIG units (16-bit); was >>3 (64-bit units)
     assign caf_wren     = (cs_M[MH_DDR1]);
     assign wdf_wren    = (cs_M[MH_DDR1] || cs_M[MH_DDR2]);
     assign wdf_data      = (LITTLEWORDIAN)

@@ -1,0 +1,20 @@
+[15991910001] MISMATCH D lw 10000530: got a8f1dbec expected 8af1dbec
+[16007310001] MISMATCH D lw 100004e8: got b50be58f expected b50b4cea
+[16015230001] MISMATCH D lw 10000d38: got c91b415e expected 865f415e
+[16050090001] MISMATCH D lw 10000f90: got 2a9c93c4 expected 2ad593c4
+[16072510001] MISMATCH D lw 10000fa8: got e02264b1 expected e0226e1a
+[16126390001] MISMATCH D lw 10000668: got c1d8ab65 expected c1d8f24a
+[16192630001] MISMATCH D lw 10000668: got c1d8ab65 expected c1d8f24a
+[16194990001] MISMATCH D lw 10000e30: got 7763bc2c expected 89c3bc2c
+[16231290001] MISMATCH D lw 10000ce8: got db61beea expected dbfebeea
+[16242270001] MISMATCH D lw 10000e98: got 9b1d18f6 expected 9b6618f6
+[16245550001] MISMATCH D lw 10000ef8: got f95a6893 expected b699824e
+[16262770001] MISMATCH D lw 100006d0: got d37b0514 expected d37b4f14
+[4570000] reset released (init_done), PF=1 PF_TESTPAT=0 RD_CREDIT=1 OPS=3000
+[1171550001] P1 done: 4096 checks, 0 errors
+[15794750000] PixelFeeder now on frame 1 (DDR 0x10400000)
+[16569770001] P2 done: 9865 checks, 32 errors
+[16572530001] P3 done: 9871 checks, 33 errors
+SUMMARY: checks=9871 mismatches=33 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=3111 video_fault=0 pf_status=0100
+RESULT: FAIL (mismatches=33 timeouts=0 protocol=0 rdf_overflow=0 pixel_overflow=0)

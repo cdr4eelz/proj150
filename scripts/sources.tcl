@@ -1,0 +1,57 @@
+# sources.tcl - RTL for ArtyA7top (the Verilog files of proj150.xpr's sources_1), relative to
+# proj150.srcs/sources_1. Headers (.vh) are found through the include dirs in build.tcl.
+set ::RTL_FILES {
+    imports/src/ArtyA7top.v
+    imports/src/MIPS150.v
+    imports/src/MemoryDDR.v
+    imports/src/base_io/UART.v
+    imports/src/base_io/UAReceive.v
+    imports/src/base_io/UATransmit.v
+    imports/src/base_mem/Cache.v
+    imports/src/base_mem/DDRStage.v
+    imports/src/base_mem/MigUiAdapter.v
+    imports/src/base_mem/RequestController.v
+    imports/src/base_util/ButtonClean.v
+    imports/src/base_util/ButtonParse.v
+    imports/src/base_util/CountCompare.v
+    imports/src/base_util/CountRegion.v
+    imports/src/base_util/Counter.v
+    imports/src/base_util/Debouncer.v
+    imports/src/base_util/EdgeDetect.v
+    imports/src/base_util/FIFOInitial.v
+    imports/src/base_util/FIFORegControl.v
+    imports/src/base_util/FIFORegister.v
+    imports/src/base_util/IORegister.v
+    imports/src/base_util/Register.v
+    imports/src/base_util/ShiftRegister.v
+    imports/src/base_util/Synchronizer.v
+    imports/src/base_vid/PixelCounter.v
+    imports/src/base_vid/VGAFramer.v
+    imports/src/base_vid/VGATestPattern.v
+    imports/src/cpu/COP0150.v
+    imports/src/cpu/CPUDumpMemUART.v
+    imports/src/cpu/CPUDumpUART.v
+    imports/src/cpu/CPUEchoUART.v
+    imports/src/cpu/CPUMIPS.v
+    imports/src/cpu/MemBank.v
+    imports/src/cpu/MemMapIO.v
+    imports/src/cpu/StageDX.v
+    imports/src/cpu/StageF.v
+    imports/src/cpu/StageMW.v
+    imports/src/cross/PatternGenerator.v
+    imports/src/gpu/ElipseEngine.v
+    imports/src/gpu/FrameFiller.v
+    imports/src/gpu/GPU.v
+    imports/src/gpu/GraphicsProcessor.v
+    imports/src/gpu/LineEngine.v
+    imports/src/gpu/PixelFeeder.v
+    imports/src/gpu/ScanLineRunner.v
+    imports/src/innerds/ALU.v
+    imports/src/innerds/ALUdec.v
+    imports/src/innerds/BranchCMP.v
+    imports/src/innerds/ByteAccess4.v
+    imports/src/innerds/InstructionControl.v
+    imports/src/innerds/InstructionPreview.v
+    imports/src/innerds/PipelineRegister.v
+    imports/src/innerds/RegFile.v
+}

@@ -1,0 +1,59 @@
+=== d_only: +PF=0
+SUMMARY: checks=10055 mismatches=0 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=0 video_fault=0 pf_status=4000
+RESULT: PASS
+=== pf_fullrate: +PF=1
+SUMMARY: checks=10335 mismatches=0 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=3338 video_fault=0 pf_status=0100
+RESULT: PASS
+=== pf_rdy30: +PF=1 +RDY_PCT=30
+SUMMARY: checks=9901 mismatches=0 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=5178 video_fault=0 pf_status=4100
+RESULT: PASS
+=== pf_rdy100: +PF=1 +RDY_PCT=100 +SEED=7
+SUMMARY: checks=10404 mismatches=0 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=3003 video_fault=0 pf_status=0100
+RESULT: PASS
+=== pf_wstream: +PF=1 +OPS=300 +WSTREAM=30000
+[20307250001] P4 done: 30000 streamed stores, video_fault=0
+SUMMARY: checks=4526 mismatches=0 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=17268 video_fault=0 pf_status=0100
+RESULT: PASS
+=== inject1_bitflip: +PF=0 +INJECT=1 +INJECT_ADDR=1230 +INJECT_BIT=21
+[966230001] MISMATCH D lw 1000123c: got 9bc3e257 expected 9be3e257
+SUMMARY: checks=10055 mismatches=1 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=0 video_fault=0 pf_status=4000
+RESULT: FAIL (mismatches=1 timeouts=0 protocol=0 rdf_overflow=0 pixel_overflow=0 video_fault=0)
+=== inject2_alias: +PF=1 +INJECT=2
+[15979930001] MISMATCH D lw 10000f38: got 52111dbc expected 52111dde
+[16013330001] MISMATCH D lw 10000d20: got 836b6708 expected 83076708
+[16034210001] MISMATCH D lw 100004b8: got 0071988a expected 0071983e
+[16210170001] MISMATCH D lw 10000f60: got a2c3edad expected 56c3edad
+[16225150001] MISMATCH D lw 10000708: got b883f7d8 expected b883f732
+[16230790001] MISMATCH D lw 10000470: got 2011093c expected 208b093c
+[16258430001] MISMATCH D lw 100006e8: got 4ac8296a expected 8ec8296a
+[16267450001] MISMATCH D lw 10000ca0: got 5a182fe8 expected fa182fe8
+[16270350001] MISMATCH D lw 10000cf8: got 75eea5ce expected 7578a5ce
+[16289050001] MISMATCH D lw 10000c08: got 47eb1e72 expected 47dc1e72
+[16315870001] MISMATCH D lw 10000c40: got 2c43c690 expected 2ce4c690
+[16321570001] MISMATCH D lw 100005e8: got 38e9dca7 expected 38e9bb2a
+SUMMARY: checks=10335 mismatches=31 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=3338 video_fault=0 pf_status=0100
+RESULT: FAIL (mismatches=31 timeouts=0 protocol=0 rdf_overflow=0 pixel_overflow=0 video_fault=0)
+=== inject3_nomask: +PF=0 +INJECT=3
+[884550001] MISMATCH D lw 10000000: got f684540f expected a5000000
+[884570001] MISMATCH D lw 10000004: got f684540f expected 3b3779b9
+[884590001] MISMATCH D lw 10000008: got f684540f expected 996ef372
+[884610001] MISMATCH D lw 1000000c: got f684540f expected 7fa66d2b
+[884630001] MISMATCH D lw 10000010: got f684540f expected dddde6e4
+[884650001] MISMATCH D lw 10000014: got f684540f expected b215609d
+[884670001] MISMATCH D lw 10000018: got f684540f expected 104cda56
+[885070001] MISMATCH D lw 10000020: got e04021d7 expected 54bbcdc8
+[885090001] MISMATCH D lw 10000024: got e04021d7 expected 2af34781
+[885110001] MISMATCH D lw 10000028: got e04021d7 expected 8b2ac13a
+[885130001] MISMATCH D lw 1000002c: got e04021d7 expected 69623af3
+[885150001] MISMATCH D lw 10000030: got e04021d7 expected cf99b4ac
+SUMMARY: checks=10055 mismatches=7870 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=0 video_fault=0 pf_status=4000
+RESULT: FAIL (mismatches=7870 timeouts=0 protocol=0 rdf_overflow=0 pixel_overflow=0 video_fault=0)
+ALL ICARUS TESTS AS EXPECTED

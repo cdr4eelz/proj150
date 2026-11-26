@@ -211,10 +211,10 @@ module Cache #(
             current_state <= next_state;
 
         if(rst) begin
-            addr_hold <= 32'h_0000_0000;
+            addr_hold <= 32'h0000_0000;
             re_hold   <= 1'b0;
-            we_hold   <= 4'b_0000;
-            din_hold  <= 32'h_0000_0000;
+            we_hold   <= 4'b0000;
+            din_hold  <= 32'h0000_0000;
         end else if(next_state == IDLE) begin //&& (|we || (re == 1'b1))) begin
 //      end else if((next_state == IDLE) && (|we || (re == 1'b1))) begin
             // This may cause immediate re-trigger of WRITE. Need to reset these after write done?
@@ -229,7 +229,7 @@ module Cache #(
                 din_hold  <= din_hold;
                 // Would be zero anyway!?!
                 re_hold   <= 1'b0;
-                we_hold   <= 4'b_0000;
+                we_hold   <= 4'b0000;
             end
         end else begin
             addr_hold <= addr_hold;
@@ -288,9 +288,11 @@ module Cache #(
     wire [ 15:0]  f_mask;
     assign f_cmd  = (isWriting) ? 3'b000 : 3'b001; // Write = 0 : Read = 1
      // Shift left by 2 (like * 4) to translate byte addr to 32-bit word addr (then "offset" within 256-bit block is done elsewhere)
-    //assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 4'b0000}; //TODO: Delete this line once confirmed below!!!
-    assign f_addr_base = {addr_hold[27:4], 4'b0000};
-  //assign f_addr_base = {1'b0, addr_hold[`IDX_ADDR_DRAM], 4'b0000}; //TODO: Should we "<< 4" instead???
+    // CAF address is in MIG app_addr units (16-bit words): byte address >> 1, 32-byte line aligned.
+    // {1'b0, byte_addr[27:5], 4'b0} == (byte_addr[27:0] >> 1) & ~15. The MSB (MIG rank bit) must be 0.
+    // (eee4d5d used {addr_hold[27:4], 4'b0}: that is NOT >>1, so CPU bit 27 landed on the rank bit
+    //  and byte offsets 16-31 of each line were fetched from the wrong 16 bytes.)
+    assign f_addr_base = {1'b0, addr_hold[`IDX_ADDR_DRAM], 4'b0000};
     //NOTE:               ^^^^ 1-bit   +   ^^^23-bits^^^   +  ^^^^ 4-bits = 28-bits???
     //NOTE: The 0 as MSB is to fill the 28-bit address width of DDR3 app interface...
     //NOTE:     ...but this leaves some DDR3 RAM inaccessible (upper half?)
