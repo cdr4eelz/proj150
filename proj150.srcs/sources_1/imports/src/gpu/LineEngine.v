@@ -167,6 +167,13 @@ module LineEngine #(
                 a         <= a0;
                 b         <= b0;
             end
+        //COALESCE OPPORTUNITY (shallow lines, MODE_tran=0): a=x steps EVERY iteration, b=y
+        //  only steps when tempB goes negative, so same-y pixels arrive back-to-back as
+        //  separate 1-pixel SLR runs (col_start==col_finish). Could instead extend the
+        //  current run's finish column while y is unchanged & flush when y steps or the
+        //  line ends; ScanLineRunner already handles multi-pixel runs (up to 8x fewer
+        //  32-byte writes). N/A for steep lines (MODE_tran=1): axes swapped, y changes
+        //  every pixel.
             MS_RUN1: if (adv1) begin
                 tempA     <= error + ADJ_posA;
                 tempB     <= error + ADJ_negB;
