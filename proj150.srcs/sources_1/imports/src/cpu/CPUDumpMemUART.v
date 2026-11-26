@@ -1,19 +1,33 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 
 module CPUDumpMemUART #(
-    parameter CPU_FREQ = 50_000_000,
-    parameter BAUD_RATE =   115_200,
-
-    parameter DD=`COLT45_DD,
+    parameter CPU_FREQ=50_000_000,
     parameter COLT45_STEPMAX=9
 )(
-    input  wire clk,
-    input  wire rst,
-    input  wire stall,
+    input clk,
+    input rst,
+    input stall,
 
     // Serial
-    input  wire SerialRX,
-    output wire SerialTX
+    input FPGA_SERIAL_RX,
+    output FPGA_SERIAL_TX,
+
+// CP2+
+    // Memory system connections
+    output [ 31:0] dcache_addr, icache_addr,
+    output [  3:0] dcache_we,   icache_we,
+    output         dcache_re,   icache_re,
+    output [ 31:0] dcache_din,  icache_din,
+    input  [ 31:0] dcache_dout, icache_dout,
+
+// CP4+
+    output          pf_vframe,    gp_vcode, gp_vframe,
+    output [ 31:0]  pf_wframe,    gp_wcode, gp_wframe,
+    input  [ 31:0]                gp_rcode,
+    input  [ 15:0]  pf_status,              gp_status,
+    input           irq_pf_frame, irq_gp_done
 );
 
     wire [13: 0]    ADDR, ADDR_NEXT;
@@ -49,70 +63,51 @@ module CPUDumpMemUART #(
 
     // Key components indirectly wired elsewhere
 
-    bios_mem_24 bram_bios
-    (   .clk(clk),  .ena(~stall),
-        .addra(ADDR_W),
-        .douta(OUT_BRa),//OUT-32
-        .enb(1'b1),
-        .addrb(ADDR_W),
-        .doutb(OUT_BRb)
-    );
-
-/*  bios_mem bram_bios
+    bios_mem bram_bios
     ( .clka(clk),   .addra(ADDR_W),
         .ena( ~stall),      .douta(OUT_BRa),
-      //.wea(4'b0000),      .dina(32'b0),
+      /*.wea(4'b0000),      .dina(32'b0),*/
       .clkb(clk),   .addrb(ADDR_W),
         .enb( 1'b1),        .doutb(OUT_BRb)
-    );  */
+    );
 
-/*  dmem_blk_ram bram_dmem
+    dmem_blk_ram bram_dmem
     ( .clka(clk),   .addra(ADDR_W),
         .ena( ~stall),      .douta(OUT_DB),
         .wea(4'b0000),      .dina (32'd0)
-    );  */
-
-/*    imem_blk_ram bram_imem
-    ( .clka(clk),   .addra(12'b0),
-        .ena(   1'b0),    //.douta(),
-        .wea(4'b0000),      .dina(32'b0),
-      .clkb(clk),   .addrb(ADDR_W),
-      //.enb(1'b1),
-      .doutb(OUT_IB)
-    );  */
-
-    UART #(
-        .CLOCK_FREQ(CPU_FREQ),
-        .BAUD_RATE(BAUD_RATE)
-    ) uart (  .Clock(clk),  .Reset(rst),
-        .SInRX(SerialRX),  .SOutTX(SerialTX),
-        // Transmitter  (handshakes go both in/out)
-        .DataInReadyTX(TX_Ready),
-        .DataInValidTX(TX_Valid),  .DataInTX(TX_Data),
-        // Receiver     (handshakes go both in/out)
-        .DataOutReadyRX(1'b1), // We were *born* ready!
-        .DataOutValidRX(  ),  .DataOutRX(  ) // ...but insolent :(
     );
 
+    imem_blk_ram bram_imem
+    ( .clka(clk),   .addra(12'b0),
+        .ena(   1'b0),    /*.douta(),*/
+        .wea(4'b0000),      .dina(32'b0),
+      .clkb(clk),   .addrb(ADDR_W),
+      /*.enb(1'b1),*/       .doutb(OUT_IB)
+    );
+
+    UART #(.ClockFreq(CPU_FREQ)) uart
+    (   .Clock(clk), .Reset(rst),
+        .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
+        // Transmitter  (handshakes go both in/out)
+        .DataInReady(TX_Ready),
+        .DataInValid(TX_Valid), .DataIn(TX_Data),
+        // Receiver     (handshakes go both in/out)
+        .DataOutReady(1'b1), // We were *born* ready!
+        .DataOutValid(  ), .DataOut(  ) // ...but insolent :(
+    );
 
 // synthesis translate_off
-generate
-if (COLT45_STEPMAX > 0) begin:_STEPS_
-
+generate if (COLT45_STEPMAX > 0) begin:_STEPS_
     initial begin
         $monitor("M: %h %h %h %h %h %h",
             TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
     end
-
     always @(posedge clk) begin
         if (0) $strobe("C: %b %b %h %h %h %h %h %h", 
             rst, stall, TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
         if (ADDR > COLT45_STEPMAX) $stop();
     end
-
-end:_STEPS_
-endgenerate
+end endgenerate
 // synthesis translate_on
-
 
 endmodule

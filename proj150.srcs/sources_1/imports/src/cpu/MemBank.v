@@ -1,4 +1,5 @@
 `include "../cpuglobal.vh"
+`include "../tuntap.vh"
 
 module MemBank #(
     parameter CPU_FREQ = 50_000_000,
@@ -209,21 +210,15 @@ module MemBank #(
     ) /* synthesis syn_noprune=1 */;
 
 
-    wire Rx_Ready, Rx_Valid, Tx_Valid, Tx_Ready;
-    wire [7:0] Rx_Data, Tx_Data;
+    `BUS_RVA_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
     MemMapIO memmap
-    (   .clk(clk), .rst(rst), .stall(stall),
+    ( .clk(clk), .rst(rst), .stall(stall),
         .ena(!stall && _hot_IO), //NOTE: Manage "ena" like a memory
         .addra(DMEM_ADDR[13:2]),
         .douta(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
-    //UART
-        .Rx_Ready(Rx_Ready),   // OUT: We offer to take a byte
-        .Rx_Valid(Rx_Valid),   // IN : UART announcing a byte
-        .Rx_Data(Rx_Data),     // IN : Data from UART
-        .Tx_Data(Tx_Data),     // OUT: Data to UART
-        .Tx_Valid(Tx_Valid),   // OUT: We announce a byte
-        .Tx_Ready(Tx_Ready),   // IN : UART can take a byte from us
+    //RVAs
+        .RVa_RX(UARX), .RVa_TX(UATX),
     //GPU control
                                 .gp_rcode(gp_rcode),
         .pf_status(pf_status),                       .gp_status(gp_status),
@@ -231,28 +226,11 @@ module MemBank #(
         .pf_wframe(pf_wframe),  .gp_wcode(gp_wcode), .gp_wframe(gp_wframe)
     ) /* synthesis syn_noprune=1 */;
 
-    UART #(
-        .CLOCK_FREQ(CPU_FREQ),
-        .BAUD_RATE(BAUD_RATE)
-    ) uart_mem (
-        .Clock(clk),  .Reset(rst),
-        .SInRX(SerialRX),  .SOutTX(SerialTX),  //Serial in & out
-        .DataOutReadyRX(Rx_Ready),  //IN
-        .DataOutValidRX(Rx_Valid),  //OUT
-        .DataOutRX(Rx_Data),        //OUT
-        .DataInTX(Tx_Data),         //IN
-        .DataInValidTX(Tx_Valid),   //IN
-        .DataInReadyTX(Tx_Ready)    //OUT
+    UARTRVA #(.ClockFreq(CPU_FREQ), .BaudRate(BAUD_RATE)) uartrva
+    ( .Clock(clk), .Reset(rst),
+        .SIn(SerialRX),  .UARX(UARX),   .IRQ_RX(irq_uart0), //Receiver
+        .UATX(UATX),  .SOut(SerialTX),  .IRQ_TX(irq_uart1) //Transmitter
     ) /* synthesis syn_noprune=1 */;
-
-    // Prior clock state for "edge" -> "pulse" conversion
-    reg WAS_Rx_Valid, WAS_Tx_Ready;
-    always @(posedge clk) begin:_REG_WAS_
-        //NOTE:Avoid unnecessary resets --if (Reset) {WAS_Rx_Valid,WAS_Tx_Ready} <= 0; else
-        {WAS_Rx_Valid,WAS_Tx_Ready} <= {Rx_Valid,Tx_Ready};
-    end
-    assign irq_uart0 = (Rx_Valid && !WAS_Rx_Valid);
-    assign irq_uart1 = (Tx_Ready && !WAS_Tx_Ready);
 
 
 //=============DEBUGGING TOOLS BELOW THIS POINT=============
