@@ -1,6 +1,6 @@
 #!/bin/bash
 # run_stages.sh STAGE - GIOS command sequences for the ddr-fix bring-up (UART log in hwtest/logs/).
-#   banner | dcache | icache | pixfeed | pixfeed_stress | pixfeed_isolate | gpu
+#   banner | dcache | icache | pixfeed | pixfeed_stress | pixfeed_isolate | gpu | elip | elipbig
 #   LOGPFX=after_ ./run_stages.sh gpu   writes logs/after_gpu.log
 set -u; cd "$(dirname "$0")"; mkdir -p logs
 G="python3 ./gios_uart.py --log logs/${LOGPFX:-}$1.log"
@@ -32,10 +32,16 @@ case "$1" in
        "sf 2" "swcolor 00ff0000" "swfill" gs ;;
   gpu)
     # PixelFeeder shows frame 1 while the GPU writes it; pf_fault ('*' in gs) must stay clear.
-    # hwelip: ElipseEngine is unfinished (x/y never advance), so it rewrites two pixels forever and
-    # wedges the GPU until reset; it is kept here as a worst-case write flood for the display.
+    # hwelip must finish: the second and third 'gs' show GF#..-ELFG (all upper case = every unit ready).
     $G --timeout 60 gs "pf 1" "gf 1" "hwcolor 00ff8040" "hwfill" "@sleep 1" gs "lw 10400000" "lw 10400c7c" "lw 10657c7c" \
        "lw 10400c80" "hwcolor 000000ff" "hwline 0 0 799 599" "@sleep 1" gs "lw 10400000" "lw 1052c640" "lw 1052c644" \
        "hwcolor 0000ff00" "hwelip 400 300 200 150" "@sleep 3" gs "lw 10496640" "lw 105c2640" "@sleep 5" gs ;;
-  *) echo "usage: $0 banner|dcache|icache|pixfeed|pixfeed_stress|pixfeed_isolate|gpu"; exit 2 ;;
+  elip|elipbig)
+    # GPU ellipses (frame 1, hwelip) against the CPU swelip reference (frame 2): pixel reads at model
+    # points + band checksums; prints PASS/FAIL. elipbig = the 399x299 ellipse alone.
+    BIGARG=""; [ "$1" = elipbig ] && BIGARG="--big"
+    mapfile -t C < <(python3 elip_check.py cmds $BIGARG)
+    $G --timeout 90 "${C[@]}"
+    python3 elip_check.py check logs/${LOGPFX:-}$1.log $BIGARG ;;
+  *) echo "usage: $0 banner|dcache|icache|pixfeed|pixfeed_stress|pixfeed_isolate|gpu|elip|elipbig"; exit 2 ;;
 esac
