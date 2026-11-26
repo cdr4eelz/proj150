@@ -98,6 +98,12 @@ include $(wildcard tests/*.mk)
 # each branch deletes its line once the RTL is in (RUN_SKIPPED=1 runs them anyway)
 $(foreach b,$(patsubst PENDING.%,%,$(filter PENDING.%,$(.VARIABLES))),$(foreach t,$(PENDING.$(b)),$(eval $(t).SKIP := pending $(b))))
 
+# ML505-only benches (Memory150 + MIG v3.61 DDR2 model, CoreGen PixelFeeder FIFO): proj150's memory
+# path (MemoryDDR, MigUiAdapter, Cache, RequestController, PixelFeeder) is covered by sim/icarus instead
+ML505_ONLY := cache_tb cache_tb_sv memory150_ddr memory150_tb pixel_feeder pixel_feeder_dvi pixel_feeder_fwft \
+  pixel_feeder_stress sys_ddr_bios
+$(foreach t,$(ML505_ONLY),$(eval $(t).SKIP := ML505 Memory150/DDR2 bench; proj150 memory path: sim/icarus))
+
 # per-test value with fallback: $(call tv,<test>,<VAR>,<default>)
 tv = $(if $(filter undefined,$(origin $(1).$(2))),$(3),$($(1).$(2)))
 

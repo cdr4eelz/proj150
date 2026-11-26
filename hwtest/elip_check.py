@@ -105,9 +105,9 @@ def check(logfile, big=False):
         m = re.match(r"lw ([0-9a-f]{8})$", head)
         if m:
             a_ = int(m.group(1), 16)
-            mm = re.match(r"([0-9a-f]{8}): ([0-9a-f]{8})", rest)
+            mm = re.match(r"([0-9a-f]{8}):\s*([0-9a-f]{8})", rest)
             if a_ in lw:
-                if mm and int(mm.group(2), 16) == lw[a_]: lwgood += 1
+                if mm and (int(mm.group(2), 16) & 0xffffff) == (lw[a_] & 0xffffff): lwgood += 1  # GPU v2 writes alpha ff
                 else:
                     lwbad += 1; print("LW MISMATCH %08x: got %s expected %08x" % (a_, mm.group(2) if mm else rest[:20], lw[a_]))
         elif head.startswith("copy "):
@@ -117,15 +117,19 @@ def check(logfile, big=False):
     pairs = list(zip(copies[0::2], copies[1::2]))
     bandbad = swdiff = 0
     for ((h1, c1), (h2, c2)), (_, _, ex) in zip(pairs, bands):
-        if not re.match(r"^[0-9a-f]{8}$", c1) or int(c1, 16) != ex:
+        if not re.match(r"^[0-9a-f]{8}$", c1) or (int(c1, 16) & 0xffffff) != (ex & 0xffffff):
             bandbad += 1; print("ROW MISMATCH hw %s -> %s expected from model %08x" % (h1, c1, ex))
         if c1 != c2: swdiff += 1
     print("lw reads: %d good, %d bad (of %d expected)" % (lwgood, lwbad, len(lw)))
     print("rows: %d of %d hardware row checksums differ from the model (%d copy replies)" % (bandbad, len(bands), len(copies)))
     print("info: %d rows where the CPU swelip reference frame differs from the hardware frame" % swdiff)
-    # GF ready flag: after each hwelip the status line must show uppercase "ELFG"
+    # GF ready flags: after each hwelip the GF#nn-xxxx field must be all upper case (every unit ready);
+    # GPU v2 adds R (rectangle): ERLFG
     stat = [g.splitlines()[0] if g else "" for g in gs_after]
-    notready = [s for s in stat if "GF#" in s and "ELFG" not in s]
+    def gf_ready(s):
+        m = re.search(r"GF#..-([A-Za-z]+)", s)
+        return m is not None and m.group(1).isupper()
+    notready = [s for s in stat if "GF#" in s and not gf_ready(s)]
     for s in stat: print("gs:", s)
     print("GF not ready in %d gs replies" % len(notready))
     good = lwbad == 0 and bandbad == 0 and lwgood == len(lw) and len(pairs) == len(bands) and not notready
