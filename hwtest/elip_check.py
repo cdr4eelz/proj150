@@ -7,8 +7,10 @@
 
 Frame 1 = hardware (gf 1), frame 2 = software reference (sf 2). Both frames are first filled with the
 same background. Reads: every Nth model pixel and the extremes with `lw`, a few background pixels, and
-the XOR checksum (`copy ADDR 0 LEN`, as the D$ test uses) of 4-row bands of both frames, which must be
-equal band by band. The ellipses must fit on screen (the engine does not clip).
+the XOR checksum (`copy ADDR 0 LEN`, as the D$ test uses) of every screen row (3200 bytes) of both
+frames; the hardware row must equal the XOR computed from the model (the software frame is only
+reported: GIOS swelip 700 520 60 40 leaves stray pixels in the low columns of many rows).
+The ellipses must fit on screen (the engine does not clip).
 """
 import re, sys
 
@@ -55,7 +57,7 @@ def model(xc, yc, a, b):
 def addr(frame, x, y): return frame + y * STRIDE + 4 * x
 
 def plan(big=False):
-    """-> (commands, expected {addr: value} for lw, band list [(offset, len)])"""
+    """-> (commands, expected {addr: value} for lw, row list [(offset, len, expected XOR)])"""
     cmds, lw, bands = [], {}, []
     cmds += ["pf 1", "gf 1", "sf 2", "hwcolor %08x" % BG, "hwfill", "swcolor %08x" % BG, "swfill", "gs"]
     ellipses = [BIG] if big else ELIPS
@@ -73,11 +75,16 @@ def plan(big=False):
         if (x, y) not in pix_all: lw[addr(FRAME_HW, x, y)] = BG
     for a_ in sorted(lw): cmds.append("lw %08x" % a_)
     ys = sorted({y for (_, y) in pix_all})
-    y0, y1 = ys[0] & ~3, ys[-1] | 3
-    rows = [y for y in range(0, 600, 4) if (y0 - 8 <= y <= y1 + 8) or y in (0, 596)]
+    y0, y1 = max(ys[0] - 2, 0), min(ys[-1] + 2, 599)
+    # one checksum per screen row, 800 pixels = 3200 bytes: the 4096-byte row stride has 224 unused
+    # pixels of uninitialised memory at the end that differ between the two frames
+    rows = sorted(set(range(y0, y1 + 1)) | {0, 599})
     for r in rows:
-        bands.append((r * STRIDE, 4 * STRIDE))
-        cmds += ["copy %08x 0 %x" % (FRAME_HW + r * STRIDE, 4 * STRIDE), "copy %08x 0 %x" % (FRAME_SW + r * STRIDE, 4 * STRIDE)]
+        x = 0   # XOR of the 800 pixels of row r in the model: background, ellipse colour on its pixels
+        for xx in range(800):
+            x ^= pix_all.get((xx, r), BG)
+        bands.append((r * STRIDE, 4 * 800, x))
+        cmds += ["copy %08x 0 %x" % (FRAME_HW + r * STRIDE, 4 * 800), "copy %08x 0 %x" % (FRAME_SW + r * STRIDE, 4 * 800)]
     cmds.append("gs")
     return cmds, lw, bands
 
@@ -108,12 +115,14 @@ def check(logfile, big=False):
         elif head == "gs":
             gs_after.append(rest)
     pairs = list(zip(copies[0::2], copies[1::2]))
-    bandbad = 0
-    for ((h1, c1), (h2, c2)) in pairs:
-        if c1 != c2 or not re.match(r"^[0-9a-f]{8}$", c1):
-            bandbad += 1; print("BAND MISMATCH hw %s -> %s | sw %s -> %s" % (h1, c1, h2, c2))
+    bandbad = swdiff = 0
+    for ((h1, c1), (h2, c2)), (_, _, ex) in zip(pairs, bands):
+        if not re.match(r"^[0-9a-f]{8}$", c1) or int(c1, 16) != ex:
+            bandbad += 1; print("ROW MISMATCH hw %s -> %s expected from model %08x" % (h1, c1, ex))
+        if c1 != c2: swdiff += 1
     print("lw reads: %d good, %d bad (of %d expected)" % (lwgood, lwbad, len(lw)))
-    print("bands: %d of %d hw/sw band checksums differ (%d copy replies)" % (bandbad, len(bands), len(copies)))
+    print("rows: %d of %d hardware row checksums differ from the model (%d copy replies)" % (bandbad, len(bands), len(copies)))
+    print("info: %d rows where the CPU swelip reference frame differs from the hardware frame" % swdiff)
     # GF ready flag: after each hwelip the status line must show uppercase "ELFG"
     stat = [g.splitlines()[0] if g else "" for g in gs_after]
     notready = [s for s in stat if "GF#" in s and "ELFG" not in s]
