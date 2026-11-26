@@ -7,6 +7,11 @@
 #   make bit                 bitstream (the default 'all' also prints the timing summary)
 #   make timing              WNS/WHS and utilization of the routed design
 #   make program             load the bitstream into the Arty over its Digilent cable (never the XUPV5)
+#   make mmi                 memory map of the four block RAMs (bios, dmem, imem, isr) from the routed design,
+#                            INIT contents checked against the IP images  -> build/arty/proj150_arty.mmi
+#   make patch COE=sw/gios.inst.coe   swap one RAM image into the EXISTING bitstream with updatemem, no rebuild
+#                            -> build/arty/proj150_arty_patched.bit;  patch-bios / patch-dmem / patch-imem /
+#                            patch-isr patch the matching sw/ image (sw/MANIFEST: gios, bench, proj7, isr7)
 #   make sim                 Icarus regression: sim/ise (ISE rig) + memory path + PixelFeeder + GPU (no Xilinx tools)
 #   make sim-ise             only the ISE rig (sim/ise; 'make -C sim/ise list' for its tests)
 #   make sw-import           copy the built BRAM images (sw/MANIFEST) from CS150; does not build software
@@ -23,6 +28,17 @@
 #   VIVADO=/path/to/vivado   default: vivado from PATH, else /tools/Xilinx/Vivado/2019.1/bin/vivado
 #   HW_SERIAL=...            Digilent cable serial for 'make program' (default: boards/<board>/board.mk)
 #   CS150=../cs150-1245      checkout of the ISE branch (software built there), for sw-import and ise-diff
+#   COE=sw/x.coe MEM=bios    make patch: image to load; MEM (bios|dmem|imem|isr) only when the file name is not one of sw/MANIFEST
+#   PATCH_IN=a.bit PATCH_OUT=b.bit   make patch: input/output bitstream (default build/arty/proj150_arty{,_patched}.bit);
+#                            chain patches:  make patch-bios PATCH_OUT=t.bit; make patch-dmem PATCH_IN=t.bit
+#   PATCH_FORCE=1            make patch: allow a bitstream older than post_route.dcp
+#   MMI_VERIFY=0             make mmi: skip the INIT check (assumes ramloop[k] = bit slice k; unsafe)
+#
+# Caveats of make patch: it never rebuilds, so 'make bit' must have run. The result is a TEST ARTIFACT: the IP, the
+# checkpoints and the Makefile's tracking still hold the old image (the next make bit rebuilds from sw/, not from the
+# patch). The MMI records block RAM placement, so patch only a bitstream written from the SAME routed checkpoint
+# the MMI was made from (make mmi regenerates it when post_route.dcp is newer). Each RAM is fixed at 4096 words
+# (PATCH_DEPTH): a shorter image is zero-padded, a longer one is an error - that needs a full rebuild.
 
 BOARD ?= arty
 include boards/$(BOARD)/board.mk
@@ -70,7 +86,7 @@ endef
 .DEFAULT_GOAL := all
 CS150 ?= ../cs150-1245
 
-.PHONY: all ip synth impl bit timing program sim sim-ise sw-import ise-diff clean clean-impl clean-ip help FORCE
+.PHONY: all ip synth impl bit timing program mmi patch patch-bios patch-dmem patch-imem patch-isr sim sim-ise sw-import ise-diff clean clean-impl clean-ip help FORCE
 
 all: bit timing
 
@@ -122,6 +138,60 @@ program: $(OUT)/$(BIT)
 	cd $(OUT)/tmp/program && $(VIVADO) -mode batch -notrace -nojournal -log $(CURDIR)/$(OUT)/logs/program.log \
 	    -source $(CURDIR)/scripts/program.tcl -tclargs $(CURDIR)/$(OUT)/$(BIT) $(HW_SERIAL) $(HW_URL) $(HW_DEVICE)
 
+# ----------------------------------------------------------------------------------------- mmi, patch
+# updatemem swaps the contents of block RAMs inside a finished bitstream (the Vivado successor of ISE's data2mem
+# / bitgen -g UpdtBRAM): seconds instead of a rebuild. It needs a .mmi memory map of the RAMs; scripts/mmi.tcl
+# writes one from the routed checkpoint and checks it against the IP images. These targets never rebuild
+# anything: they do not depend on post_route.dcp or the bitstream, they only check that they exist.
+MMI          := $(OUT)/$(BIT:.bit=.mmi)
+PATCH_DEPTH  ?= 4096
+PATCH_IN     ?= $(OUT)/$(BIT)
+PATCH_OUT    ?= $(OUT)/$(BIT:.bit=_patched.bit)
+UPDATEMEM    ?= $(dir $(VIVADO))updatemem
+TCLSH        ?= $(shell command -v tclsh 2>/dev/null)
+# memory name (the -proc name in the MMI) : IP name; the image of each is IP_DEPS_<ip>
+PATCH_MEMS   := bios:bios_mem dmem:dmem_blk_ram imem:imem_blk_ram isr:isr_mem
+# MEM from the file name of COE unless given
+MEM          ?= $(strip $(foreach p,$(PATCH_MEMS),$(if $(filter $(notdir $(COE)),$(notdir $(IP_DEPS_$(word 2,$(subst :, ,$(p)))))),$(word 1,$(subst :, ,$(p))))))
+
+$(MMI): scripts/mmi.tcl scripts/coe.tcl $(COMMON_TCL)
+	$(call vivado_run,mmi,mmi.tcl,DEPTH=$(PATCH_DEPTH) $(if $(MMI_VERIFY),MMI_VERIFY=$(MMI_VERIFY)))
+	@cat $(OUT)/reports/mmi_verify.rpt
+
+# Regenerated when post_route.dcp is newer (or MMI_VERIFY is given). Done by removing the stale file, so
+# post_route.dcp is not a prerequisite and 'make mmi' can never start a synthesis or implementation.
+mmi:
+	@test -f $(OUT)/impl/post_route.dcp || { echo "make mmi: no routed checkpoint $(OUT)/impl/post_route.dcp: run 'make impl' first"; exit 1; }
+	@if [ $(OUT)/impl/post_route.dcp -nt $(MMI) $(if $(MMI_VERIFY),|| true) ]; then rm -f $(MMI); fi
+	@$(MAKE) --no-print-directory $(MMI)
+	@echo "$(MMI) is up to date with $(OUT)/impl/post_route.dcp"
+
+patch:
+	@test -n "$(COE)" || { echo "usage: make patch COE=sw/gios.inst.coe   (or patch-bios / patch-dmem / patch-imem / patch-isr)"; exit 1; }
+	@test -f "$(COE)" || { echo "make patch: $(COE) does not exist"; exit 1; }
+	@test -n "$(filter bios dmem imem isr,$(MEM))" || { echo "make patch: cannot tell which RAM $(COE) is for: add MEM=bios|dmem|imem|isr (sw/MANIFEST names: $(foreach p,$(PATCH_MEMS),$(notdir $(IP_DEPS_$(word 2,$(subst :, ,$(p)))))))"; exit 1; }
+	@test -f "$(PATCH_IN)" || { echo "make patch: $(PATCH_IN) does not exist: run 'make bit' first (patching never rebuilds)"; exit 1; }
+	@test -f $(OUT)/impl/post_route.dcp || { echo "make patch: no routed checkpoint $(OUT)/impl/post_route.dcp to take the RAM locations from: run 'make impl'"; exit 1; }
+	@if [ $(OUT)/impl/post_route.dcp -nt "$(PATCH_IN)" ] && [ -z "$(PATCH_FORCE)" ]; then \
+	    echo "make patch: $(PATCH_IN) is older than $(OUT)/impl/post_route.dcp, so the RAM locations in the MMI may not match it."; \
+	    echo "            Run 'make bit', or PATCH_FORCE=1 if you know it was written from this checkpoint."; exit 1; fi
+	@test "$(abspath $(PATCH_IN))" != "$(abspath $(PATCH_OUT))" || { echo "make patch: PATCH_IN and PATCH_OUT are the same file"; exit 1; }
+	@$(MAKE) --no-print-directory mmi
+	@mkdir -p $(OUT)/patch $(OUT)/logs $(OUT)/tmp/patch
+	$(if $(TCLSH),$(TCLSH) scripts/coe2mem.tcl $(COE) $(OUT)/patch/$(MEM).mem DEPTH=$(PATCH_DEPTH),\
+	    cd $(OUT)/tmp/patch && $(VIVADO) -mode batch -notrace -nojournal -log $(CURDIR)/$(OUT)/logs/coe2mem.log \
+	    -source $(CURDIR)/scripts/coe2mem.tcl -tclargs $(abspath $(COE)) $(CURDIR)/$(OUT)/patch/$(MEM).mem DEPTH=$(PATCH_DEPTH))
+	cd $(OUT)/tmp/patch && $(UPDATEMEM) -meminfo $(CURDIR)/$(MMI) -data $(CURDIR)/$(OUT)/patch/$(MEM).mem -proc $(MEM) \
+	    -bit $(abspath $(PATCH_IN)) -out $(abspath $(PATCH_OUT)) -force > $(CURDIR)/$(OUT)/logs/patch.log 2>&1; \
+	    rc=$$?; cat $(CURDIR)/$(OUT)/logs/patch.log; exit $$rc
+	@echo "patched $(MEM) of $(PATCH_IN) with $(COE) -> $(PATCH_OUT)"
+	@echo "TEST ARTIFACT: the IP/checkpoints still hold the old image; load it with scripts/program.tcl (see 'make program')"
+
+patch-bios: ; @$(MAKE) --no-print-directory patch MEM=bios COE=$(or $(COE),$(IP_DEPS_bios_mem))
+patch-dmem: ; @$(MAKE) --no-print-directory patch MEM=dmem COE=$(or $(COE),$(IP_DEPS_dmem_blk_ram))
+patch-imem: ; @$(MAKE) --no-print-directory patch MEM=imem COE=$(or $(COE),$(IP_DEPS_imem_blk_ram))
+patch-isr:  ; @$(MAKE) --no-print-directory patch MEM=isr  COE=$(or $(COE),$(IP_DEPS_isr_mem))
+
 # ----------------------------------------------------------------------------------------- sim
 sim: sim-ise
 	sim/icarus/run_icarus.sh
@@ -144,7 +214,8 @@ clean:
 	rm -rf $(OUT)
 
 clean-impl:
-	rm -rf $(OUT)/synth $(OUT)/impl $(OUT)/reports $(OUT)/tmp $(OUT)/$(BIT) $(OUT)/timing.txt $(OUT)/synth.params
+	rm -rf $(OUT)/synth $(OUT)/impl $(OUT)/reports $(OUT)/tmp $(OUT)/$(BIT) $(OUT)/timing.txt $(OUT)/synth.params \
+	    $(MMI) $(OUT)/patch $(OUT)/$(BIT:.bit=_patched.bit)
 
 clean-ip:
 	rm -rf $(OUT)/ip
