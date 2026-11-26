@@ -339,11 +339,11 @@ set_false_path -from [get_ports { SWITCH[*] }]
 
 
 # This represents, essentially, one synchronizer fed to another with a debouncer in between:
-set_max_delay -datapath_only -from [get_pins {clean_rst_top/genblk1[0].DbounceIt/OutReg/SR.SS.Out_reg[0]/C}] -to [get_pins {sync_rst_mig_sys_n/flops_reg[0][0]/D}] 15.000
+#OBSOLETE (MIG sys_rst is now the MMCM lock, no synchronizer): set_max_delay -datapath_only -from [get_pins {clean_rst_top/genblk1[0].DbounceIt/OutReg/SR.SS.Out_reg[0]/C}] -to [get_pins {sync_rst_mig_sys_n/flops_reg[0][0]/D}] 15.000
 ##TODO: These timing exceptions deserve to be "relative" constraints (relative to the Synchronizer module)
 set_max_delay -datapath_only -from [get_pins {raw_rst_r_reg/C}] -to [get_pins {sync_rst_cpu/flops_reg[0][0]/D}] 15.000
 set_max_delay -datapath_only -from [get_pins {raw_rst_r_reg/C}] -to [get_pins {sync_rst_pix/flops_reg[0][0]/D}] 15.000
-set_max_delay -datapath_only -from [get_pins {raw_locked_r_reg/C}] -to [get_pins {sync_rst_mig_sys_n/flops_reg[0][0]/D}] 15.000
+#OBSOLETE (MIG sys_rst is now the MMCM lock, no synchronizer): set_max_delay -datapath_only -from [get_pins {raw_locked_r_reg/C}] -to [get_pins {sync_rst_mig_sys_n/flops_reg[0][0]/D}] 15.000
 
 
 #######################################################################

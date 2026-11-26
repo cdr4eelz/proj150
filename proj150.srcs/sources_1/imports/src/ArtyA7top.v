@@ -67,47 +67,35 @@ module ArtyA7top #(
         .OUT(reset_top_clocks) // Reset signal (Active HIGH)
     );  //assign reset_top_clocks = !CK_RST_N;  // Top CLocks are first to come out of reset
 
-    wire locked_clock0, locked_clock1, locked_top_clocks;  // Participate in startup sequence
+    wire locked_top_clocks;  // Participate in startup sequence
     wire clk_mig_sys, clk_mig_ref, clk_cpu, clk_pix;
-//TODO: Figure out if we need BUFG on these clocks???
+    // ONE MMCM for everything (100 MHz in, VCO 1000 MHz): 50 MHz CPU, 40 MHz pixel,
+    // 200 MHz MIG reference and 100 MHz MIG system clock. This is the clocking proven by
+    // arty-mig-test (MIG sys_clk_i/clk_ref_i are "No Buffer" inputs fed from one clk_wiz).
+    // Replaces the old clk_wiz_0 + clk_wiz_1 (101.01 MHz) pair, which both hung off one IBUF.
+    // clk_wiz_0 gets its 4th output from scripts/ip/clk_wiz_0.tcl.
     clk_wiz_0 TOP_clocks (  // Generate various clocks for components
-    // Clock in ports
-        .clk_in_100MHz(clk_in_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
-        //.clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board)
-    // Clock out ports (rebuild clk_wiz if needs change)
-        .clk_cpu_50MHz      (clk_cpu),      // output modest CPU speed
-        .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
-        .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG (must be 200MHz)
-        // Status and control signals
-        .reset(reset_top_clocks),  // input reset (ACTIVE HIGH)
-        .locked(locked_clock0)  // output locked (ACTIVE HIGH)
-    );  // NOTE: clk_wiz appears to put BUFG on its output clocks
-
-    //assign locked_clock1 = 1'b1; // Disable MIG clock, use approximate 100MHz directly
-    //assign clk_mig_sys = clk_in_100MHz; // Drive MIG (input) clock directly from board clock (100MHz)
-    // ^^^ Using clk_in_100MHz directly is approximate (wants 101.01MHz) but hopefully a cleaner clock!
-    clk_wiz_1 MIG_clocks (
     // Clock in ports
         .clk_in_100MHz(clk_in_100MHz),
     // Clock out ports
-        .clk_mig_101MHz(clk_mig_sys),     // output 101.010MHz, although 100MHz input is close enough
-    // Status and control signals
-        .reset(reset_top_clocks), // Active HIGH
-        .locked(locked_clock1)
-    );
-    assign locked_top_clocks = locked_clock0 && locked_clock1; // Consider this async
-//TODO: Register/Synchronize "locked_top_clocks" before using it as a reset condition for other components? Or just let it be async and hope for the best?
+        .clk_cpu_50MHz      (clk_cpu),      // output modest CPU speed
+        .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
+        .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG (must be 200MHz)
+        .clk_migsys_100MHz  (clk_mig_sys),  // output SYS clk for MIG (prj InputClkFreq 99.997)
+        // Status and control signals
+        .reset(reset_top_clocks),  // input reset (ACTIVE HIGH)
+        .locked(locked_top_clocks) // output locked (ACTIVE HIGH)
+    );  // NOTE: clk_wiz puts BUFGs on its output clocks
+
     // Then some other support components come out of reset (like DRAM)
     wire rst_cpu, init_done;  // TODO: CPU comes out of reset after everything else
     wire rst_mig_sys_n, rst_pix; // Avoid debug on these since it brings in 2 extra clock domains
 
-    reg raw_locked_r;
-    always @(posedge clk_in_100MHz) begin //Attempt to register combinational logic before sync
-        raw_locked_r <= locked_top_clocks && !reset_top_clocks; //BAD BAD BAD?
-    end
-    Synchronizer #( .Width(1) ) sync_rst_mig_sys_n (
-        .async_signal(raw_locked_r),
-        .Clock(clk_mig_sys),  .sync_signal(rst_mig_sys_n));  // ACTIVE HIGH??? NOTE: This clock is bad when PLL not locked!
+    // MIG sys_rst is ACTIVE LOW and is driven ONLY by the MMCM lock, exactly as in arty-mig-test:
+    // the MIG leaves reset as soon as its input clocks are stable (the MIG synchronizes sys_rst
+    // internally). It is never gated by init_calib_complete. Not synchronized into clk_mig_sys,
+    // because that clock stops when the MMCM unlocks (the reset could then never assert).
+    assign rst_mig_sys_n = locked_top_clocks;
 
     wire clk_mig_ui, rst_mig_ui; // Presuming "init_done" is in clk_mig_ui domain (uncertain)
     reg raw_rst_r;
