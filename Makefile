@@ -7,7 +7,9 @@
 #   make bit                 bitstream (the default 'all' also prints the timing summary)
 #   make timing              WNS/WHS and utilization of the routed design
 #   make program             load the bitstream into the Arty over its Digilent cable (never the XUPV5)
-#   make sim                 Icarus regression of memory path + PixelFeeder + GPU (no Xilinx tools)
+#   make sim                 Icarus regression: sim/ise (ISE rig) + memory path + PixelFeeder + GPU (no Xilinx tools)
+#   make sim-ise             only the ISE rig (sim/ise; 'make -C sim/ise list' for its tests)
+#   make ise-diff            compare the RTL with the cs150-1245 ISE branch (FILE=cpu/StageF.v for one diff)
 #   make clean               remove build/<board>;  make clean-impl keeps the generated IP
 #
 # Parameters (override on the command line):
@@ -19,6 +21,7 @@
 #   IP_JOBS=4                Vivado instances to run in parallel when generating IP
 #   VIVADO=/path/to/vivado   default: vivado from PATH, else /tools/Xilinx/Vivado/2019.1/bin/vivado
 #   HW_SERIAL=...            Digilent cable serial for 'make program' (default: boards/<board>/board.mk)
+#   CS150=../cs150-1245      checkout of the ISE branch, for ise-diff
 
 BOARD ?= arty
 include boards/$(BOARD)/board.mk
@@ -64,7 +67,9 @@ define vivado_run
 endef
 
 .DEFAULT_GOAL := all
-.PHONY: all ip synth impl bit timing program sim clean clean-impl clean-ip help FORCE
+CS150 ?= ../cs150-1245
+
+.PHONY: all ip synth impl bit timing program sim sim-ise ise-diff clean clean-impl clean-ip help FORCE
 
 all: bit timing
 
@@ -117,8 +122,17 @@ program: $(OUT)/$(BIT)
 	    -source $(CURDIR)/scripts/program.tcl -tclargs $(CURDIR)/$(OUT)/$(BIT) $(HW_SERIAL) $(HW_URL) $(HW_DEVICE)
 
 # ----------------------------------------------------------------------------------------- sim
-sim:
+sim: sim-ise
 	sim/icarus/run_icarus.sh
+
+# The cs150-1245 ISE Icarus rig (sim/ise, see its README): unit/CPU/GPU tests carried over from ISE
+sim-ise:
+	$(MAKE) -C sim/ise all CS150=$(abspath $(CS150))
+
+# ----------------------------------------------------------------------------------------- ise-diff
+# Review aid for the ISE port (normalised: comments/whitespace/default_nettype ignored). RAW=1 for plain diffs.
+ise-diff:
+	scripts/tools/ise_diff.py --cs150 $(CS150) $(if $(RAW),--raw) $(FILE)
 
 # ----------------------------------------------------------------------------------------- clean
 clean:

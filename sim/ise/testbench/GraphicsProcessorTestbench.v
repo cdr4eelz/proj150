@@ -1,0 +1,531 @@
+`timescale 1ns/1ps
+
+module GraphicsProcessorTestbench;
+
+    parameter ClockFreq = 50_000_000;
+    parameter HalfCycle = 5;
+    localparam Cycle = 2*HalfCycle;
+    reg  cpu_clk_g, rst_cpu_bus;
+    initial cpu_clk_g = 0;
+    always #(HalfCycle) cpu_clk_g = ~cpu_clk_g;
+
+    wire        GP_ready, GP_fault;
+    reg         GP_vcode;
+    reg  [31:0] GP_wcode, GP_wframe;
+    wire [31:0] GP_rcode;
+    wire [ 5:0] GP_rframe;
+
+    reg         raf_full;
+    wire        raf_wren;
+    wire [30:0] raf_addr;
+    wire        rdf_rden;
+    reg         rdf_wren;
+    reg [127:0] rdf_data;
+
+    reg         FF_ready;
+    wire        FF_valid;
+    wire [31:0] FF_color;
+    wire [31:0] FF_frame;
+
+    reg         LE_ready;
+    wire        LE_color_valid;
+    wire [31:0] LE_color;
+    wire        LE_x0_valid;
+    wire        LE_y0_valid;
+    wire        LE_x1_valid;
+    wire        LE_y1_valid;
+    wire [ 9:0] LE_point;
+    wire        LE_trigger;
+    wire [31:0] LE_frame;
+
+    reg         EL_ready;
+    wire        EL_color_valid;
+    wire        EL_backc_valid;
+    wire [31:0] EL_color;
+    wire        EL_xc_valid;
+    wire        EL_yc_valid;
+    wire        EL_a_valid;
+    wire        EL_b_valid;
+    wire [ 9:0] EL_point;
+    wire        EL_trigger;
+    wire [31:0] EL_frame;
+
+    reg         RE_ready;
+    wire        RE_color_valid;
+    wire        RE_backc_valid;
+    wire [31:0] RE_color;
+    wire        RE_xl_valid;
+    wire        RE_yt_valid;
+    wire        RE_xr_valid;
+    wire        RE_yb_valid;
+    wire [ 9:0] RE_point;
+    wire        RE_trigger;
+    wire [31:0] RE_frame;
+
+    GraphicsProcessor #(
+        .LITTLEWORDIAN(1)
+    ) DUT(
+        .clk(cpu_clk_g),
+        .rst(rst_cpu_bus),
+    //GraphicsProcessor control signals
+        .GP_ready(GP_ready), .GP_fault(GP_fault),
+        .GP_vcode(GP_vcode), .GP_vframe(GP_vcode),
+        .GP_wcode(GP_wcode), .GP_wframe(GP_wframe),
+        .GP_rcode(GP_rcode), .GP_rframe(GP_rframe),
+    //DDR FIFOs
+        .rdf_wren(rdf_wren),
+        .raf_full(raf_full),
+        .rdf_data(rdf_data),
+        .rdf_rden(rdf_rden),
+        .raf_wren(raf_wren),
+        .raf_addr(raf_addr),
+    //FrameFiller control signals
+        .FF_ready(FF_ready),
+        .FF_valid(FF_valid),
+        .FF_color(FF_color),
+        .FF_frame(FF_frame),
+    //LineEngine control signals
+        .LE_ready(LE_ready),
+        .LE_color_valid(LE_color_valid),
+        .LE_color(LE_color),
+        .LE_x0_valid(LE_x0_valid),
+        .LE_y0_valid(LE_y0_valid),
+        .LE_x1_valid(LE_x1_valid),
+        .LE_y1_valid(LE_y1_valid),
+        .LE_point(LE_point),
+        .LE_trigger(LE_trigger),
+        .LE_frame(LE_frame),
+    //ElipseEngine control signals
+        .EL_ready(EL_ready),
+        .EL_color_valid(EL_color_valid),
+        .EL_backc_valid(EL_backc_valid),
+        .EL_color(EL_color),
+        .EL_xc_valid(EL_xc_valid),
+        .EL_yc_valid(EL_yc_valid),
+        .EL_a_valid(EL_a_valid),
+        .EL_b_valid(EL_b_valid),
+        .EL_point(EL_point),
+        .EL_trigger(EL_trigger),
+        .EL_frame(EL_frame),
+    //RectangleEngine control signals
+        .RE_ready(RE_ready),
+        .RE_color_valid(RE_color_valid),
+        .RE_backc_valid(RE_backc_valid),
+        .RE_color(RE_color),
+        .RE_xl_valid(RE_xl_valid),
+        .RE_yt_valid(RE_yt_valid),
+        .RE_xr_valid(RE_xr_valid),
+        .RE_yb_valid(RE_yb_valid),
+        .RE_point(RE_point),
+        .RE_trigger(RE_trigger),
+        .RE_frame(RE_frame)
+    );
+
+
+// Little convenience tasks for error tracking
+
+integer ELOG_errors = 0; // was a 1-bit reg: an even number of errors printed "ERRORS: 0"
+
+    task ELOG_ERROR;
+        input [100*8:1] unit_name;
+        input [256*8:1] message;
+    begin
+        $display("ERROR: (%s) %s", unit_name, message);
+        ELOG_errors = ELOG_errors + 1;
+    end endtask
+
+    task ELOG_TALLY;
+    begin
+        $display("\nERRORS: %0d\n", ELOG_errors);
+    end endtask
+
+
+    wire ENGINES_ready;
+
+    initial begin
+        #(Cycle);
+        @(negedge cpu_clk_g); // drive inputs on the falling edge (DUT samples on the rising edge)
+        {GP_vcode, GP_wcode, GP_wframe} = 0;
+        rst_cpu_bus = 1'b1;
+        #(10*Cycle);
+        rst_cpu_bus = 1'b0;
+        #(Cycle);
+
+        $display("GraphicsProcessor: Fake memory & engines...");
+        //execGP( 32'h0000_4000, 1 );
+//        execGP( 32'h1200_3080, 1 );
+        execGP( 32'h1200_3000, 1 );
+
+        @(negedge cpu_clk_g);
+        while (!ENGINES_ready) @(negedge cpu_clk_g); // GP should have waited already
+        $display("GraphicsProcessor: Done.");
+        ELOG_TALLY;
+        $finish();
+    end
+
+    task execGP;
+        input [31:0] codebase;
+        input [31:0] framebase;
+    begin
+        @(negedge cpu_clk_g);
+        $display("gp-TB: Wait...");
+        while (!GP_ready) #(Cycle); // wait for GP_ready
+        GP_wcode = codebase;
+        GP_wframe = framebase;
+        GP_vcode = 1'b1;
+        $strobe("gp-TB: code=%h  frame=%h", GP_wcode, GP_wframe);
+        #(Cycle);
+        GP_vcode = 1'b0;
+        GP_wcode = 32'bz;
+        $monitor("gp-TB: procframe==%h  rcode=%h  fault==%b",
+                 GP_rframe, GP_rcode, GP_fault);
+        while (!GP_ready) begin
+//            if (wdf_wren && wdf_mask != 16'hFFFF) begin
+//                $display("gp-TB: ...", x, y);
+//            end
+            #(Cycle);
+        end
+        $monitor();
+        if (GP_fault) ELOG_ERROR("GPCode", "Fault");
+        $display("gp-TB: Done.");
+    end endtask
+
+
+/*  ... old version ...
+*** SAMPLE-1 GPCODE block from checkpoint 4 ***
+    0x4000:   0x0100_0000   # FILL: black
+    0x4004:   0x0200_00FF   # LINE: blue
+    0x4008:   0x0010_0020   #   first-endpoint  (0x10, 0x20)
+    0x400C:   0x001A_002B   #   second-endpoint (0x1A, 0x2B)
+    0x4010:   0x02FF_0000   # LINE: red
+    0x4014:   0x0123_0124   #   first-endpoint  (0x123,0x124)
+    0x4018:   0x00AA_00BB   #   second-endpoint (0xAA, 0xBB)
+    0x401C:   0x0300_FF00   # ELIP: green
+    0x4020:   0x0143_0104   #   center-point    (0x143,0x104)
+    0x4024:   0x0020_0032   #   second-endpoint (0x20, 0x32)
+    0x4028:   0x0000_0000   # STOP.
+    0x402C:   0xFFFF_FFFF   # ERR.
+reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
+    32'h0100_0000, 32'h0200_00FF, 32'h0010_0020, 32'h001A_002B,
+    32'h02FF_0000, 32'h0123_0124, 32'h00AA_00BB, 32'h03FF_0000,
+    32'h0143_0104, 32'h0020_0032, 32'h0000_0000, 32'hFFFF_FFFF,
+    128'b0,
+    128'b0,
+    128'b0,
+    128'b0,
+    128'b0
+};
+*/
+
+/*
+*** SAMPLE-1 GPCODE block tweaked from checkpoint 4 ***
+    0x4000:   1000_0000   # FILL: black
+    0x4004:   2000_00FF   # LINE: blue
+    0x4008:   0010_0020   #   first-endpoint  (0x10, 0x20)
+    0x400C:   001A_002B   #   second-endpoint (0x1A, 0x2B)
+    0x4010:   20FF_0000   # LINE: red
+    0x4014:   0123_0124   #   first-endpoint  (0x123,0x124)
+    0x4018:   00AA_00BB   #   second-endpoint (0xAA, 0xBB)
+    0x401C:   3000_FF00   # ELIP: green outline
+    0x4020:   0143_0104   #   center-point    (0x143,0x104)
+    0x4024:   0020_0032   #   second-endpoint (0x20, 0x32)
+    0x4028:   0000_0000   #   XRGB fill-color transparent
+    0x402C:   40FF_FFFF   # RECT: white outline & fill
+    0x4030:   0200_0200   #   left-top
+    0x4034:   0280_024F   #   right-bottom
+    0x4038:   FFFF_FFFF   #   fill-color white
+    0x403C:   0000_0000   # STOP.
+    0x4040:   FFFF_FFFF   # ERR...
+*/
+reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
+    32'h1000_0000, 32'h2000_00FF, 32'h0010_0020, 32'h001A_002B,
+    32'h20FF_0000, 32'h0123_0124, 32'h00AA_00BB, 32'h3000_FF00,
+    32'h0143_0104, 32'h0020_0032, 32'h0000_0000, 32'h40FF_FFFF,
+    32'h0200_0200, 32'h0280_024F, 32'hFFFF_FFFF, 32'h0000_0000,
+    32'hFFFF_FFFF, 32'hFFFF_FFFF, 32'hFFFF_FFFF, 32'hFFFF_FFFF,
+    128'd0,
+    128'd0,
+    128'd0 //NOTE: This MUST total 1024-bits (32 x 32-bit) in size!
+};
+
+/*
+Fill, Line, Line, Line, Elip, Elip, Stop...
+> dump 12003080  (From SW generated sequence)
+12003080:10002233 20ffffff 000a000a 02bc012c
+12003090:20ffffff 0190000a 000a01f4 20ffffff
+120030a0:001400fa 001400fa 30ff0000 00640064
+120030b0:0014001e ff1a7f0f 3000ff00 028a00c8
+120030c0:00320032 ff0000ff 00000000 00000000
+
+Above is sw generated GP sequence for the following commands:
+    pINST = pSEQUENCE;  //Point at 0x12003080 (IMPORTANT DETAIL)
+    pINST = hwq_fill(pINST, 0x00002233u);
+    pINST = hwq_line(pINST, 0x00FFFFFFu,  10, 10,  700,300);
+    pINST = hwq_line(pINST, 0x00FFFFFFu, 400, 10,   10,500);
+    pINST = hwq_pixl(pINST, 0x00FFFFFFu,  20,250);
+    pINST = hwq_elip(pINST, 0x00FF0000u, 100,100,   20, 30,  0xFF1A7F0Fu);
+////pINST = hwq_rect(pINST, 0x00FFFFFFu, 550,150,  750,250,  0xFFF0F020u);
+    pINST = hwq_circ(pINST, 0x0000FF00u, 650,200,   50,      0xFF0000FFu);
+*/
+reg  [0:1023] GPCODE_SAMPLE2 = { //Ascending bit order
+    32'h10002233, 32'h20ffffff, 32'h000a000a, 32'h02bc012c,
+    32'h20ffffff, 32'h0190000a, 32'h000a01f4, 32'h20ffffff,
+    32'h001400fa, 32'h001400fa, 32'h30ff0000, 32'h00640064,
+    32'h0014001e, 32'hff1a7f0f, 32'h3000ff00, 32'h028a00c8,
+    32'h00320032, 32'hff0000ff, 32'h00000000, 32'hFFFFFFFF,
+    128'h00010203_04050607_08090A0B_0C0D0E0F,
+    128'h10111213_14151617_18191A1B_1C1D1E1F,
+    128'h20212223_24252627_28292A2B_2C2D2E2F
+};
+/*
+   Starts at 0x12003080, Fill, Line, Line, Line, then these two elipses...
+# [-FILL-] color=00002233 (0,34,51)
+# [-LINE-] color=00ffffff (255,255,255) 
+# [-LINE-] P0=0000000a,0000000a (10,10)
+# [-LINE-] P1=000002bc,0000012c (700,300)
+...
+>>>>pINST = hwq_elip(pINST, 0x00FF0000u, 100,100,   20, 30,  0xFF1A7F0Fu);
+# [-ELIP-] color=00ff0000 (255,0,0)
+# [-ELIP-] backc=ff1a7f0f (26,127,15)
+# [-ELIP-] CENTER=00000064,00000064 (100,100)
+# [-ELIP-] SIZE=00000014,0000001e (20,30)
+
+*** BUG causes last elipse to have bad coordinates and fill color ***
+>>>>pINST = hwq_circ(pINST, 0x0000FF00u, 650,200,   50,      0xFF0000FFu);
+# [-ELIP-] color=0000ff00 (0,255,0)
+# [-ELIP-] backc=00000000 (0,0,0)
+# [-ELIP-] CENTER=0000028a,00000000 (650,0)
+# [-ELIP-] SIZE=00000000,00000000 (0,0)
+*/
+
+
+// Fake memory fetch/response, always fetches 2-parts of SAMPLE-1 ignoring address!
+    wire [0:1023] GPCODE;
+    assign GPCODE[0:1023] = GPCODE_SAMPLE2;
+
+    localparam MS_DEAD=0, MS_IDLE=1, MS_OFFER1=2, MS_OFFER2=3;
+    reg [1:0] mem_ns, mem_cs = MS_DEAD;
+    integer mem_offset = 0;
+    always @(*) begin
+        mem_ns = mem_cs;  //Default: Hold prior state
+        raf_full = 1'b1;   //Default: Pretend full like RequestController
+        rdf_wren = 1'b0; //Default: Read value invalid
+        rdf_data = 128'bz;//Default: Obvious bad value
+        case (mem_cs)
+            MS_IDLE: begin
+                raf_full = 1'b0;
+                if (raf_wren) mem_ns = MS_OFFER1; //NOTE:IGNORES raf_addr!
+            end
+            MS_OFFER1, MS_OFFER2: begin
+                rdf_wren = 1'b1; //First 128-bits from SAMPLE below
+                rdf_data[127:0] = GPCODE[mem_offset +: 128];
+                if (rdf_rden) mem_ns = (mem_cs==MS_OFFER1) ? MS_OFFER2 : MS_IDLE;
+            end
+            default: mem_ns = MS_DEAD;
+        endcase
+    end
+    always @(posedge cpu_clk_g) begin
+        if (rst_cpu_bus) mem_cs <= MS_IDLE;
+        else mem_cs <= mem_ns;
+
+        if (!raf_full && raf_wren) begin
+            mem_offset <= ((raf_addr * 64) % 1024);
+            $strobe("gp-MEM: addr=%h offset=%0d", raf_addr, mem_offset);
+        end
+        if (rdf_wren && rdf_rden) begin
+            $display("gp-MEM: data=%h %h %h %h", rdf_data[127:96],
+                rdf_data[95:64], rdf_data[63:32], rdf_data[31:0]);
+            mem_offset <= mem_offset + 128;
+        end
+    end
+
+
+//Fake ENGINEs to listen to GP actions
+    integer FF__countdown, LE__countdown, EL__countdown, RE__countdown;
+    integer LE__frame, LE__color, LE__x0, LE__y0, LE__x1, LE__y1;
+    integer EL__frame, EL__color, EL__xc, EL__yc, EL__a,  EL__b,  EL__backc;
+    integer RE__frame, RE__color, RE__xl, RE__yt, RE__xr, RE__yb, RE__backc;
+    assign ENGINES_ready = (FF_ready && LE_ready && EL_ready && RE_ready);
+    always @(posedge cpu_clk_g) begin
+        if (rst_cpu_bus) begin
+            {FF_ready, FF__countdown} <= 0;
+            {LE_ready, LE__countdown} <= 0;
+            {EL_ready, EL__countdown} <= 0;
+            {RE_ready, RE__countdown} <= 0;
+        end else begin
+            if (FF__countdown == 0) begin
+                FF_ready <= 1'b1;
+                if (!FF_ready) $display("[+FILL+] Ready!");
+            end else FF__countdown <= (FF__countdown-1);
+            if (LE__countdown == 0) begin
+                LE_ready <= 1'b1;
+                if (!LE_ready) $display("[+LINE+] Ready!");
+            end else LE__countdown <= (LE__countdown-1);
+            if (EL__countdown == 0) begin
+                EL_ready <= 1'b1;
+                if (!EL_ready) $display("[+ELIP+] Ready!");
+            end else EL__countdown <= (EL__countdown-1);
+            if (RE__countdown == 0) begin
+                RE_ready <= 1'b1;
+                if (!RE_ready) $display("[+RECT+] Ready!");
+            end else RE__countdown <= (RE__countdown-1);
+        end
+
+        if (FF_ready) begin
+            if (FF_valid) begin
+                if (!ENGINES_ready) ELOG_ERROR("FILL", "Overlap");
+                $display("[=FILL=] frame=%h", FF_frame);
+                $display("[-FILL-] color=%h (%0d,%0d,%0d)", FF_color,
+                         FF_color[23:16], FF_color[15:8], FF_color[7:0]);
+                FF_ready <= 0;
+                FF__countdown <= 9;
+            end
+        end else begin
+            if (FF_valid) ELOG_ERROR("FILL", "Premature");
+        end
+
+        if (LE_ready) begin
+            if (LE_color_valid) begin
+                $display(" LINE: color=%h (%0d,%0d,%0d)", LE_color,
+                         LE_color[23:16], LE_color[15:8], LE_color[7:0]);
+                LE__color <= LE_color;
+            end
+            if (LE_x0_valid) begin
+                $display(" LINE: x0=%h (%0d)", LE_point, LE_point);
+                LE__x0 <= LE_point;
+            end
+            if (LE_y0_valid) begin
+                $display(" LINE: y0=%h (%0d)", LE_point, LE_point);
+                LE__y0 <= LE_point;
+            end
+            if (LE_x1_valid) begin
+                $display(" LINE: x1=%h (%0d)", LE_point, LE_point);
+                LE__x1 <= LE_point;
+            end
+            if (LE_y1_valid) begin
+                $display(" LINE: y1=%h (%0d)", LE_point, LE_point);
+                LE__y1 <= LE_point;
+            end
+            if (LE_trigger) begin
+                LE__frame <= LE_frame;
+                if (!ENGINES_ready) ELOG_ERROR("LINE", "Overlap");
+                // $strobe prints at the end of the time step, after the nonblocking
+                // assignments above (incl. values latched this cycle) have landed; no #1.
+                $strobe("[=LINE=] frame=%h", LE__frame);
+                $strobe("[-LINE-] color=%h (%0d,%0d,%0d)", LE__color,
+                         LE__color[23:16], LE__color[15:8], LE__color[7:0]);
+                $strobe("[-LINE-] P0=%h,%h (%0d,%0d)",
+                         LE__x0, LE__y0, LE__x0, LE__y0);
+                $strobe("[-LINE-] P1=%h,%h (%0d,%0d)",
+                         LE__x1, LE__y1, LE__x1, LE__y1);
+                LE_ready <= 0;
+                LE__countdown <= 3;
+            end
+        end else begin
+            if (LE_color_valid || LE_x0_valid || LE_y0_valid
+                    || LE_x1_valid || LE_y1_valid || LE_trigger)
+                ELOG_ERROR("LINE", "Premature");
+        end
+
+        if (EL_ready) begin
+            if (EL_color_valid) begin
+                $display(" ELIP: color=%h (%0d,%0d,%0d)", EL_color,
+                         EL_color[23:16], EL_color[15:8], EL_color[7:0]);
+                EL__color <= EL_color;
+            end
+            if (EL_backc_valid) begin
+                $display(" ELIP: backc=%h (%0d,%0d,%0d)", EL_color,
+                         EL_color[23:16], EL_color[15:8], EL_color[7:0]);
+                EL__backc <= EL_color;
+            end
+            if (EL_xc_valid) begin
+                $display(" ELIP: xc=%h (%0d)", EL_point, EL_point);
+                EL__xc <= EL_point;
+            end
+            if (EL_yc_valid) begin
+                $display(" ELIP: yc=%h (%0d)", EL_point, EL_point);
+                EL__yc <= EL_point;
+            end
+            if (EL_a_valid) begin
+                $display(" ELIP: a=%h (%0d)", EL_point, EL_point);
+                EL__a <= EL_point;
+            end
+            if (EL_b_valid) begin
+                $display(" ELIP: b=%h (%0d)", EL_point, EL_point);
+                EL__b <= EL_point;
+            end
+            if (EL_trigger) begin
+                EL__frame <= EL_frame;
+                if (!ENGINES_ready) ELOG_ERROR("ELIP", "Overlap");
+                // $strobe prints at the end of the time step, after the nonblocking
+                // assignments above (incl. values latched this cycle) have landed; no #1.
+                $strobe("[=ELIP=] frame=%h", EL__frame);
+                $strobe("[-ELIP-] color=%h (%0d,%0d,%0d)", EL__color,
+                         EL__color[23:16], EL__color[15:8], EL__color[7:0]);
+                $strobe("[-ELIP-] backc=%h (%0d,%0d,%0d)", EL__backc,
+                         EL__backc[23:16], EL__backc[15:8], EL__backc[7:0]);
+                $strobe("[-ELIP-] CENTER=%h,%h (%0d,%0d)",
+                         EL__xc, EL__yc, EL__xc, EL__yc);
+                $strobe("[-ELIP-] SIZE=%h,%h (%0d,%0d)",
+                         EL__a, EL__b, EL__a, EL__b);
+                EL_ready <= 0;
+                EL__countdown <= 3;
+            end
+        end else begin
+            if (EL_color_valid || EL_backc_valid || EL_xc_valid || EL_yc_valid
+                    || EL_a_valid || EL_b_valid || EL_trigger)
+                ELOG_ERROR("ELIP", "Premature");
+        end
+
+        if (RE_ready) begin
+            if (RE_color_valid) begin
+                $display(" RECT: color=%h (%0d,%0d,%0d)", RE_color,
+                         RE_color[23:16], RE_color[15:8], RE_color[7:0]);
+                RE__color <= RE_color;
+            end
+            if (RE_backc_valid) begin
+                $display(" RECT: backc=%h (%0d,%0d,%0d)", RE_color,
+                         RE_color[23:16], RE_color[15:8], RE_color[7:0]);
+                RE__backc <= RE_color;
+            end
+            if (RE_xl_valid) begin
+                $display(" RECT: XL=%h (%0d)", RE_point, RE_point);
+                RE__xl <= RE_point;
+            end
+            if (RE_yt_valid) begin
+                $display(" RECT: YT=%h (%0d)", RE_point, RE_point);
+                RE__yt <= RE_point;
+            end
+            if (RE_xr_valid) begin
+                $display(" RECT: XR=%h (%0d)", RE_point, RE_point);
+                RE__xr <= RE_point;
+            end
+            if (RE_yb_valid) begin
+                $display(" RECT: YB=%h (%0d)", RE_point, RE_point);
+                RE__yb <= RE_point;
+            end
+            if (RE_trigger) begin
+                RE__frame <= RE_frame;
+                if (!ENGINES_ready) ELOG_ERROR("RECT", "Overlap");
+                // $strobe prints at the end of the time step, after the nonblocking
+                // assignments above (incl. values latched this cycle) have landed; no #1.
+                $strobe("[=RECT=] frame=%h", RE__frame);
+                $strobe("[-RECT-] color=%h (%0d,%0d,%0d)", RE__color,
+                         RE__color[23:16], RE__color[15:8], RE__color[7:0]);
+                $strobe("[-RECT-] backc=%h (%0d,%0d,%0d)", RE__backc,
+                         RE__backc[23:16], RE__backc[15:8], RE__backc[7:0]);
+                $strobe("[-RECT-] LEFTTOP=%h,%h (%0d,%0d)",
+                         RE__xl, RE__yt, RE__xl, RE__yt);
+                $strobe("[-RECT-] RIGHTBOTTOM=%h,%h (%0d,%0d)",
+                         RE__xr, RE__yb, RE__xr, RE__yb);
+                RE_ready <= 0;
+                RE__countdown <= 3;
+            end
+        end else begin
+            if (RE_color_valid || RE_backc_valid || RE_xl_valid || RE_yt_valid
+                    || RE_xr_valid || RE_yb_valid || RE_trigger)
+                ELOG_ERROR("RECT", "Premature");
+        end
+    end
+
+endmodule
