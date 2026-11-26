@@ -43,6 +43,7 @@ Parameters, on the command line (`make bit SW_STALL_EN=0`):
 | `BOARD=arty` | Board directory under `boards/` (default `arty`). Build outputs go to `build/<board>/`. |
 | `SW_STALL_EN=0` | `ArtyA7top` parameter: ignore `SWITCH[1]` (stall the CPU). Use for bring-up builds. |
 | `GENERICS="A=1 B=2"` | Any other top-level parameter overrides. Changing them rebuilds from synthesis on. |
+| *(sticky)* | Parameters given once are remembered in `build/<board>/synth.params`: `make timing` or `make program` after `make bit SW_STALL_EN=0` use that build. `make bit GENERICS=` goes back to the defaults. |
 | `TIMING_GATE=0` | Write the bitstream even with negative slack (debugging only). |
 | `IP_JOBS=4`, `VIVADO=...`, `HW_SERIAL=...` | Parallel IP builds, Vivado binary, Digilent cable serial. |
 

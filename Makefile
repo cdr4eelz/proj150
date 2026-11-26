@@ -13,7 +13,8 @@
 # Parameters (override on the command line):
 #   BOARD=arty               board directory under boards/ (pynq-z2 is a placeholder)
 #   SW_STALL_EN=0            ArtyA7top parameter: ignore SWITCH[1] (bring-up builds)
-#   GENERICS="A=1 B=2"       any other top-level parameters
+#   GENERICS="A=1 B=2"       any other top-level parameters (sticky: later runs without them reuse
+#                            the last ones; 'GENERICS=' resets to the defaults)
 #   TIMING_GATE=0            write the bitstream even if setup/hold slack is negative
 #   IP_JOBS=4                Vivado instances to run in parallel when generating IP
 #   VIVADO=/path/to/vivado   default: vivado from PATH, else /tools/Xilinx/Vivado/2019.1/bin/vivado
@@ -28,7 +29,17 @@ TIMING_GATE ?= 1
 
 OUT   := build/$(BOARD)
 SRC1  := proj150.srcs/sources_1
+# Top-level parameters are sticky: given on the command line they are stored in build/<board>/synth.params
+# and reused by later runs without them, so 'make timing' after 'make bit SW_STALL_EN=0' reports on that
+# build instead of rebuilding with the defaults. 'make bit GENERICS=' goes back to the defaults.
+ifeq ($(origin SW_STALL_EN)$(origin GENERICS),undefinedundefined)
+GEN_ALL := $(strip $(shell cat $(OUT)/synth.params 2>/dev/null))
+else
 GEN_ALL := $(strip $(GENERICS) $(if $(SW_STALL_EN),SW_STALL_EN=$(SW_STALL_EN)))
+endif
+ifneq ($(GEN_ALL),)
+$(info top-level parameters: $(GEN_ALL))
+endif
 
 # RTL the synthesis reads (scripts/sources.tcl lists the files; any .v/.vh edit retriggers synth)
 RTL := $(shell find $(SRC1)/imports/src -type f \( -name '*.v' -o -name '*.vh' \)) scripts/sources.tcl
@@ -72,7 +83,7 @@ ip:
 	@$(MAKE) --no-print-directory -j$(IP_JOBS) $(IP_DCP)
 
 # ----------------------------------------------------------------------------------------- synth
-# GENERICS changes (e.g. SW_STALL_EN=0 -> 1) must rebuild: keep them in a file that only changes then
+# A parameter change (e.g. SW_STALL_EN=0 -> 1) must rebuild: keep them in a file that only changes then
 $(OUT)/synth.params: FORCE
 	@mkdir -p $(OUT)
 	@echo '$(GEN_ALL)' | cmp -s - $@ || echo '$(GEN_ALL)' > $@
