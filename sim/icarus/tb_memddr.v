@@ -47,6 +47,8 @@ module tb_memddr;
     reg         d_re = 0, i_re = 0;
     wire [31:0] d_dout, i_dout;
     wire        d_stall, i_stall;
+    reg         gp_vcode_r = 0;
+    reg  [31:0] gp_wcode_r = 0, gp_wframe_r = 0;
     reg         pf_vframe = 0; reg [31:0] pf_wframe = 0;
     wire        video_valid; wire [31:0] video; wire [15:0] pf_status, gp_status; wire [31:0] gp_rcode;
     wire        irq_pf, irq_gp, rdf_overflow; wire [3:0] dbg_a, dbg_d, dbg_i;
@@ -65,6 +67,7 @@ module tb_memddr;
     defparam dut.pixfeed.COLT45_TESTPAT = `PF_TESTPAT;
     MemoryDDR #(.SCREEN_WIDTH(800), .SCREEN_HEIGHT(600)) dut (
 `else
+    defparam dut.gpu.WATCH_SLR = 0;   // per-run SLR printf floods the log
     MemoryDDR #(.SCREEN_WIDTH(800), .SCREEN_HEIGHT(600), .PF_TESTPAT(`PF_TESTPAT), .RD_CREDIT_EN(`RD_CREDIT)) dut (
 `endif
         .clk_cpu(clk_cpu), .rst_cpu_mem(rst_cpu), .rst_cpu_bus(rst_cpu),
@@ -82,8 +85,8 @@ module tb_memddr;
         .DBG_rdf_overflow(rdf_overflow),
 `endif
         .video_ready(video_ready), .video_valid(video_valid), .video(video),
-        .pf_vframe(pf_vframe), .gp_vcode(1'b0), .gp_vframe(1'b0),
-        .pf_wframe(pf_wframe), .gp_wcode(32'd0), .gp_wframe(32'd0), .gp_rcode(gp_rcode),
+        .pf_vframe(pf_vframe), .gp_vcode(gp_vcode_r), .gp_vframe(1'b0),
+        .pf_wframe(pf_wframe), .gp_wcode(gp_wcode_r), .gp_wframe(gp_wframe_r), .gp_rcode(gp_rcode),
         .pf_status(pf_status), .gp_status(gp_status), .irq_pf_frame(irq_pf), .irq_gp_done(irq_gp),
         .DBG_no_cache(1'b0)
     );
@@ -153,6 +156,8 @@ module tb_memddr;
         end
     endtask
 
+`include "tb_gpu_phase.vh"
+
     // ---------------- monitors
     integer rdf_ovf = 0, pix_ovf = 0, video_faults = 0;
     always @(posedge clk_mig_ui) if (dut.fifo_rdf_wr_en && dut.fifo_rdf_full) rdf_ovf = rdf_ovf + 1;
@@ -219,19 +224,20 @@ module tb_memddr;
         // PixelFeeder streams frame 1. The display must not starve (no video_fault).
         for (i = 0; i < wstream; i = i + 1) dsw(32'h1000_0000 + 4*(i % 16384), 32'h5700_0000 + i, 4'b1111);
         if (wstream) $display("[%0t] P4 done: %0d streamed stores, video_fault=%0d", $time, wstream, pf_status[15]);
+        if (gp_en) gp_phase;
         repeat (2000) @(posedge clk_cpu);
         $display("SUMMARY: checks=%0d mismatches=%0d stall_timeouts=%0d stub_protocol_errors=%0d", checks, errors, timeouts, dut.u_mig_arty_a7_100.protocol_errors);
         $display("SUMMARY: mig_rdf_overflows=%0d adapter_overflow_flag=%0d pixel_fifo_overflows=%0d pf_reads=%0d video_fault=%0d pf_status=%04h",
                  rdf_ovf, rdf_overflow, pix_ovf, pf_reads, pf_status[15], pf_status);
-        if (errors == 0 && timeouts == 0 && dut.u_mig_arty_a7_100.protocol_errors == 0 && rdf_ovf == 0 && pix_ovf == 0
+        if (errors == 0 && timeouts == 0 && gp_errors == 0 && gp_timeouts == 0 && dut.u_mig_arty_a7_100.protocol_errors == 0 && rdf_ovf == 0 && pix_ovf == 0
 `ifndef LEGACY
             && !pf_status[15]   // video_fault: pixel FIFO underflow/drop (startup false alarm fixed in ddr-fix)
 `endif
            )
             $display("RESULT: PASS");
         else
-            $display("RESULT: FAIL (mismatches=%0d timeouts=%0d protocol=%0d rdf_overflow=%0d pixel_overflow=%0d video_fault=%0d)",
-                     errors, timeouts, dut.u_mig_arty_a7_100.protocol_errors, rdf_ovf, pix_ovf, pf_status[15]);
+            $display("RESULT: FAIL (gp_errors=%0d gp_timeouts=%0d mismatches=%0d timeouts=%0d protocol=%0d rdf_overflow=%0d pixel_overflow=%0d video_fault=%0d)",
+                     gp_errors, gp_timeouts, errors, timeouts, dut.u_mig_arty_a7_100.protocol_errors, rdf_ovf, pix_ovf, pf_status[15]);
         $finish;
     end
     initial begin #400_000_000_000; $display("RESULT: FAIL (global timeout)"); $finish; end

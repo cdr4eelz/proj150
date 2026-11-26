@@ -76,8 +76,12 @@ module ScanLineRunner #(
                   SLR_color_fill = SLRs_color_fill  >> (live_SLR*32),//[(live_SLR*32)+31 -: 32],
                   SLR_color_edge = SLRs_color_edge  >> (live_SLR*32);//[(live_SLR*32)+31 -: 32];
     wire [ 9:0] SLR_row          = SLRs_row         >> (live_SLR*10),//[(live_SLR*10)+ 9 -: 10],
-                  SLR_col_start  = SLRs_col_start   >> (live_SLR*10),//[(live_SLR*10)+ 9 -: 10],
-                  SLR_col_finish = SLRs_col_finish  >> (live_SLR*10);//[(live_SLR*10)+ 9 -: 10];
+                  TEMP_START     = SLRs_col_start   >> (live_SLR*10),//[(live_SLR*10)+ 9 -: 10],
+                  TEMP_FINISH    = SLRs_col_finish  >> (live_SLR*10);//[(live_SLR*10)+ 9 -: 10];
+    wire [ 9:0] SLR_col_start, SLR_col_finish; //Start/Finish get FLIPPED if needed (as in the ISE SLR):
+    assign {SLR_col_start, SLR_col_finish} = (TEMP_START <= TEMP_FINISH) ?
+                                                {TEMP_START, TEMP_FINISH} :
+                                                {TEMP_FINISH, TEMP_START};
 
 
 //SLR-Master: Drive DDR lines to write a "run" (series) of pixels
@@ -97,6 +101,7 @@ module ScanLineRunner #(
     reg  [ 6:0] X8, X8_last;
     reg  isFIRST8; //Manipulate a register rather than using extra comparator
 
+    reg  [31:0] r_color_edge, r_color_fill; //Captured with the run: engines may change theirs afterwards
     reg  [ 7:0] r_edge_L, r_fill_L, r_edge_R, r_fill_R;
     reg  [ 3:0] maskW;
     reg  [31:0] maskC [3:0]; //Array rather than "bus style" vector concatenation
@@ -114,6 +119,10 @@ module ScanLineRunner #(
     wire [ 7:0] c_edge_R = (15'b111_1111_0111_1111 >> offset_finish);
     wire [ 7:0] c_fill_R = (15'b000_0000_1111_1111 >> offset_finish);
 
+    //Fill colour's top (alpha) byte non-zero => paint the pixels between the two edge pixels;
+    //zero => outline only (just the first and last chunk of the run is written). FrameFiller sets it.
+    wire fill_active = |(r_color_fill & 32'hFF_000000);
+
     wire [ 7:0] edge8 = ( (r_edge_L | {8{!isFIRST8}}) & (r_edge_R | {8{!isLAST8}}) );
     wire [ 7:0] fill8 = ( (r_fill_L & {8{ isFIRST8}}) | (r_fill_R & {8{ isLAST8}}) );
 //  wire [ 7:0] mask8 = (edge8 & fill8); //"either is active" (active-lo)
@@ -127,12 +136,18 @@ module ScanLineRunner #(
         integer b;
         for (b=0; b<4; b=b+1) begin
             maskW[b] = 1'b0;            //Default to ENABLE pixel write
-            maskC[b] = SLR_color_edge;  //  in EDGE color
+            maskC[b] = r_color_edge;    //  in EDGE color
             casez ({hi4, edge8[b], fill8[b], edge8[4+b], fill8[4+b]})
                 5'b0_11_zz: maskW[b] = 1'b1; //AND of active-lo -=> OR the two enables
-                5'b0_10_zz: maskC[b] = SLR_color_fill; //When only FILL active
+                5'b0_10_zz: begin   //When only FILL active
+                    maskC[b] = {r_color_edge[31:24], r_color_fill[23:0]}; //(alpha byte is not stored)
+                    maskW[b] = !fill_active; //Invert to match mask active-lo
+                end
                 5'b1_zz_11: maskW[b] = 1'b1; //As above, for 2nd pair
-                5'b1_zz_10: maskC[b] = SLR_color_fill; // (hi-bit is "mux" selector)
+                5'b1_zz_10: begin   // (hi-bit is "mux" selector)
+                    maskC[b] = {r_color_edge[31:24], r_color_fill[23:0]};
+                    maskW[b] = !fill_active;
+                end
             endcase //Flat "muxie-style" (defaults  & casez keep it short); probly confusing!
         end
     end
@@ -162,6 +177,8 @@ module ScanLineRunner #(
                 X8        <= SLR_col_start[9:3];  //Truncate to a chunk of 8 pixels
                 X8_last   <= SLR_col_finish[9:3]; //  so stride matches memory width
                 isFIRST8  <= 1'b1;
+                r_color_edge <= SLR_color_edge;
+                r_color_fill <= SLR_color_fill;
                 {r_edge_L, r_fill_L} <= {c_edge_L, c_fill_L};
                 {r_edge_R, r_fill_R} <= {c_edge_R, c_fill_R};
             end
@@ -169,7 +186,7 @@ module ScanLineRunner #(
                 //NADA
             end
             MS_DDR2: if (wdr_advance2) begin
-                X8 <= (X8+1);
+                X8 <= (fill_active) ? (X8+1) : X8_last;   //Jump to end when not filling
                 isFIRST8 <= 1'b0;
             end
         endcase

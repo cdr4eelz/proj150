@@ -1,0 +1,13 @@
+# Icarus: gp_fill_line_elip (run_icarus.sh regression entry) on ellipse-fix
+[7862950001] P5 FILL: cycles=321025 checks=1607 errors=0
+[14687690001] P5 LINE: cycles=328886 checks=1697 errors=0
+[14687690001] P5 ELIP model: frame-4 plots=468 analytic_misfits=0
+[21463370000] P5 ELIP frame 4 finished in 331711 cycles
+[23033190001] P5 ELIP frame 4: checks=17977 errors=0
+[23033190001] P5 ELIP model: frame-5 plots=500 analytic_misfits=0
+[23385290000] P5 ELIP frame 5 finished in 10571 cycles
+[24288210001] P5 ELIP frame 5: checks=24773 errors=0
+[24288210001] P5 done: gp_checks=24773 gp_errors=0 gp_timeouts=0
+SUMMARY: checks=4168 mismatches=0 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=0 video_fault=0 pf_status=0000
+RESULT: PASS

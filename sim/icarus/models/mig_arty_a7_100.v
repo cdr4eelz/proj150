@@ -2,6 +2,9 @@
 // 81.25 MHz ui_clk, holds ui_clk_sync_rst while sys_rst (ACTIVE LOW) is low, and puts the
 // behavioral UI model ui_mem_stub (from arty-mig-test, unchanged) behind the app_* ports.
 `timescale 1ps/1ps
+`ifndef STUB_LOG2
+ `define STUB_LOG2 18   // direct-mapped lines of 16 B: 2^18 = 4 MB; the GPU phase (-DSTUB_LOG2=21) needs 32 MB for frames 2..5
+`endif
 module mig_arty_a7_100 (
     inout  wire [15:0] ddr3_dq, inout wire [1:0] ddr3_dqs_n, ddr3_dqs_p,
     output wire [13:0] ddr3_addr, output wire [2:0] ddr3_ba,
@@ -28,7 +31,7 @@ module mig_arty_a7_100 (
         else if (rcnt != 4'hF) rcnt <= rcnt + 1; else ui_clk_sync_rst <= 1'b0;
     initial ui_clk_sync_rst = 1'b1;
     wire [31:0] protocol_errors;
-    ui_mem_stub #(.DIRECT_LOG2(18), .CALIB_CYCLES(300)) stub (
+    ui_mem_stub #(.DIRECT_LOG2(`STUB_LOG2), .CALIB_CYCLES(300)) stub (
         .clk(ui_clk), .rst(ui_clk_sync_rst), .init_calib_complete(init_calib_complete),
         .app_addr(app_addr), .app_cmd(app_cmd), .app_en(app_en), .app_rdy(app_rdy),
         .app_wdf_data(app_wdf_data), .app_wdf_mask(app_wdf_mask), .app_wdf_wren(app_wdf_wren),
