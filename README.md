@@ -1,6 +1,7 @@
 # proj150
 
 Possibly temporary informal fork of the cs150 project in order to port things to a modern dev board such as the Arty A7.
+The initial port was a manual attempt that was buggy; it was later patched up with help from Grok Bot.
 
 The CS150 MIPS150 project (`cs150-1245`, ISE branch) ported to Vivado 2019.1, non-project mode: MIPS CPU, UART, VGA + GPU and a
 write-through cache in front of DDR3. Target board: **Digilent Arty A7-100T** (`xc7a100tcsg324-1`). A
