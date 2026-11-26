@@ -30,6 +30,7 @@ run dut d_only          +PF=0                      ; chk d_only pass
 run dut pf_fullrate     +PF=1                      ; chk pf_fullrate pass
 run dut pf_rdy30        +PF=1 +RDY_PCT=30          ; chk pf_rdy30 pass
 run dut pf_rdy100       +PF=1 +RDY_PCT=100 +SEED=7 ; chk pf_rdy100 pass
+run dut pf_wstream      +PF=1 +OPS=300 +WSTREAM=30000 ; chk pf_wstream pass
 run dut inject1_bitflip +PF=0 +INJECT=1 +INJECT_ADDR=1230 +INJECT_BIT=21 ; chk inject1_bitflip fail
 run dut inject2_alias   +PF=1 +INJECT=2            ; chk inject2_alias fail
 run dut inject3_nomask  +PF=0 +INJECT=3            ; chk inject3_nomask fail

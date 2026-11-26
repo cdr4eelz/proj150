@@ -24,11 +24,12 @@ module tb_memddr;
     always #5000  clk_100 = ~clk_100;
     always #2500  clk_200 = ~clk_200;
 
-    integer ops, pf_en, seed;
+    integer ops, pf_en, seed, wstream;
     initial begin
         if (!$value$plusargs("OPS=%d", ops))  ops = 3000;
         if (!$value$plusargs("PF=%d", pf_en)) pf_en = 0;
         if (!$value$plusargs("SEED=%d", seed)) seed = 1;
+        if (!$value$plusargs("WSTREAM=%d", wstream)) wstream = 0;  // P4: back-to-back stores (like GIOS swfill)
     end
 
     // ---------------- resets, as in ArtyA7top: MIG sys_rst = lock; CPU waits for calibration
@@ -214,15 +215,23 @@ module tb_memddr;
         dlw(32'h1000_3000);                                    // evict that line
         dlw(32'h1000_1000); dlw(32'h1000_1014);                // miss at offset 0, then hit at 20
         $display("[%0t] P3 done: %0d checks, %0d errors", $time, checks, errors);
+        // P4: a long run of sequential word stores (write-through: one CAF write each) while the
+        // PixelFeeder streams frame 1. The display must not starve (no video_fault).
+        for (i = 0; i < wstream; i = i + 1) dsw(32'h1000_0000 + 4*(i % 16384), 32'h5700_0000 + i, 4'b1111);
+        if (wstream) $display("[%0t] P4 done: %0d streamed stores, video_fault=%0d", $time, wstream, pf_status[15]);
         repeat (2000) @(posedge clk_cpu);
         $display("SUMMARY: checks=%0d mismatches=%0d stall_timeouts=%0d stub_protocol_errors=%0d", checks, errors, timeouts, dut.u_mig_arty_a7_100.protocol_errors);
         $display("SUMMARY: mig_rdf_overflows=%0d adapter_overflow_flag=%0d pixel_fifo_overflows=%0d pf_reads=%0d video_fault=%0d pf_status=%04h",
                  rdf_ovf, rdf_overflow, pix_ovf, pf_reads, pf_status[15], pf_status);
-        if (errors == 0 && timeouts == 0 && dut.u_mig_arty_a7_100.protocol_errors == 0 && rdf_ovf == 0 && pix_ovf == 0)
+        if (errors == 0 && timeouts == 0 && dut.u_mig_arty_a7_100.protocol_errors == 0 && rdf_ovf == 0 && pix_ovf == 0
+`ifndef LEGACY
+            && !pf_status[15]   // video_fault: pixel FIFO underflow/drop (startup false alarm fixed in ddr-fix)
+`endif
+           )
             $display("RESULT: PASS");
         else
-            $display("RESULT: FAIL (mismatches=%0d timeouts=%0d protocol=%0d rdf_overflow=%0d pixel_overflow=%0d)",
-                     errors, timeouts, dut.u_mig_arty_a7_100.protocol_errors, rdf_ovf, pix_ovf);
+            $display("RESULT: FAIL (mismatches=%0d timeouts=%0d protocol=%0d rdf_overflow=%0d pixel_overflow=%0d video_fault=%0d)",
+                     errors, timeouts, dut.u_mig_arty_a7_100.protocol_errors, rdf_ovf, pix_ovf, pf_status[15]);
         $finish;
     end
     initial begin #400_000_000_000; $display("RESULT: FAIL (global timeout)"); $finish; end
