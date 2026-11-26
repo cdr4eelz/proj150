@@ -19,12 +19,12 @@ module CPUEchoUART #(
 //  This "UART" module avoids redundant top-level IOB registers...
 //      ...BUT has one register set between IOB's and TX/RX logic.
     UART #(
-        .CLOCK_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
+        .ClockFreq(CPU_FREQ),  .BaudRate(BAUD_RATE)
     ) uartModule( .Clock(clk),  .Reset(rst),
-        .DataInTX(DataInTX),  .DataInValidTX(DataInValidTX),
-        .DataInReadyTX(DataInReadyTX),  .SOutTX(SerialTX),
-        .DataOutRX(DataOutRX),  .DataOutValidRX(DataOutValidRX),
-        .DataOutReadyRX(DataOutReadyRX),  .SInRX(SerialRX)
+        .DataIn(DataInTX),  .DataInValid(DataInValidTX),
+        .DataInReady(DataInReadyTX),  .SOut(SerialTX),
+        .DataOut(DataOutRX),  .DataOutValid(DataOutValidRX),
+        .DataOutReady(DataOutReadyRX),  .SIn(SerialRX)
     );
 
     // This is the very simple "echo", TX for each RX

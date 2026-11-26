@@ -1,39 +1,41 @@
+`timescale 1ns/1ps
+
 `ifndef MACROSAFE
 `define MACROSAFE
 `endif // required to get this to compile...
-`include "../base_util/const.vh"
+`include "../base_util/Const.v"
 
 module UATransmit(
-    input  wire         Clock, Reset,
+    input   Clock, Reset,
 
-    input  wire[7:0]    DataIn,
-    input  wire         DataInValid,
-    output wire         DataInReady,
+    input   [7:0] DataIn,
+    input         DataInValid,
+    output        DataInReady,
 
-    output wire         SOut
+    output        SOut
 );
 //  // for log2 function
 //  `include "../base_util/util.vh"
 
     //--|Parameters|--------------------------------------------------------------
 
-    parameter   CLOCK_FREQ = 100_000_000;
-    parameter   BAUD_RATE  =     115_200;
+    parameter   ClockFreq         =   100_000_000;
+    parameter   BaudRate          =   115_200;
 
     // See diagram in the lab guide
-    localparam  SymbolEdgeTime    =   CLOCK_FREQ / BAUD_RATE;
+    localparam  SymbolEdgeTime    =   ClockFreq / BaudRate;
     localparam  ClockCounterWidth =   `log2(SymbolEdgeTime);
 
     //--|Solution|----------------------------------------------------------------
 
-    reg [3:0] BitCount = 4'd0;
-    reg [ClockCounterWidth-1:0] ClockCounter = 0;
-    reg [9:0] ShiftOut = 10'b1111_1111_11;
+    reg [3:0] BitCount;
+    reg [ClockCounterWidth-1:0] ClockCounter;
+    reg [9:0] ShiftOut;
 
     wire TXRunning, SymbolEdge, StartTX;
 
     assign DataInReady = ((BitCount == 0) || ((BitCount == 1) && SymbolEdge));
-    assign SOut = (TXRunning) ? ShiftOut[0] : 1'b1;
+    assign SOut = ShiftOut[0]; //(TXRunning) ? ShiftOut[0] : 1'b1;
 
     assign SymbolEdge = (ClockCounter == SymbolEdgeTime-1);
     assign TXRunning = (BitCount != 0);

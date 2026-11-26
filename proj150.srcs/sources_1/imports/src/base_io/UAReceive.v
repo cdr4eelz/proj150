@@ -1,28 +1,30 @@
+`timescale 1ns/1ps
+
 `ifndef MACROSAFE
 `define MACROSAFE
 `endif // required to get this to compile...
-`include "../base_util/const.vh"
+`include "../base_util/Const.v"
 
 module UAReceive(
-  input  wire         Clock,
-  input  wire         Reset,
+  input   Clock,
+  input   Reset,
 
-  output wire[7:0]    DataOut,
-  output wire         DataOutValid,
-  input  wire         DataOutReady,
+  output  [7:0] DataOut,
+  output        DataOutValid,
+  input         DataOutReady,
 
-  input  wire         SIn
+  input         SIn
 );
 //// for log2 function
 //`include "../base_util/util.vh"
 
   //--|Parameters|--------------------------------------------------------------
 
-  parameter   CLOCK_FREQ        =   100_000_000;
-  parameter   BAUD_RATE         =       115_200;
+  parameter   ClockFreq         =   100_000_000;
+  parameter   BaudRate          =   115_200;
 
   // See diagram in the lab guide
-  localparam  SymbolEdgeTime    =   CLOCK_FREQ / BAUD_RATE;
+  localparam  SymbolEdgeTime    =   ClockFreq / BaudRate;
   localparam  SampleTime        =   SymbolEdgeTime / 2;
   localparam  ClockCounterWidth =   `log2(SymbolEdgeTime);
 
@@ -33,10 +35,10 @@ module UAReceive(
   wire                            Start;
   wire                            RXRunning;
 
-  reg     [9:0]                   RXShift = 10'b00_0000_0000;
-  reg     [3:0]                   BitCounter = 4'd0;
-  reg     [ClockCounterWidth-1:0] ClockCounter = 0;
-  reg                             HasByte = 1'b0;
+  reg     [9:0]                   RXShift;
+  reg     [3:0]                   BitCounter;
+  reg     [ClockCounterWidth-1:0] ClockCounter;
+  reg                             HasByte;
 
   //--|Signal Assignments|------------------------------------------------------
 
@@ -76,11 +78,7 @@ module UAReceive(
 
   //--|Shift Register|----------------------------------------------------------
   always @(posedge Clock) begin
-    if (Reset) begin
-      RXShift <= 10'b00_0000_0000;
-    end else if (Sample && RXRunning) begin
-      RXShift <= {SIn, RXShift[9:1]};
-    end
+    if (Sample && RXRunning) RXShift <= {SIn, RXShift[9:1]};
   end
 
   
