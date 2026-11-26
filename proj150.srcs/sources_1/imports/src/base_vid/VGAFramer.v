@@ -130,8 +130,10 @@ end
     -------         SYNC GENERATION                 ------
     ----------------------------------------------------*/
 
-//TODO: I don't think I'm handling front/back porch correctly...
-//          If changed, might have to change other "h_cntr_reg/v_cntr_reg" usage
+// H sync uses (start/end - 1) so the extra h_sync_dly_reg cycle still
+// yields the declared H_FP / H_PW. V sync must not: v_sync_dly_reg is
+// only one pixel, not one line. The old (V_FP+HEIGHT-1) compare put
+// sync on lines 600-603 (effective V_FP=0, V_BP=24).
     always @(posedge clk_pix) begin
         if (rst_pix || waiting) begin
             h_cntr_reg <= 0;
@@ -160,7 +162,7 @@ end
                 h_sync_reg <= !(H_POL);
             end
 
-            if  ((v_cntr_reg >= (V_FP + FRAME_HEIGHT - 1)) && (v_cntr_reg < (V_FP + FRAME_HEIGHT + V_PW - 1))) begin
+            if  ((v_cntr_reg >= (V_FP + FRAME_HEIGHT)) && (v_cntr_reg < (V_FP + FRAME_HEIGHT + V_PW))) begin
                 v_sync_reg <= V_POL;
             end else begin
                 v_sync_reg <= !(V_POL);
