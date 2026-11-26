@@ -121,7 +121,11 @@ module GraphicsProcessor #(
     wire ENGINES_ready, chunk_valid;
     wire INST_valid    = (chunk_valid && (cs_M==MS_PROC));
     wire CMD_advance   = (INST_valid && ENGINES_ready);
-    wire chunk_advance = (!chunk_valid || (&code_index && CMD_advance));
+    //Only fetch the next chunk once the LAST word of this one is fully used: a point word (x in
+    //SS_X0/SS_XX, y in SS_Y0/SS_YY) is read twice, so CMD_advance in the odd (X) sub-states must not
+    //count (the DDRStage zeroes chunk_data when a fetch starts, which turned b/y1 into 0).
+    wire INST_done     = (CMD_advance && !cs_S[0]); //Same as INST_advance below
+    wire chunk_advance = (!chunk_valid || (&code_index && INST_done));
     wire chunk_reset   = (rst_r || (cs_M==MS_IDLE)); //Reset chunk on IDLE to let pending read clear
     wire [255:0] chunk_data;
 
