@@ -1,24 +1,27 @@
 # program.tcl - load proj150_arty.bit into the Arty A7-100T over its on-board Digilent USB-JTAG
-# (Copied from arty-mig-test/scripts/program.tcl.)
+# (From arty-mig-test/scripts/program.tcl; 'make program' calls it with the serial from boards/<board>/board.mk.)
 # (volatile: lost at power-off). Works with Vivado 2019.1 (open_hw) and newer (open_hw_manager).
 #
-#   vivado -mode batch -nojournal -source scripts/program.tcl -tclargs [bit] [serial] [hw_server_url]
+#   vivado -mode batch -nojournal -source scripts/program.tcl -tclargs [bit] [serial] [hw_server_url] [device_pattern]
 #
-#   bit      default build/proj150_arty.bit
+#   bit      default build/arty/proj150_arty.bit
 #   serial   Digilent cable serial, e.g. 210319BCC332A (the Arty on UBU24). Optional, but required
 #            if more than one Digilent cable is connected.
 #   url      default localhost:3121
+#   device   default xc7a100t*
 #
 # Only Digilent targets are ever considered. Other cables on the same hw_server (for example the
 # Xilinx Platform Cable USB II driving the XUPV5, target */xilinx_tcf/Xilinx/...) are ignored.
 set script_dir [file dirname [file normalize [info script]]]
-set bit    [file join [file dirname $script_dir] build proj150_arty.bit]
+set bit    [file join [file dirname $script_dir] build arty proj150_arty.bit]
 set serial ""
 set url    localhost:3121
 if {[llength $argv] >= 1 && [lindex $argv 0] ne ""} { set bit [file normalize [lindex $argv 0]] }
 if {[llength $argv] >= 2} { set serial [lindex $argv 1] }
 if {[llength $argv] >= 3} { set url    [lindex $argv 2] }
-if {![file exists $bit]} { error "bitstream not found: $bit (run scripts/build.tcl first)" }
+set devpat xc7a100t*
+if {[llength $argv] >= 4} { set devpat [lindex $argv 3] }
+if {![file exists $bit]} { error "bitstream not found: $bit (run make bit first)" }
 
 if {[catch {open_hw_manager}]} { open_hw }
 connect_hw_server -url $url
@@ -41,8 +44,8 @@ puts "INFO: using target $target"
 current_hw_target $target
 open_hw_target
 
-set devs [get_hw_devices -quiet xc7a100t*]
-if {[llength $devs] != 1} { error "expected one xc7a100t on $target, found: [get_hw_devices]" }
+set devs [get_hw_devices -quiet $devpat]
+if {[llength $devs] != 1} { error "expected one $devpat on $target, found: [get_hw_devices]" }
 set dev [lindex $devs 0]
 current_hw_device $dev
 refresh_hw_device -update_hw_probes false $dev
