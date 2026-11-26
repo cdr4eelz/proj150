@@ -96,7 +96,6 @@ include $(wildcard tests/*.mk)
 
 # proj150 port: tests that need RTL from a later port branch are SKIPped with the branch name;
 # each branch deletes its line once the RTL is in (RUN_SKIPPED=1 runs them anyway)
-PENDING.port-gpu-v2 := frame_filler gpu_raster_lw0 gpu_raster_lw1 graphics_processor line_engine
 PENDING.port-mmio-uart := stage_mw memmapio_haltval memmapio_prng memmapio_uart prng32lfsr
 $(foreach b,$(patsubst PENDING.%,%,$(filter PENDING.%,$(.VARIABLES))),$(foreach t,$(PENDING.$(b)),$(eval $(t).SKIP := pending $(b))))
 
