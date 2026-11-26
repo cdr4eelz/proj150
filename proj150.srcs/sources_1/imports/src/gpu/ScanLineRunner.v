@@ -1,34 +1,35 @@
+`timescale 1ns/1ps
 
 `ifndef MACROSAFE
 `define MACROSAFE
 `endif // required to get this to compile...
-`include "../base_util/const.vh"
+`include "../base_util/Const.v"
 
 module ScanLineRunner #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
     parameter LITTLEWORDIAN=1,  //Order of 32-bit WORDS within each 256-bit block
     parameter SLR_COUNT=1       //Arbitrate multiple SLRs
 )(
-    input  wire         clk, rst,
+    input           clk, rst,
 
 //DDR FIFOs (write-only):
-    input  wire         caf_full,
-    input  wire         wdf_full,
-    output wire         caf_wren,
-    output wire[ 27:0]  caf_addr,
-    output wire         wdf_wren,
-    output wire[127:0]  wdf_data,
-    output wire[ 15:0]  wdf_mask,
+    input           caf_full,
+    input           wdf_full,
+    output          caf_wren,
+    output  [ 30:0] caf_addr,
+    output          wdf_wren,
+    output  [127:0] wdf_data,
+    output  [ 15:0] wdf_mask,
 
 //ScanRun control(s) <=> Engine/GPU (concatenated buses):
-    output wire[(SLR_COUNT)-1:0]    SLRs_ready,
-    input  wire[(SLR_COUNT)-1:0]    SLRs_valid,
-    input  wire[(SLR_COUNT*32)-1:0] SLRs_frame,
-    input  wire[(SLR_COUNT*32)-1:0] SLRs_color_edge,
-    input  wire[(SLR_COUNT*32)-1:0] SLRs_color_fill,
-    input  wire[(SLR_COUNT*10)-1:0] SLRs_row,
-    input  wire[(SLR_COUNT*10)-1:0] SLRs_col_start,
-    input  wire[(SLR_COUNT*10)-1:0] SLRs_col_finish
+    output [(SLR_COUNT)-1:0] SLRs_ready,
+    input  [(SLR_COUNT)-1:0]    SLRs_valid,
+    input  [(SLR_COUNT*32)-1:0] SLRs_frame,
+    input  [(SLR_COUNT*32)-1:0] SLRs_color_edge,
+    input  [(SLR_COUNT*32)-1:0] SLRs_color_fill,
+    input  [(SLR_COUNT*10)-1:0] SLRs_row,
+    input  [(SLR_COUNT*10)-1:0] SLRs_col_start,
+    input  [(SLR_COUNT*10)-1:0] SLRs_col_finish
 );
 
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
@@ -52,7 +53,7 @@ module ScanLineRunner #(
         ready_SLRs[live_SLR] = SLR_MASTER_ready;
     end
 
-    //Next SLR selection (priority based)
+    //Next SLR selection (priority based, but should never be a fight)
     always @(live_SLR or SLRs_valid) begin:_SLR_PRI_
         integer idx;
         next_SLR = live_SLR;
@@ -78,13 +79,13 @@ module ScanLineRunner #(
     wire [ 9:0] SLR_row          = SLRs_row         >> (live_SLR*10),//[(live_SLR*10)+ 9 -: 10],
                   TEMP_START     = SLRs_col_start   >> (live_SLR*10),//[(live_SLR*10)+ 9 -: 10],
                   TEMP_FINISH    = SLRs_col_finish  >> (live_SLR*10);//[(live_SLR*10)+ 9 -: 10];
-    wire [ 9:0] SLR_col_start, SLR_col_finish; //Start/Finish get FLIPPED if needed (as in the ISE SLR):
+    wire [9:0] SLR_col_start, SLR_col_finish; //Start/Finish get FLIPPED if needed:
+//    assign {SLR_col_start, SLR_col_finish} = {TEMP_START, TEMP_FINISH};
     assign {SLR_col_start, SLR_col_finish} = (TEMP_START <= TEMP_FINISH) ?
                                                 {TEMP_START, TEMP_FINISH} :
                                                 {TEMP_FINISH, TEMP_START};
 
-
-//SLR-Master: Drive DDR lines to write a "run" (series) of pixels
+//SLR-Master: Drive DDR lines to write a "run" (series) of horizontal pixels
     localparam
         MH_RSET     = 0, //Performing or coming out of reset     <=-._
         MH_IDLE     = 1, //Ready for initiation                       \
@@ -101,14 +102,14 @@ module ScanLineRunner #(
     reg  [ 6:0] X8, X8_last;
     reg  isFIRST8; //Manipulate a register rather than using extra comparator
 
-    reg  [31:0] r_color_edge, r_color_fill; //Captured with the run: engines may change theirs afterwards
     reg  [ 7:0] r_edge_L, r_fill_L, r_edge_R, r_fill_R;
     reg  [ 3:0] maskW;
     reg  [31:0] maskC [3:0]; //Array rather than "bus style" vector concatenation
+    reg  [31:0] r_color_edge, r_color_fill;
 
     wire [ 9:0] x = {X8[6:0], 3'b000}; //Truncate to first pixel in chunk of 8 (match memory width)
     wire [ 5:0] framebits = SLR_frame[27:22];
-    wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
+    wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00000}; //CPU "byte" address
     wire isLAST8 = (X8 >= X8_last); //(x >= x_finish)
 
     //Sub-Offsets & Active-Lo byte-enable masks for start/finish edge cases (LITTLEWORDIAN)
@@ -119,14 +120,11 @@ module ScanLineRunner #(
     wire [ 7:0] c_edge_R = (15'b111_1111_0111_1111 >> offset_finish);
     wire [ 7:0] c_fill_R = (15'b000_0000_1111_1111 >> offset_finish);
 
-    //Fill colour's top (alpha) byte non-zero => paint the pixels between the two edge pixels;
-    //zero => outline only (just the first and last chunk of the run is written). FrameFiller sets it.
-    wire fill_active = |(r_color_fill & 32'hFF_000000);
-
     wire [ 7:0] edge8 = ( (r_edge_L | {8{!isFIRST8}}) & (r_edge_R | {8{!isLAST8}}) );
     wire [ 7:0] fill8 = ( (r_fill_L & {8{ isFIRST8}}) | (r_fill_R & {8{ isLAST8}}) );
 //  wire [ 7:0] mask8 = (edge8 & fill8); //"either is active" (active-lo)
     wire        hi4 = (LITTLEWORDIAN) ? cs_M[MH_DDR1] : cs_M[MH_DDR2];
+    wire fill_active = |(r_color_fill & 32'hFF_000000);
 
     wire wdr_advance1 = (!wdf_full && !caf_full);
     wire wdr_advance2 = (!wdf_full);
@@ -136,18 +134,18 @@ module ScanLineRunner #(
         integer b;
         for (b=0; b<4; b=b+1) begin
             maskW[b] = 1'b0;            //Default to ENABLE pixel write
-            maskC[b] = r_color_edge;    //  in EDGE color
+            maskC[b] = r_color_edge;  //  in EDGE color
             casez ({hi4, edge8[b], fill8[b], edge8[4+b], fill8[4+b]})
                 5'b0_11_zz: maskW[b] = 1'b1; //AND of active-lo -=> OR the two enables
                 5'b0_10_zz: begin   //When only FILL active
-                    maskC[b] = {r_color_edge[31:24], r_color_fill[23:0]}; //(alpha byte is not stored)
+                    maskC[b] = r_color_fill;
                     maskW[b] = !fill_active; //Invert to match mask active-lo
                 end
                 5'b1_zz_11: maskW[b] = 1'b1; //As above, for 2nd pair
-                5'b1_zz_10: begin   // (hi-bit is "mux" selector)
-                    maskC[b] = {r_color_edge[31:24], r_color_fill[23:0]};
+                5'b1_zz_10: begin
+                    maskC[b] = r_color_fill;
                     maskW[b] = !fill_active;
-                end
+                end // (hi-bit is "mux" selector)
             endcase //Flat "muxie-style" (defaults  & casez keep it short); probly confusing!
         end
     end
@@ -177,10 +175,10 @@ module ScanLineRunner #(
                 X8        <= SLR_col_start[9:3];  //Truncate to a chunk of 8 pixels
                 X8_last   <= SLR_col_finish[9:3]; //  so stride matches memory width
                 isFIRST8  <= 1'b1;
-                r_color_edge <= SLR_color_edge;
-                r_color_fill <= SLR_color_fill;
                 {r_edge_L, r_fill_L} <= {c_edge_L, c_fill_L};
                 {r_edge_R, r_fill_R} <= {c_edge_R, c_fill_R};
+                r_color_edge <= SLR_color_edge;
+                r_color_fill <= SLR_color_fill;
             end
             MS_DDR1: begin
                 //NADA
@@ -193,7 +191,7 @@ module ScanLineRunner #(
     end
 
     assign SLR_MASTER_ready = (cs_M[MH_IDLE]);
-    assign caf_addr  = {1'b0, cpu_addr[27:1]}; // byte addr -> MIG units (16-bit); was >>3 (64-bit units)
+    assign caf_addr  = {6'b000000, cpu_addr[27:3]}; //Make 31-bit DDR-address (@double-word)
     assign caf_wren     = (cs_M[MH_DDR1]);
     assign wdf_wren    = (cs_M[MH_DDR1] || cs_M[MH_DDR2]);
     assign wdf_data      = (LITTLEWORDIAN)

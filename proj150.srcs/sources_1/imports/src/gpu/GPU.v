@@ -1,34 +1,37 @@
+`timescale 1ns/1ps
 
 module GPU #(
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
-    parameter LITTLEWORDIAN=1, WATCH_SLR=1
+    parameter SCREEN_WIDTH=800,
+    parameter SCREEN_HEIGHT=600,
+    parameter LITTLEWORDIAN=1,
+    parameter WATCH_SLR=1
 )(
-    input  wire clk,
-    input  wire rst,
+    input clk,
+    input rst,
 
 //GraphicsProcessor interface:
-    input  wire         gp_vcode, gp_vframe,
-    input  wire[ 31:0]  gp_wcode, gp_wframe,
-    output wire[ 31:0]  gp_rcode,
-    output wire[ 15:0]  gp_status,
-    output wire         irq_gp_done,
+    input           gp_vcode, gp_vframe,
+    input   [ 31:0] gp_wcode, gp_wframe,
+    output  [ 31:0] gp_rcode,
+    output  [ 15:0]           gp_status,
+    output          irq_gp_done,
 
 //DDR-FIFOs (Read-only for GraphicsProcessor):
-    input  wire         gcmd_raf_full,
-    output wire         gcmd_raf_wren,
-    output wire[ 27:0]  gcmd_raf_addr, //WAS: [30:0]
-    output wire         gcmd_rdf_rden,
-    input  wire         gcmd_rdf_wren,
-    input  wire[127:0]  gcmd_rdf_data,
+    input           gcmd_raf_full,
+    output          gcmd_raf_wren,
+    output  [ 30:0] gcmd_raf_addr,
+    output          gcmd_rdf_rden,
+    input           gcmd_rdf_wren,
+    input   [127:0] gcmd_rdf_data,
 
 //DDR-FIFOs (Write-only for ScanLineRunner):
-    input  wire         slr_waf_full,
-    output wire         slr_waf_wren,
-    output wire[ 27:0]  slr_waf_addr, //WAS: [30:0]
-    input  wire         slr_wdf_full,
-    output wire         slr_wdf_wren,
-    output wire[ 15:0]  slr_wdf_mask,
-    output wire[127:0]  slr_wdf_data
+    input           slr_waf_full,
+    output          slr_waf_wren,
+    output  [ 30:0] slr_waf_addr,
+    input           slr_wdf_full,
+    output          slr_wdf_wren,
+    output  [ 15:0] slr_wdf_mask,
+    output  [127:0] slr_wdf_data
 );
 
     // GraphicsProcessor <=> FrameFiller:
@@ -54,12 +57,26 @@ module GPU #(
     wire [ 31:0] elip_color;
     wire [  9:0] elip_point;
     wire         elip_color_valid;
+    wire         elip_backc_valid;
     wire         elip_xc_valid;
     wire         elip_yc_valid;
     wire         elip_a_valid;
     wire         elip_b_valid;
     wire         elip_trigger;
     wire [ 31:0] elip_frame;
+
+    // GraphicsProcessor <=> RectangleEngine:
+    wire         rect_ready;
+    wire [ 31:0] rect_color;
+    wire [  9:0] rect_point;
+    wire         rect_color_valid;
+    wire         rect_backc_valid;
+    wire         rect_xl_valid;
+    wire         rect_yt_valid;
+    wire         rect_xr_valid;
+    wire         rect_yb_valid;
+    wire         rect_trigger;
+    wire [ 31:0] rect_frame;
 
 //GP status & interrupt generation => CPU
     wire [  5:0] gp_rframe;
@@ -78,7 +95,7 @@ module GPU #(
 
     assign gp_status = {
         gp_fault, 1'b0, gp_rframe[5:0],
-        4'b0000, elip_ready, line_ready, fill_ready, gp_ready
+        3'b000, rect_ready, elip_ready, line_ready, fill_ready, gp_ready
     };
     assign irq_gp_done = gp_done_1shot_1cycle_sync_posedge;
 
@@ -118,6 +135,7 @@ module GPU #(
     //ElipseEngine <=> GP:
         .EL_ready(elip_ready),
         .EL_color_valid(elip_color_valid),
+        .EL_backc_valid(elip_backc_valid),
         .EL_color      (elip_color),
         .EL_xc_valid(elip_xc_valid),
         .EL_yc_valid(elip_yc_valid),
@@ -125,16 +143,29 @@ module GPU #(
         .EL_b_valid (elip_b_valid),
         .EL_point   (elip_point),
         .EL_trigger(elip_trigger),
-        .EL_frame  (elip_frame)
+        .EL_frame  (elip_frame),
+    //RectangleEngine <=> GP:
+        .RE_ready(rect_ready),
+        .RE_color_valid(rect_color_valid),
+        .RE_backc_valid(rect_backc_valid),
+        .RE_color      (rect_color),
+        .RE_xl_valid(rect_xl_valid),
+        .RE_yt_valid(rect_yt_valid),
+        .RE_xr_valid(rect_xr_valid),
+        .RE_yb_valid(rect_yb_valid),
+        .RE_point   (rect_point),
+        .RE_trigger(rect_trigger),
+        .RE_frame  (rect_frame)
     ) /* synthesis syn_noprune=1 */;
 
     localparam SLR_FF       = 0,
                 SLR_LE      = 1,
-                SLR_EL      = 2;
-    localparam   SLR__CNT   = 3;
+                SLR_EL      = 2,
+                SLR_RE      = 3;
+    localparam  SLR__CNT = 4;
 
-    wire [(SLR__CNT)-1:0] SLRs_ready;
-    wire [(SLR__CNT)-1:0] SLRs_valid;
+    wire [(SLR__CNT)-1:0]    SLRs_ready;
+    wire [(SLR__CNT)-1:0]    SLRs_valid;
     wire [(SLR__CNT*32)-1:0] SLRs_frame;
     wire [(SLR__CNT*32)-1:0] SLRs_color_edge;
     wire [(SLR__CNT*32)-1:0] SLRs_color_fill;
@@ -143,7 +174,8 @@ module GPU #(
     wire [(SLR__CNT*10)-1:0] SLRs_col_finish;
 
     ScanLineRunner #(
-        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
+        .SCREEN_WIDTH(SCREEN_WIDTH),
+        .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .LITTLEWORDIAN(LITTLEWORDIAN),
         .SLR_COUNT(SLR__CNT)
     ) slr (
@@ -170,8 +202,8 @@ module GPU #(
 
 
     FrameFiller #(
-        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
-        .SCANLINERUNNER(1)
+        .SCREEN_WIDTH(SCREEN_WIDTH),
+        .SCREEN_HEIGHT(SCREEN_HEIGHT)
     ) ff (
         .clk(clk),
         .rst(rst),
@@ -180,13 +212,6 @@ module GPU #(
         .FF_valid (fill_valid),
         .FF_color (fill_color),
         .FF_frame (fill_frame),
-    //DDR FIFOs (write-only):
-        .caf_full(1'b1), .wdf_full(1'b1),
-/* verilator lint_off PINCONNECTEMPTY */
-        .caf_wren    (), .wdf_wren    (),
-        .caf_addr    (), .wdf_mask    (),
-        .wdf_data(),
-/* verilator lint_on  PINCONNECTEMPTY */
     //SLR interface (write-only):
         .SLR_ready(SLRs_ready           [SLR_FF]                    ),
         .SLR_valid(SLRs_valid           [SLR_FF]                    ),
@@ -200,8 +225,9 @@ module GPU #(
 
 
     LineEngine #(
-        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
-        .SCANLINERUNNER(1), .LITTLEWORDIAN(0)
+        .SCREEN_WIDTH(SCREEN_WIDTH),
+        .SCREEN_HEIGHT(SCREEN_HEIGHT),
+        .LITTLEWORDIAN(0)
     ) le (
         .clk(clk),
         .rst(rst),
@@ -216,13 +242,6 @@ module GPU #(
         .LE_point   (line_point),
         .LE_trigger(line_trigger),
         .LE_frame  (line_frame),
-    //DDR FIFOs (write-only):
-        .caf_full(1'b1), .wdf_full(1'b1),
-/* verilator lint_off PINCONNECTEMPTY */
-        .caf_wren    (), .wdf_wren    (),
-        .caf_addr    (), .wdf_mask    (),
-        .wdf_data(),
-/* verilator lint_on  PINCONNECTEMPTY */
     //SLR interface (write-only):
         .SLR_ready(SLRs_ready           [SLR_LE]                    ),
         .SLR_valid(SLRs_valid           [SLR_LE]                    ),
@@ -236,14 +255,15 @@ module GPU #(
 
 
     ElipseEngine #(
-        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT)
+        .SCREEN_WIDTH(SCREEN_WIDTH),
+        .SCREEN_HEIGHT(SCREEN_HEIGHT)
     ) el (
         .clk(clk),
         .rst(rst),
     //Elipse control <=> CPU:
         .EL_ready(elip_ready),
         .EL_color_valid(elip_color_valid),
-        .EL_backc_valid(1'b0), //No BACK command yet: fill alpha stays 0 => outline only
+        .EL_backc_valid(elip_backc_valid),
         .EL_color      (elip_color),
         .EL_xc_valid(elip_xc_valid),
         .EL_yc_valid(elip_yc_valid),
@@ -264,14 +284,46 @@ module GPU #(
     ) /* synthesis syn_noprune=1 */;
 
 
+    RectangleEngine #(
+        .SCREEN_WIDTH(SCREEN_WIDTH),
+        .SCREEN_HEIGHT(SCREEN_HEIGHT)
+    ) re (
+        .clk(clk),
+        .rst(rst),
+    //Rectangle control <=> CPU:
+        .RE_ready(rect_ready),
+        .RE_color_valid(rect_color_valid),
+        .RE_backc_valid(rect_backc_valid),
+        .RE_color      (rect_color),
+        .RE_xl_valid(rect_xl_valid),
+        .RE_yt_valid(rect_yt_valid),
+        .RE_xr_valid(rect_xr_valid),
+        .RE_yb_valid(rect_yb_valid),
+        .RE_point   (rect_point),
+        .RE_trigger(rect_trigger),
+        .RE_frame  (rect_frame),
+    //SLR interface (write-only):
+        .SLR_ready(SLRs_ready           [SLR_RE]                    ),
+        .SLR_valid(SLRs_valid           [SLR_RE]                    ),
+        .SLR_frame     (SLRs_frame     [(SLR_RE*32)+31:(SLR_RE*32)] ),
+        .SLR_color_fill(SLRs_color_fill[(SLR_RE*32)+31:(SLR_RE*32)] ),
+        .SLR_color_edge(SLRs_color_edge[(SLR_RE*32)+31:(SLR_RE*32)] ),
+        .SLR_row       (SLRs_row       [(SLR_RE*10)+ 9:(SLR_RE*10)] ),
+        .SLR_col_start (SLRs_col_start [(SLR_RE*10)+ 9:(SLR_RE*10)] ),
+        .SLR_col_finish(SLRs_col_finish[(SLR_RE*10)+ 9:(SLR_RE*10)] )
+    ) /* synthesis syn_noprune=1 */;
+
+
 //synthesis translate_off
 
     always @(posedge clk) begin:_WATCH_SLR_
         integer idx;
         for (idx = 0; idx < SLR__CNT; idx = idx+1) begin
             if (WATCH_SLR && SLRs_ready[idx] && SLRs_valid[idx]) begin
-                $display("%d SLR[%0d] ready=%b row=%0d s=%0d f=%0d",
+                $display("%d SLR[%0d] ready=%b edge=%8h fill=%8h row=%0d s=%0d f=%0d",
                          $time, idx, SLRs_ready[idx],
+                         SLRs_color_edge[(idx*32)+31 -: 32],
+                         SLRs_color_fill[(idx*32)+31 -: 32],
                          SLRs_row       [(idx*10)+ 9 -: 10],
                          SLRs_col_start [(idx*10)+ 9 -: 10],
                          SLRs_col_finish[(idx*10)+ 9 -: 10]

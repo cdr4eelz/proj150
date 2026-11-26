@@ -45,6 +45,7 @@ set ::RTL_FILES {
     imports/src/gpu/GraphicsProcessor.v
     imports/src/gpu/LineEngine.v
     imports/src/gpu/PixelFeeder.v
+    imports/src/gpu/RectangleEngine.v
     imports/src/gpu/ScanLineRunner.v
     imports/src/innerds/ALU.v
     imports/src/innerds/ALUdec.v

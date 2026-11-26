@@ -541,6 +541,12 @@ module MemoryDDR #(
     //assign pf_status = 16'd0;
     //assign irq_pf_frame = 1'b0;
 
+    // The GPU (cs150-1245 ISE files, verbatim) addresses DDR in the ML505 MIG's 64-bit units
+    // (31-bit byte>>3); the Arty MIG UI (RequestController) takes 16-bit units (28-bit byte>>1).
+    wire [ 30:0] gpu_gcmd_raf_addr, gpu_slr_waf_addr;
+    assign gcmd_raf_addr = {1'b0, gpu_gcmd_raf_addr[24:0], 2'b00};
+    assign bpas_waf_addr = {1'b0, gpu_slr_waf_addr[24:0], 2'b00};
+
     GPU #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .LITTLEWORDIAN(LITTLEWORDIAN)
@@ -556,14 +562,14 @@ module MemoryDDR #(
     //DDR FIFOs (read-only for GraphicsProcessor):
         .gcmd_raf_full(gcmd_raf_full), //IN
         .gcmd_raf_wren(gcmd_raf_wren), //OUT
-        .gcmd_raf_addr(gcmd_raf_addr), //OUT[27:0]
+        .gcmd_raf_addr(gpu_gcmd_raf_addr), //OUT[30:0] (byte>>3)
         .gcmd_rdf_rden(gcmd_rdf_rden), //OUT
         .gcmd_rdf_wren(gcmd_rdf_wren), //IN
         .gcmd_rdf_data(ALLR_rdf_data), //IN[127:0]
     //DDR FIFOs (write-only for ScanLineRunner):
         .slr_waf_full(bpas_waf_full), //IN
         .slr_waf_wren(bpas_waf_wren), //OUT
-        .slr_waf_addr(bpas_waf_addr), //OUT[15:0]
+        .slr_waf_addr(gpu_slr_waf_addr), //OUT[30:0] (byte>>3)
         .slr_wdf_full(bpas_wdf_full), //IN
         .slr_wdf_wren(bpas_wdf_wren), //OUT
         .slr_wdf_mask(bpas_wdf_mask), //OUT[15:0]
