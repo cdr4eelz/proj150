@@ -32,8 +32,10 @@ set ::RTL_FILES {
     imports/src/base_vid/VGAFramer.v
     imports/src/base_vid/VGATestPattern.v
     imports/src/cpu/COP0150.v
+    imports/src/cpu/CPUDumpMemMap.v
     imports/src/cpu/CPUDumpMemUART.v
     imports/src/cpu/CPUDumpUART.v
+    imports/src/cpu/CPUEchoDDR.v
     imports/src/cpu/CPUEchoUART.v
     imports/src/cpu/CPUMIPS.v
     imports/src/cpu/MemBank.v
