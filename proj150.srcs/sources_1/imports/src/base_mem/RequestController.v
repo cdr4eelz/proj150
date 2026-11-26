@@ -138,6 +138,11 @@ module RequestController(
     reg  [10:0] issued_reads;
     reg  [11:0] serviced_reads; // extra bit b/c 2 chunks - use [11:1] to cmpare.
 
+    // A read beat is "serviced" when it is actually popped from the RDF (FWFT: rdf_wren = valid,
+    // rdf_rden = pop by the selected consumer). Counting rdf_wren alone advanced the counter on every
+    // cycle a beat merely sat in the FIFO, steering later beats to the wrong requester (desync).
+    wire rdf_pop = rdf_wren && rdf_rden;
+
     wire fetch_issued;
     assign fetch_issued = caf_wren && (caf_cadr[30:28] == 3'b001) && !ff_full;
 
@@ -149,7 +154,7 @@ module RequestController(
 
         if(rst)
             serviced_reads <= 12'b0;
-        else if(rdf_wren)
+        else if(rdf_pop)
             serviced_reads <= serviced_reads + 12'b1;
 
         if(rst) begin
@@ -158,7 +163,7 @@ module RequestController(
         end else if((fifo_access == INST_ACCESS) && fetch_issued) begin
             inst_req_num   <= issued_reads;
             inst_req_valid <= 2'b10;
-        end else if((inst_req_num == serviced_reads[11:1]) && |inst_req_valid && rdf_wren) begin
+        end else if((inst_req_num == serviced_reads[11:1]) && |inst_req_valid && rdf_pop) begin
             inst_req_num   <= inst_req_num;
             inst_req_valid <= inst_req_valid - 2'b01;
         end
@@ -169,7 +174,7 @@ module RequestController(
         end else if((fifo_access == DATA_ACCESS) && fetch_issued) begin
             data_req_num   <= issued_reads;
             data_req_valid <= 2'b10;
-        end else if((data_req_num == serviced_reads[11:1]) && |data_req_valid && rdf_wren) begin
+        end else if((data_req_num == serviced_reads[11:1]) && |data_req_valid && rdf_pop) begin
             data_req_num   <= data_req_num;
             data_req_valid <= data_req_valid - 2'b01;
         end
@@ -180,7 +185,7 @@ module RequestController(
         end else if((fifo_access == GCMD_ACCESS) && fetch_issued) begin
             gcmd_req_num   <= issued_reads;
             gcmd_req_valid <= 2'b10;
-        end else if((gcmd_req_num == serviced_reads[11:1]) && |gcmd_req_valid && rdf_wren) begin
+        end else if((gcmd_req_num == serviced_reads[11:1]) && |gcmd_req_valid && rdf_pop) begin
             gcmd_req_num   <= gcmd_req_num;
             gcmd_req_valid <= gcmd_req_valid - 2'b01;
         end
