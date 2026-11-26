@@ -118,6 +118,7 @@ module MemoryDDR #(
 
 // RequestController/MASTER <=> FIFOs:      [clk_cpu domain]
     (* mark_debug = "true" *) wire            rcon_caf_full;  //FIFO: "!ready"
+    wire            rcon_caf_backlog; //FIFO prog_full: RCON holds new non-PixelFeeder commands
     (* mark_debug = "true" *) wire            rcon_caf_wr_en; //  RCON: "valid"
     (* mark_debug = "true" *) wire [ 30:0]    rcon_caf_din;   //  RCON: {cmd-3,addr-28}     NOTE:Width WAS: [33:0]
     (* mark_debug = "true" *) wire            rcon_wdf_full;  //FIFO: "!ready"
@@ -301,6 +302,7 @@ module MemoryDDR #(
     // FIFO-WR: RCON clock-domain
         .wr_clk (clk_cpu),          // input    : CPU/RCON clock
         .full   (rcon_caf_full),    // output   : FIFO =>  RCON: "!ready"
+        .prog_full(rcon_caf_backlog), // output : FIFO =>  RCON: backlog limit (scripts/ip/mig_fifos.tcl)
         .wr_en  (rcon_caf_wr_en),   // input    : FIFO  <= RCON: "valid"
         .din    (rcon_caf_din),   //input[30:0] : FIFO  <= RCON: {cmd-3,addr-28} = 31
         .wr_ack (rcon_caf_wr_ack),  // output   : FIFO =>  DDR3: "valid"
@@ -359,6 +361,7 @@ module MemoryDDR #(
     // Master/RequestController interface:
 
         .caf_full(rcon_caf_full),   //input  RCON  <= FIFO  : "!ready"
+        .caf_backlog(rcon_caf_backlog), //input RCON <= FIFO  : prog_full
         .caf_wren(rcon_caf_wr_en),  //RCON =>  FIFO         : "valid"
         .caf_cadr(rcon_caf_din),    //RCON =>  FIFO         : {cmd,addr}
         .wdf_full(rcon_wdf_full),   //input  RCON  <= FIFO  : "!ready"

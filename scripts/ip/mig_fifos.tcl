@@ -7,3 +7,12 @@ set_property -dict [list \
     CONFIG.Programmable_Full_Type      {Single_Programmable_Full_Threshold_Constant} \
     CONFIG.Full_Threshold_Assert_Value {400} \
 ] [get_ips mig_rdf]
+
+# mig_caf gets a prog_full flag (write side, clk_cpu): while it is high RequestController accepts no
+# NEW command except PixelFeeder reads, so at most ~24 commands (mostly writes, 7 ui_clk each) sit
+# ahead of a display read instead of up to 512 (a GIOS swfill underflowed the pixel FIFO).
+# Must stay above the PixelFeeder's 15 outstanding reads (see RequestController caf_backlog).
+set_property -dict [list \
+    CONFIG.Programmable_Full_Type      {Single_Programmable_Full_Threshold_Constant} \
+    CONFIG.Full_Threshold_Assert_Value {24} \
+] [get_ips mig_caf]

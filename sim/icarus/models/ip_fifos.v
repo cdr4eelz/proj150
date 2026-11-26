@@ -5,13 +5,17 @@
 `ifndef PIXEL_PF_FULL
  `define PIXEL_PF_FULL 448   // scripts/ip/pixel_fifo.tcl
 `endif
+`ifndef CAF_PF_FULL
+ `define CAF_PF_FULL 24      // scripts/ip/mig_fifos.tcl (mig_caf)
+`endif
 `ifndef PIXEL_PF_EMPTY
  `define PIXEL_PF_EMPTY 1600  // scripts/ip/pixel_fifo.tcl
 `endif
 module mig_caf (input wire rst, wr_clk, wr_en, input wire [30:0] din, output wire full, output wire wr_ack,
+                output wire prog_full,
                 input wire rd_clk, rd_en, output wire [30:0] dout, output wire valid, empty, underflow);
-    fifo_async_fwft_model #(.WW(31), .DEPTH(512), .NAME("mig_caf")) f (
-        .rst(rst), .wr_clk(wr_clk), .wr_en(wr_en), .din(din), .full(full), .almost_full(), .prog_full(),
+    fifo_async_fwft_model #(.WW(31), .DEPTH(512), .PF_THRESH(`CAF_PF_FULL), .NAME("mig_caf")) f (
+        .rst(rst), .wr_clk(wr_clk), .wr_en(wr_en), .din(din), .full(full), .almost_full(), .prog_full(prog_full),
         .wr_ack(wr_ack), .overflow(), .rd_clk(rd_clk), .rd_en(rd_en), .dout(dout), .valid(valid),
         .empty(empty), .prog_empty(), .underflow(underflow));
 endmodule
