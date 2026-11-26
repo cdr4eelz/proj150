@@ -1,0 +1,7 @@
+[4570000] reset released (init_done), PF=0 PF_TESTPAT=0 RD_CREDIT=1 OPS=3000
+[1171550001] P1 done: 4096 checks, 0 errors
+[1803410001] P2 done: 10049 checks, 0 errors
+[1805150001] P3 done: 10055 checks, 0 errors
+SUMMARY: checks=10055 mismatches=0 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=0 video_fault=0 pf_status=4000
+RESULT: PASS

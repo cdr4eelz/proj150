@@ -1,0 +1,8 @@
+[4570000] reset released (init_done), PF=1 PF_TESTPAT=0 RD_CREDIT=1 OPS=3000
+[993610001] P1 done: 4096 checks, 0 errors
+[15794750000] PixelFeeder now on frame 1 (DDR 0x10400000)
+[16489670001] P2 done: 10143 checks, 0 errors
+[16491670001] P3 done: 10149 checks, 0 errors
+SUMMARY: checks=10149 mismatches=0 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=2802 video_fault=0 pf_status=0100
+RESULT: PASS
