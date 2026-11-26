@@ -62,7 +62,7 @@ module MIPS150 #(
         .intr_handled(intr_handled),    //IN  (Acknowledge ISR is happening)
         .intr_request(intr_request),    //OUT (Like branch to fixed address)
     // Interrupt Requests <==> Devices
-        .irq_uart0(irq_uart0), .irq_uart1(irq_uart1),
+        .irq_UARX(irq_uart0), .irq_UATX(irq_uart1),
         .irq_pf_frame(irq_pf_frame), .irq_gp_done(irq_gp_done)
     );
 
