@@ -1,0 +1,11 @@
+# Icarus: run_icarus.sh -DSTUB_LOG2=21 ... -- +PF=0 +OPS=50 +GP=1 +GP_TMO=400000 on the UNMODIFIED master RTL (e15eb22) with the new GPU phase of tb_memddr
+[7862950001] P5 FILL: cycles=321025 checks=1607 errors=0
+[14687690001] P5 LINE: cycles=328886 checks=1697 errors=0
+[14687690001] P5 ELIP model: frame-4 plots=468 analytic_misfits=0
+[22749150000] GP TIMEOUT frame 4: GP not ready after 400000 cycles (gp_status=0406 gp_rcode=10100030)
+[22829150000] P5 ELIP model: frame-5 plots=500 analytic_misfits=0
+[32890210000] GP TIMEOUT frame 5: GP not ready after 400000 cycles (gp_status=0406 gp_rcode=10100030)
+[32970210000] P5 done: gp_checks=1697 gp_errors=0 gp_timeouts=2
+SUMMARY: checks=4168 mismatches=0 stall_timeouts=0 stub_protocol_errors=0
+SUMMARY: mig_rdf_overflows=0 adapter_overflow_flag=0 pixel_fifo_overflows=0 pf_reads=0 video_fault=0 pf_status=0000
+RESULT: FAIL (gp_errors=0 gp_timeouts=2 mismatches=0 timeouts=0 protocol=0 rdf_overflow=0 pixel_overflow=0 video_fault=0)
