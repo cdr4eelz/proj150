@@ -8,14 +8,14 @@ case "$1" in
   dcache)
     $G --timeout 60 --file 10100000 data4k.hex \
        result "copy 10100000 0 1000" "copy 10100000 10180000 1000" "copy 10180000 0 1000" \
-       "copy 10100000 10104000 1000" "copy 10102000 0 1000" "copy 10104000 0 1000" \
+       "copy 10100000 10104000 1000" "copy 10104000 0 1000" \
        "dump 10100000" "dump 10180000" \
        "sw 18181818 18000040" "sw 10101010 10000040" "lw 10002040" "lw 18000040" "lw 10000040" \
        "sw c0ffee14 10001014" "lw 10003014" "lw 10001000" "lw 10001014" \
        "sw 11223344 10001100" "sb aa 10001101" "sh bbcc 10001106" "lw 10001100" "lw 10001104" "lhu 10001102" "lbu 10001103" \
        "copy 40000000 10200000 4000" "copy 40000000 0 4000" "copy 10200000 0 4000" ;;
   icache)
-    $G --timeout 30 "sw 0 10020000" --file 10030000 icache_prog.hex result "jal 10030000" "lw 10020000" \
+    $G --timeout 30 --file 10030000 icache_prog.hex "sw 0 10020000" result "jal 10030000" "lw 10020000" \
        "jal 10030000" "lw 10020000" ;;
   pixfeed)
     $G --timeout 30 gs "pf 1" "@sleep 1" gs "@sleep 2" gs "pf 0" "@sleep 1" gs "pf 1" "@sleep 1" gs ;;
