@@ -243,6 +243,7 @@ module GPU #(
     //Elipse control <=> CPU:
         .EL_ready(elip_ready),
         .EL_color_valid(elip_color_valid),
+        .EL_backc_valid(1'b0), //No BACK command yet: fill alpha stays 0 => outline only
         .EL_color      (elip_color),
         .EL_xc_valid(elip_xc_valid),
         .EL_yc_valid(elip_yc_valid),
