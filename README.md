@@ -43,6 +43,8 @@ in parallel), then synthesis and implementation. Later runs only redo what chang
 | `make bit` | Bitstream `build/<board>/proj150_arty.bit`. Re-checks the timing gate, so a failing `impl` cannot be turned into a bitstream. |
 | `make timing` | Prints WNS/WHS, writes `build/<board>/timing.txt` (slack plus LUT/FF/BRAM/DSP use). |
 | `make program` | Programs the Arty over its **Digilent** JTAG cable, selected by serial (`HW_SERIAL`, see `boards/arty/board.mk`). Never opens other cables, e.g. the Xilinx Platform Cable USB II of the XUPV5. |
+| `make mmi` | Memory map of the four block RAMs for `updatemem`: `build/<board>/proj150_arty.mmi` (see *Patching a RAM image into a bitstream*). Reads `post_route.dcp`, never rebuilds. |
+| `make patch COE=sw/gios.inst.coe` | Swap one RAM image into the **existing** bitstream with `updatemem`, no rebuild: `build/<board>/proj150_arty_patched.bit`. `make patch-bios`, `patch-dmem`, `patch-imem`, `patch-isr` do the same for the four `sw/` images. A test aid, not a build. |
 | `make sim` | First `make sim-ise`: the unit, CPU and GPU tests carried over from the cs150-1245 ISE Icarus rig (`sim/ise`, see its README; uses the cs150 checkout at `CS150`, default `../cs150-1245`). Then `sim/icarus/run_icarus.sh`: memory path, PixelFeeder and GPU against a behavioural MIG. No Xilinx tools needed. |
 | `make clean` | Remove `build/<board>`. `make clean-impl` keeps the generated IP; `make clean-ip` removes only the IP. |
 | `make all` | `bit` + `timing` (default goal). `make help` prints the header of the Makefile. |
@@ -57,6 +59,53 @@ Parameters, on the command line (`make bit SW_STALL_EN=0`):
 | *(sticky)* | Parameters given once are remembered in `build/<board>/synth.params`: `make timing` or `make program` after `make bit SW_STALL_EN=0` use that build. `make bit GENERICS=` goes back to the defaults. |
 | `TIMING_GATE=0` | Write the bitstream even with negative slack (debugging only). |
 | `IP_JOBS=4`, `VIVADO=...`, `HW_SERIAL=...` | Parallel IP builds, Vivado binary, Digilent cable serial. |
+| `COE=`, `MEM=`, `PATCH_IN=`, `PATCH_OUT=`, `PATCH_FORCE=1`, `MMI_VERIFY=0` | `make patch` / `make mmi` only, see below. |
+
+### Patching a RAM image into a bitstream
+
+Changing the software (the `sw/*.coe` block RAM images) normally means `make ip` and a full rebuild. For a
+quick test, `updatemem` (Vivado's replacement for ISE's `data2mem` / `bitgen -g UpdtBRAM`) can swap one image
+inside the finished bitstream in seconds, with no synthesis or place and route:
+
+```
+make bit                                   # once: the bitstream to patch
+make patch-bios                            # sw/gios.inst.coe  -> bios_mem  -> build/arty/proj150_arty_patched.bit
+make patch COE=sw/gios.inst.coe            # the same; MEM=bios|dmem|imem|isr when the file is not one of the sw/MANIFEST names
+make patch-dmem PATCH_IN=build/arty/proj150_arty_patched.bit PATCH_OUT=build/arty/p2.bit    # chain a second image
+vivado -mode batch -source scripts/program.tcl -tclargs build/arty/proj150_arty_patched.bit 210319BCC332A localhost:3121 'xc7a100t*'
+```
+
+| Memory (`-proc`) | IP | `sw/` image | Primitives |
+| --- | --- | --- | --- |
+| `bios` | `bios_mem` | `gios.inst.coe` | 16 x RAMB18, 2 bits each |
+| `dmem` | `dmem_blk_ram` | `bench.inst.coe` | 4 x RAMB36, one byte lane each |
+| `imem` | `imem_blk_ram` | `proj7.inst.coe` | 4 x RAMB36, one byte lane each |
+| `isr` | `isr_mem` | `isr7.coe` | 4 x RAMB36, one byte lane each |
+
+How it works: `scripts/mmi.tcl` (`make mmi`, run automatically by `make patch`) opens
+`build/<board>/impl/post_route.dcp` and writes `build/<board>/proj150_arty.mmi`, with one Processor and
+AddressSpace per memory (the UG1580 format) and the location and bit slice of every primitive.
+`write_mem_info` cannot do that: it only knows MicroBlaze and PS7 designs. The primitives are found as the
+`RAMB18E1`/`RAMB36E1` cells below the instance whose `REF_NAME` is the IP. The bit slice each one holds is not
+assumed: the `INIT_xx` of every primitive is decoded and compared, word for word, with the image the IP was built
+from (the `.mif` that blk_mem_gen wrote in `build/<board>/ip/<ip>/`, else the COE named in its `.xci`). The MMI
+is only written if every lane matches, otherwise `make mmi` fails and says which primitives differ. That
+usually means the IP was regenerated after the last `make impl`: run `make bit`. `MMI_VERIFY=0` skips the check
+and assumes blk_mem_gen's `ramloop[k]` = bit slice `k` order (unsafe). `scripts/coe2mem.tcl` (`tclsh` or
+`vivado -mode batch`) converts the COE to the `.mem` file `updatemem` reads: `@0000`, then one 32-bit hex word
+per line, zero padded to the RAM's 4096 words.
+
+Caveats:
+
+* A patched bitstream is a **test artifact**. The IP, the checkpoints and the Makefile's rebuild tracking still
+  hold the old image, and the next `make bit` rebuilds from `sw/`, not from your patch. Put the change into
+  `sw/` (`make sw-import`) before a real build.
+* The MMI records where the block RAMs were placed, so patch only a bitstream written from the **same routed
+  checkpoint** the MMI was made from. `make mmi` regenerates the MMI when `post_route.dcp` is newer, and
+  `make patch` refuses a bitstream older than the checkpoint (`PATCH_FORCE=1` overrides).
+* The RAMs are fixed at 4096 words (`PATCH_DEPTH`). A shorter image is zero padded like the IP does; a longer one is an
+  error, and needs a full rebuild.
+* `make patch` never builds anything: without `build/<board>/proj150_arty.bit` and `post_route.dcp` it stops.
 
 ### What triggers a rebuild
 
