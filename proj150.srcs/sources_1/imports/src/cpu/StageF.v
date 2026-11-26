@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 
 //TODO: Check for misalignment (PC-FAULT) or just formally eliminate lower 2 bits
@@ -9,22 +11,22 @@ module StageF #(
     parameter PC_BOOT=32'h4000_0000, PC_ISR=32'hC000_0180,
     parameter PCWIDTH=32, INSTWIDTH=32, COUNTERWIDTH=32
 )(
-    input  wire clk, rst, stall,
+    input clk, rst, stall,
 
     //Branch/Exception control to deviate from PC+4
-    input  wire _DoBranch, _DoISR,
-    input  wire[  (PCWIDTH-1):0] _PCBranch,
+    input  _DoBranch, _DoISR,
+    input  [  (PCWIDTH-1):0] _PCBranch,
 
     //Outputs
-    output wire[  (PCWIDTH-1):0] PC_, PCNEXT_,
-    output wire[(INSTWIDTH-1):0] INST_,
+    output [  (PCWIDTH-1):0] PC_, PCNEXT_,
+    output [(INSTWIDTH-1):0] INST_,
 
     //Instruction memory taps
-    output wire[  (PCWIDTH-1):0] IMEM_ADDR,
-    input  wire[(INSTWIDTH-1):0] IMEM_Data,
+    output [  (PCWIDTH-1):0] IMEM_ADDR,
+    input  [(INSTWIDTH-1):0] IMEM_Data,
 
     //Instruction related counters & reset (synchronous)
-    input  wire _ResetCounters,
+    input _ResetCounters,
     output reg [(COUNTERWIDTH-1):0] CNT_CYCLE, CNT_INST, CNT_STALL, CNT_BRANCH, CNT_ISR,
     output reg WAS_RUNNING, WAS_INST, WAS_STALL, WAS_BRANCH, WAS_ISR
 );
@@ -53,7 +55,8 @@ module StageF #(
 
     reg [(PCWIDTH-1):0] REG_PCNEXT;
     always @(posedge clk) begin:_REG_PCNEXT_
-        REG_PCNEXT <= MUX_PCNEXT; //After DoISR, remembers the "replaced" PC
+        if (!stall) REG_PCNEXT <= MUX_PCNEXT; //After DoISR, remembers the "replaced" PC
+        //NOTE: The "!stall" fixes a huge bug where the ISR addr itself would end up in EPC!
     end
 
     assign PC_ = REG_PC, PCNEXT_ = REG_PCNEXT;
