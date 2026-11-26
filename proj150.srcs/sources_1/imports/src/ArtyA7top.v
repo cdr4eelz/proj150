@@ -7,7 +7,9 @@ module ArtyA7top #(
                 BAUD_RATE       =   115_200,
     parameter   SCREEN_WIDTH    = 800,
                 SCREEN_HEIGHT   =     600,
-    parameter   CPU_CORE        = "" //"DUMPUART"
+    parameter   CPU_CORE        = "", //"DUMPUART"
+    parameter   SW_STALL_EN     = 1  // 1: SWITCH[1] up stalls the CPU (debug). 0: ignore SWITCH[1]
+                                     //    (bring-up builds: build.tcl SW_STALL_EN=0)
 )(
     input  wire         CLK_100MHz,  // Board clock for Arty-A7
     //input CLK_125MHz,  // Board clock for PYNQ
@@ -151,7 +153,7 @@ end:DUMPUART else begin:MIPS150
 
     (* mark_debug = "true" *) wire stall_top, stall_dip;
     // Debounce??? Once stall is asserted, perhaps momentary pushbutton could "step" the CPU???
-    assign stall_dip = switches[1]; //1'b0;  // TODO: Tie-in to a GPIO switch (and invert repeatedly)
+    assign stall_dip = (SW_STALL_EN != 0) && switches[1]; //1'b0;  // TODO: Tie-in to a GPIO switch (and invert repeatedly)
 
     // MemoryDDR (WAS: Memory150)
     (* mark_debug = "true" *) wire [31:0] dcache_addr;

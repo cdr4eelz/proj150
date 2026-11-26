@@ -108,3 +108,7 @@ vivado_*.str
 ### !proj150.srcs/sources_1/constrs/            # If you have .xdc here
 ### !proj150.srcs/sources_1/constrs/*.xdc
 
+
+# Non-project build (scripts/build.tcl)
+/build/
+/proj150.srcs/sources_1/ipbuild/
