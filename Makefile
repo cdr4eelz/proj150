@@ -9,6 +9,7 @@
 #   make program             load the bitstream into the Arty over its Digilent cable (never the XUPV5)
 #   make sim                 Icarus regression: sim/ise (ISE rig) + memory path + PixelFeeder + GPU (no Xilinx tools)
 #   make sim-ise             only the ISE rig (sim/ise; 'make -C sim/ise list' for its tests)
+#   make sw-import           copy the built BRAM images (sw/MANIFEST) from CS150; does not build software
 #   make ise-diff            compare the RTL with the cs150-1245 ISE branch (FILE=cpu/StageF.v for one diff)
 #   make clean               remove build/<board>;  make clean-impl keeps the generated IP
 #
@@ -21,7 +22,7 @@
 #   IP_JOBS=4                Vivado instances to run in parallel when generating IP
 #   VIVADO=/path/to/vivado   default: vivado from PATH, else /tools/Xilinx/Vivado/2019.1/bin/vivado
 #   HW_SERIAL=...            Digilent cable serial for 'make program' (default: boards/<board>/board.mk)
-#   CS150=../cs150-1245      checkout of the ISE branch, for ise-diff
+#   CS150=../cs150-1245      checkout of the ISE branch (software built there), for sw-import and ise-diff
 
 BOARD ?= arty
 include boards/$(BOARD)/board.mk
@@ -47,11 +48,11 @@ endif
 # RTL the synthesis reads (scripts/sources.tcl lists the files; any .v/.vh edit retriggers synth)
 RTL := $(shell find $(SRC1)/imports/src -type f \( -name '*.v' -o -name '*.vh' \)) scripts/sources.tcl
 
-# COE files that initialise the block RAM IP
-IP_DEPS_bios_mem     := $(SRC1)/imports/gios/gios.inst.coe
-IP_DEPS_dmem_blk_mem := $(SRC1)/imports/testdata/testdata.coe
-IP_DEPS_imem_blk_mem := $(SRC1)/imports/software/simplesend/simplesend.inst.coe
-IP_DEPS_isr_mem      := $(SRC1)/imports/isr/basic.coe
+# COE files that initialise the block RAM IP: local copies of images built in cs150-1245 (make sw-import)
+IP_DEPS_bios_mem     := sw/gios.inst.coe
+IP_DEPS_dmem_blk_ram := sw/bench.inst.coe
+IP_DEPS_imem_blk_ram := sw/proj7.inst.coe
+IP_DEPS_isr_mem      := sw/isr7.coe
 
 IP_DCP      := $(foreach i,$(IPS),$(OUT)/ip/$(i)/$(i).dcp)
 ip_script    = $(firstword $(wildcard boards/$(BOARD)/ip/$(1).tcl ip/$(1).tcl))
@@ -69,7 +70,7 @@ endef
 .DEFAULT_GOAL := all
 CS150 ?= ../cs150-1245
 
-.PHONY: all ip synth impl bit timing program sim sim-ise ise-diff clean clean-impl clean-ip help FORCE
+.PHONY: all ip synth impl bit timing program sim sim-ise sw-import ise-diff clean clean-impl clean-ip help FORCE
 
 all: bit timing
 
@@ -128,6 +129,10 @@ sim: sim-ise
 # The cs150-1245 ISE Icarus rig (sim/ise, see its README): unit/CPU/GPU tests carried over from ISE
 sim-ise:
 	$(MAKE) -C sim/ise all CS150=$(abspath $(CS150))
+
+# ----------------------------------------------------------------------------------------- sw-import
+sw-import:
+	scripts/sw-import.sh $(CS150)
 
 # ----------------------------------------------------------------------------------------- ise-diff
 # Review aid for the ISE port (normalised: comments/whitespace/default_nettype ignored). RAW=1 for plain diffs.
