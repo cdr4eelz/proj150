@@ -1,31 +1,29 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
+`include "../tuntap.vh"
 
 module MemMapIO #(
     parameter BADNESS=0, BAD_WORD=32'hFED1C007, BAD_BYTE=8'h11,
     parameter COLT45_SHAKE=1, COLT45_POLLS=0
 )(
-    input  wire clk, rst, stall,
+    input clk, rst, stall,
 
 // DAS BUS:
-    input  wire       ena,    //ena is like "memory" style "enable port a"
-    input  wire[11:0] addra,  //Address for read or write (use zero if worried about side effects)
-    input  wire[ 3:0] wea,    //Write enable & byte mask together (ena must also be active for write)
-    input  wire[31:0] dina,   //Data in grabbed at clock edge if enabled
+    input         ena,    //ena is like "memory" style "enable port a"
+    input  [11:0] addra,  //Address for read or write (use zero if worried about side effects)
+    input  [ 3:0] wea,    //Write enable & byte mask together (ena must also be active for write)
+    input  [31:0] dina,   //Data in grabbed at clock edge if enabled
     output reg [31:0] douta,//DATA read (behaves like synchronous memory with registered output)
 
-// UART ins & outs:
-    output wire         Rx_Ready,   // OUT: We offer to take a byte
-    input  wire         Rx_Valid,   // IN : UART announcing a byte
-    input  wire[7:0]    Rx_Data,    // IN : Data from UART
-    output wire[7:0]    Tx_Data,    // OUT: Data to UART
-    output wire         Tx_Valid,   // OUT: We announce a byte
-    input  wire         Tx_Ready,   // IN : UART can take a byte from us
+// DOS SHAKES POR FAVOR:
+    inout `BUS_RVA_type(8) RVa_RX, RVa_TX,
 
 // GPU control:
-    output wire         pf_vframe,  gp_vcode,  gp_vframe,
-    output wire[ 31:0]  pf_wframe,  gp_wcode,  gp_wframe,
-    input  wire[ 31:0]              gp_rcode,
-    input  wire[ 15:0]  pf_status,             gp_status
+    output          pf_vframe,  gp_vcode,  gp_vframe,
+    output [ 31:0]  pf_wframe,  gp_wcode,  gp_wframe,
+    input  [ 31:0]              gp_rcode,
+    input  [ 15:0]  pf_status,             gp_status
 );
 
 //                  Table 2: I/O Memory Map
@@ -45,26 +43,36 @@ localparam [5:0]            //   DATA-ENCODING/DESC
     A_CntInst       =6'h05, // Number of instructions executed
 //h006    32'h80000018    Reset counts                  Write
     A_ResetCnt      =6'h06, // N/A (any byte will trigger)
-//h014    32'h80000050    PF_FRAME                      Write
+//h014    32'h80000050    PF_FRAME                      Read active / Write next
     A_PFFrame       =6'h14, // PixelFeeder frame# (ADDR is frame# * 0x0040_0000)
 //h015    32'h80000054    GP_FRAME                      Write
     A_GPFrame       =6'h15, // Stored, then "captured" along with GP_CODE on launch
 //h016    32'h80000058    GP_CODE                       Write
     A_GPCode        =6'h16, // Write also launches GraphicsProcessor
 //h017    32'h8000005C    GPU status                    Read
-    A_GPUStatus     =6'h17; // See Memory150 for concatenated signals
+    A_GPUStatus     =6'h17, // See Memory150 for concatenated signals
+//h020    32'h80000080    Random 32-bits from PRNG      Read / write seed
+    A_Random32      =6'h20, // A LFSR output with writeable seed
+//h021    32'h80000084    HALT value                    Read / write
+    A_HaltVal       =6'h21; // Store value for BIOS or emulator to see
+//
+//TODO: Add "breadcrum" location which writes the PC and a custom value for
+//    : debugging purposes. THe writes would go into a FIFO and reads would
+//    : pull the values out in sequence (the FIFO would overflow at capacity)
+//    : Might also be examined via ChipScope or similar tools (or emulator)
 //
 //[Maps onto multiple addresses to reduce # of address lines checked]
     localparam H_D0TxReady = 0,   H_D0RxValid = 1,   H_D0TxData  = 2,
                H_D0RxData  = 3,   H_CntCycle  = 4,   H_CntInst   = 5,
                H_ResetCnt  = 6,   H_PFFrame   = 7,   H_GPFrame   = 8,
-               H_GPCode    = 9,   H_GPUStatus =10;
-    localparam H__LAST = H_GPUStatus;
+               H_GPCode    = 9,   H_GPUStatus =10, //Custom vals follow:
+               H_Random32  =11,   H_HaltVal   =12;
+    localparam H__LAST = H_HaltVal;
 
     wire isWrite = (ena &&  |wea); // != 4'b0000
     wire isRead  = (ena && ~|wea); // == 4'b0000
 
-    reg  [(H__LAST-1):0] HOT_ADDR;
+    reg  [H__LAST:0] HOT_ADDR; // "Last" isn't size... so include it in the range!
     always @(*) begin:_HOT_ADDR_
         case (addra[5:0])
             A_D0TxReady : HOT_ADDR = (1 << H_D0TxReady);
@@ -78,9 +86,21 @@ localparam [5:0]            //   DATA-ENCODING/DESC
             A_GPFrame   : HOT_ADDR = (1 << H_GPFrame);
             A_GPCode    : HOT_ADDR = (1 << H_GPCode);
             A_GPUStatus : HOT_ADDR = (1 << H_GPUStatus);
+            // Custom MMIO locations follow:
+            A_Random32  : HOT_ADDR = (1 << H_Random32);
+            A_HaltVal   : HOT_ADDR = (1 << H_HaltVal);
             default: HOT_ADDR = 0;
         endcase
     end
+
+//RVA-Pair operations
+    // Forward patchwork (individual ready/valid lines to consolidated RVA SHAKE below):
+    wire      Rx_Ready;   // OUT: We offer to take a byte
+    wire       Rx_Valid;   // IN : UART announcing a byte
+    wire [ 7:0] Rx_Data;    // IN : Data from UART
+    wire [ 7:0] Tx_Data;  // OUT: Data to UART
+    wire       Tx_Valid;   // OUT: We announce a byte
+    wire      Tx_Ready;     // IN : UART can take a byte from us
 
     // Drive these pre-clock (continuous drive) so other RVA sees them at clock
     assign Rx_Ready = isRead && HOT_ADDR[H_D0RxData]; //(addra==12'h003)
@@ -107,28 +127,37 @@ localparam [5:0]            //   DATA-ENCODING/DESC
     reg          pf_vframe_r, gp_vframe_r, gp_vcode_r;
     reg  [31: 0] pf_wframe_r, gp_wframe_r, gp_wcode_r;
     reg  [31: 0] gpu_status_r;
+    reg  [31: 0] halt_val_r;
     //Stash these internally for isolation (trade latency)
     always @(posedge clk) begin:_REG_GPU_
         if (isWrite && HOT_ADDR[H_PFFrame]) begin
             pf_wframe_r <= dina;
             pf_vframe_r <= 1'b1;
         end else pf_vframe_r <= 1'b0;
+
         if (isWrite && HOT_ADDR[H_GPFrame]) begin
             gp_wframe_r <= dina;
             gp_vframe_r <= 1'b1;
         end else gp_vframe_r <= 1'b0;
+
         if (isWrite && HOT_ADDR[H_GPCode])  begin
           gp_wcode_r  <= dina;
           gp_vcode_r <= 1'b1;
         end else gp_vcode_r <= 1'b0;
 
-        //  1-cycle latency (don't check too quick after trigger)!
+        //  1-cycle latency to ease timing
+        //    (Don't check too quick after trigger!)
         gpu_status_r <= { pf_status, gp_status };
     end
     assign pf_wframe = pf_wframe_r, pf_vframe = pf_vframe_r;
     assign gp_wframe = gp_wframe_r, gp_vframe = gp_vframe_r;
     assign gp_wcode  = gp_wcode_r,  gp_vcode  = gp_vcode_r;
 
+    wire [31:0] prng_out;
+    reg  [31:0] prng_out_r;
+    always @(posedge clk) begin
+        prng_out_r <= prng_out;
+    end
 
 // Reading operations
     reg [31:0] MUX_DOUTA;
@@ -140,43 +169,75 @@ localparam [5:0]            //   DATA-ENCODING/DESC
             A_D0RxData  : MUX_DOUTA = {24'd0, Rx_Data};
             A_CntCycle  : MUX_DOUTA = CNT_Cycle[31:0];
             A_CntInst   : MUX_DOUTA = CNT_Inst[31:0];
-            //A_ResetCnt,A_PFFrame,A_GPFrame,A_GPCode
+            A_PFFrame   : MUX_DOUTA = {4'h1, pf_status[13:8], 22'd0};
+            //A_ResetCnt,A_GPFrame,A_GPCode
             A_GPUStatus : MUX_DOUTA = gpu_status_r;
+            // Custom MMIO locations...
+            A_Random32  : MUX_DOUTA = prng_out_r;
+            A_HaltVal   : MUX_DOUTA = halt_val_r;
+            // "default" sets special val to mark read of unmapped address:
             default: MUX_DOUTA = (BADNESS) ? BAD_WORD : 32'dx;
         endcase
     end
     always @(posedge clk) begin:_REG_DOUTA_
         //NOTE:Avoiding unnecessary resets -- if (rst) DOUTA <= 0; else
+        if (rst) begin
+            halt_val_r <= 0; //TODO: Consider NOT resetting so it persists
+        end else begin
+            if (isWrite && HOT_ADDR[H_HaltVal]) begin
+                // Really just a simple read/write register!
+                halt_val_r <= dina;
+            end
+        end
+        //TODO: In future, move this into "else" of "rst" clause:
         if (isRead) douta <= MUX_DOUTA;
     end
 
+// Sub-modules that are mapped into memory
+
+    BUS_RVA_tap #(.InWidth(8)) TAP_RVA_Rx
+    ( ._BUS_(RVa_RX), //Incoming
+        .DataReady(Rx_Ready),
+        .DataValid(Rx_Valid), .Data(Rx_Data)
+    );
+
+    BUS_RVA_tun #(.InWidth(8)) TUN_RVA_Tx
+    ( ._BUS_(RVa_TX), //Outgoing
+        .DataValid(Tx_Valid), .Data(Tx_Data),
+        .DataReady(Tx_Ready)
+    );
+
+    PRNG32LFSR  Random32
+    ( .clk(clk), .rst_n(!rst), // Active-low reset
+        .load_seed(isWrite && HOT_ADDR[H_Random32]),
+        .seed_val(dina),
+        .prng_out(prng_out)
+    );
+
 
 // synthesis translate_off
-
-generate
-if (COLT45_SHAKE) begin:_SHAKE_MSG_
-
-    always @(posedge clk) begin
+generate if (COLT45_SHAKE)
+    always @(posedge clk) begin:_SHAKE_MSG_
         if (isRead) case (addra)
             12'h000: if (COLT45_POLLS) $display("MEMIO: Poll Tx (%b)   @%t", Tx_Ready, $time);
             12'h001: if (COLT45_POLLS) $display("MEMIO: Poll Rx (%b)   @%t", Rx_Valid, $time);
             12'h003: $display("MEMIO: Rx Shake (0x%h, %d, '%c')   @%t", Rx_Data, Rx_Data, Rx_Data, $time);
             12'h004: $display("MEMIO: Read Cycles (C=%d, S=%d)   @%t", CNT_Cycle, CNT_Inst, $time);
             12'h005: $display("MEMIO: Read Steps (C=%d, S=%d)   @%t", CNT_Cycle, CNT_Inst, $time);
+            12'h020: $display("MEMIO: Read Random32 (0x%h)   @%t", prng_out_r, $time);
+            12'h021: $display("MEMIO: Read HaltVal (0x%h)   @%t", halt_val_r, $time);
             default: $display("MEMIO: MISS-READ (%h)   @%t", addra, $time);
         endcase
         if (isWrite) case (addra)
             12'h002: $display("MEMIO: Tx Shake (0x%h, %d, '%c')  @%t", Tx_Data, Tx_Data, Tx_Data, $time);
             12'h006: $display("MEMIO: Counters reset. Were Cycles=%h Stalls=%h  @%t", CNT_Cycle, CNT_Inst, $time);
+            12'h020: $display("MEMIO: Seed Random32 (0x%h)  @%t", dina, $time);
+            12'h021: $display("MEMIO: Store HaltVal (0x%h, %d)  @%t", dina, dina, $time);
             //TODO: $display(...pix...)
             default: $display("MEMIO: MISS-WRITE (%h)   @%t", addra, $time);
         endcase
     end
-
-end:_SHAKE_MSG_
 endgenerate //COLT45_SHAKE
-
 // synthesis translate_on
-
 
 endmodule

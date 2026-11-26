@@ -1,50 +1,61 @@
+`timescale 1ns/1ps
+
 module UART(
-    input  wire         Clock,
-    input  wire         Reset,
+  input   Clock,
+  input   Reset,
 
-    input  wire[7:0]    DataInTX,
-    input  wire         DataInValidTX,
-    output wire         DataInReadyTX,
+  input   [7:0] DataIn,
+  input         DataInValid,
+  output        DataInReady,
 
-    output wire[7:0]    DataOutRX,
-    output wire         DataOutValidRX,
-    input  wire         DataOutReadyRX,
+  output  [7:0] DataOut,
+  output        DataOutValid,
+  input         DataOutReady,
 
-    output wire         SOutTX,
-    input  wire         SInRX
+  input         SIn,
+  output        SOut
 );
-    parameter   CLOCK_FREQ  =   50_000_000;
-    parameter   BAUD_RATE   =      115_200;
 
-    // UART for 2019 & 2024 adds these registers in addition to top-level IOBs
-    reg serial_in_reg = 1'b1, serial_out_reg = 1'b1;
-    wire serial_out_tx;
-    assign SOutTX = serial_out_reg;
-    always @ (posedge Clock) begin
-        serial_out_reg  <= Reset ? 1'b1 : serial_out_tx;
-        serial_in_reg   <= Reset ? 1'b1 : SInRX;
-    end
+  parameter ClockFreq =                   50_000_000;
+  parameter BaudRate  =                   115_200;
 
-    UATransmit #(
-        .CLOCK_FREQ(    CLOCK_FREQ),
-        .BAUD_RATE(     BAUD_RATE)
-    ) uatransmit (
-        .Clock(Clock),  .Reset(Reset),
-        .DataIn(        DataInTX),
-        .DataInValid(   DataInValidTX),
-        .DataInReady(   DataInReadyTX),
-        .SOut(          serial_out_tx)
-    );
+  wire      SOutInt, SInInt;
 
-    UAReceive #(
-        .CLOCK_FREQ(    CLOCK_FREQ),
-        .BAUD_RATE(     BAUD_RATE)
-    ) uareceive (
-        .Clock(Clock),  .Reset(Reset),
-        .DataOut(       DataOutRX),
-        .DataOutValid(  DataOutValidRX),
-        .DataOutReady(  DataOutReadyRX),
-        .SIn(           serial_in_reg)
-    );
+  IORegister            #(.Width(         1),
+                          .Initial(       1'b1))
+                    txreg(.Clock(         Clock),
+                          .Reset(         1'b0),
+                          .Set(           Reset),
+                          .Enable(        1'b1),
+                          .In(            SOutInt),
+                          .Out(           SOut)),
+
+                    rxreg(.Clock(         Clock),
+                          .Reset(         1'b0),
+                          .Set(           Reset),
+                          .Enable(        1'b1),
+                          .In(            SIn),
+                          .Out(           SInInt));
+
+
+
+
+  UATransmit           #( .ClockFreq(     ClockFreq),
+                          .BaudRate(      BaudRate))
+              uatransmit( .Clock(         Clock),
+                          .Reset(         Reset),
+                          .DataIn(        DataIn),
+                          .DataInValid(   DataInValid),
+                          .DataInReady(   DataInReady),
+                          .SOut(          SOutInt));
+
+  UAReceive            #( .ClockFreq(     ClockFreq),
+                          .BaudRate(      BaudRate))
+               uareceive( .Clock(         Clock),
+                          .Reset(         Reset),
+                          .DataOut(       DataOut),
+                          .DataOutValid(  DataOutValid),
+                          .DataOutReady(  DataOutReady),
+                          .SIn(           SInInt));
 
 endmodule

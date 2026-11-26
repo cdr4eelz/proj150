@@ -4,7 +4,9 @@ set ::RTL_FILES {
     imports/src/ArtyA7top.v
     imports/src/MIPS150.v
     imports/src/MemoryDDR.v
+    imports/src/TunTap.v
     imports/src/base_io/UART.v
+    imports/src/base_io/UARTRVA.v
     imports/src/base_io/UAReceive.v
     imports/src/base_io/UATransmit.v
     imports/src/base_mem/Cache.v
@@ -22,6 +24,7 @@ set ::RTL_FILES {
     imports/src/base_util/FIFORegControl.v
     imports/src/base_util/FIFORegister.v
     imports/src/base_util/IORegister.v
+    imports/src/base_util/PRNG32LFSR.v
     imports/src/base_util/Register.v
     imports/src/base_util/ShiftRegister.v
     imports/src/base_util/Synchronizer.v
